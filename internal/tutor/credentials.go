@@ -3,6 +3,7 @@ package tutor
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,9 @@ const (
 
 // OAuthToken holds OAuth credentials for ChatGPT Plus subscription plan access.
 type OAuthToken struct {
+	IDToken      string    `json:"id_token,omitempty"`
+	Subject      string    `json:"subject,omitempty"`
+	Email        string    `json:"email,omitempty"`
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token,omitempty"`
 	ExpiresAt    time.Time `json:"expires_at"`
@@ -43,11 +47,14 @@ func (t *OAuthToken) IsExpired() bool {
 // Never include secrets in commits or plain tracked files. Credentials are stored
 // strictly in the OS user data directory with restricted file permissions (0600).
 type AuthConfig struct {
-	ActiveProvider   string      `json:"active_provider"`
-	AnthropicKey     string      `json:"anthropic_key,omitempty"`
-	GoogleKey        string      `json:"google_key,omitempty"`
-	OpenAIKey        string      `json:"openai_key,omitempty"`
-	ChatGPTPlanToken *OAuthToken `json:"chatgpt_plan_token,omitempty"`
+	HostID           string            `json:"ext_agent_host_id,omitempty"`
+	ActiveProvider   string            `json:"active_provider"`
+	AnthropicKey     string            `json:"anthropic_key,omitempty"`
+	GoogleKey        string            `json:"google_key,omitempty"`
+	OpenAIKey        string            `json:"openai_key,omitempty"`
+	ChatGPTPlanToken *OAuthToken       `json:"chatgpt_plan_token,omitempty"`
+	ChatGPTClientID  string            `json:"chatgpt_client_id,omitempty"`
+	SelectedModels   map[string]string `json:"selected_models,omitempty"`
 }
 
 // AuthStore provides thread-safe access to persistent tutor credentials.
@@ -107,7 +114,18 @@ func NewAuthStore(filePath string) (*AuthStore, error) {
 func (s *AuthStore) GetConfig() AuthConfig {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.config
+	copyConfig := s.config
+	if s.config.ChatGPTPlanToken != nil {
+		token := *s.config.ChatGPTPlanToken
+		copyConfig.ChatGPTPlanToken = &token
+	}
+	if s.config.SelectedModels != nil {
+		copyConfig.SelectedModels = make(map[string]string)
+		for k, v := range s.config.SelectedModels {
+			copyConfig.SelectedModels[k] = v
+		}
+	}
+	return copyConfig
 }
 
 // SetActiveProvider updates the active provider and persists changes.
@@ -142,6 +160,10 @@ func (s *AuthStore) SetAPIKey(provider string, key string) error {
 func (s *AuthStore) SetChatGPTPlanToken(token *OAuthToken) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if token != nil {
+		copyToken := *token
+		token = &copyToken
+	}
 	s.config.ChatGPTPlanToken = token
 	return s.saveLocked()
 }
@@ -202,12 +224,100 @@ func (s *AuthStore) IsConfigured(provider string) bool {
 	case ProviderChatGPTPlan:
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		return s.config.ChatGPTPlanToken != nil && s.config.ChatGPTPlanToken.AccessToken != ""
+		return s.config.ChatGPTPlanToken != nil && s.config.ChatGPTPlanToken.AccessToken != "" && s.config.ChatGPTPlanToken.Subject != "" && hasPlanScope(s.config.ChatGPTPlanToken.Scope)
 	case ProviderAnthropic, ProviderGoogle, ProviderOpenAI:
 		return s.ResolveKey(provider) != ""
 	default:
 		return false
 	}
+}
+
+// GetSelectedModel returns the user-selected model for a provider if set.
+func (s *AuthStore) GetSelectedModel(provider string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.config.SelectedModels == nil {
+		return ""
+	}
+	return s.config.SelectedModels[provider]
+}
+
+// SetSelectedModel updates and persists the chosen model for a provider.
+func (s *AuthStore) SetSelectedModel(provider string, model string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.config.SelectedModels == nil {
+		s.config.SelectedModels = make(map[string]string)
+	}
+	trimmed := strings.TrimSpace(model)
+	if trimmed == "" {
+		delete(s.config.SelectedModels, provider)
+	} else {
+		s.config.SelectedModels[provider] = trimmed
+	}
+	return s.saveLocked()
+}
+
+// ResolveModel returns the active model for a provider, honoring explicit user selection
+// first, then falling back to vetted provider defaults.
+func (s *AuthStore) ResolveModel(provider string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.config.SelectedModels != nil {
+		if sel := strings.TrimSpace(s.config.SelectedModels[provider]); sel != "" {
+			return sel
+		}
+	}
+	switch provider {
+	case ProviderAnthropic:
+		return DefaultAnthropicModel
+	case ProviderGoogle:
+		return DefaultGeminiModel
+	case ProviderOpenAI:
+		return DefaultOpenAIAPIModel
+	case ProviderChatGPTPlan:
+		return DefaultChatGPTModel
+	default:
+		return "offline"
+	}
+}
+
+// GetChatGPTClientID returns custom client ID if configured.
+func (s *AuthStore) GetChatGPTClientID() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.config.ChatGPTClientID
+}
+
+// SetChatGPTClientID saves custom client ID for ChatGPT Plus OAuth.
+func (s *AuthStore) SetChatGPTClientID(clientID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.config.ChatGPTClientID = strings.TrimSpace(clientID)
+	return s.saveLocked()
+}
+
+// ResolveChatGPTClientID returns active client ID, checking env var first, then stored config, then default.
+func (s *AuthStore) ResolveChatGPTClientID() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if token := s.config.ChatGPTPlanToken; token != nil && token.Subject != "" && strings.HasPrefix(token.ClientID, "oaiapp_") {
+		return token.ClientID
+	}
+	return DefaultDCRClientID
+}
+
+func (s *AuthStore) EnsureHostID() (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.config.HostID == "" {
+		s.config.HostID = "urn:uuid:" + uuid.NewString()
+		if err := s.saveLocked(); err != nil {
+			s.config.HostID = ""
+			return "", err
+		}
+	}
+	return s.config.HostID, nil
 }
 
 func (s *AuthStore) saveLocked() error {

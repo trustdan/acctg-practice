@@ -50,6 +50,7 @@ func ParseProposal(rawJSON string, eng *engine.Engine, catalog *domain.AccountCa
 	}
 
 	cand := &CandidateQuestion{
+		Teaching:         proposal.Teaching,
 		ID:               candID,
 		FamilyID:         proposal.FamilyID,
 		RuleVersion:      1,
@@ -62,6 +63,22 @@ func ParseProposal(rawJSON string, eng *engine.Engine, catalog *domain.AccountCa
 	}
 
 	// 1. Validate supported family
+	for stage, text := range cand.Teaching {
+		switch stage {
+		case domain.StageIdentifyAccount, domain.StageAccountCategory, domain.StageDirection, domain.StageDebitCredit, domain.StageCounterAccount, domain.StageBalancedEntry, domain.StageEquationEffect:
+		default:
+			cand.Status = StatusCandidateRejected
+			cand.ValidationStatus = ValidationFailed
+			cand.RejectionReason = "unsupported teaching stage"
+			return cand, fmt.Errorf("%s", cand.RejectionReason)
+		}
+		if len(text.Hint) > 2000 || len(text.Explanation) > 4000 || strings.TrimSpace(text.Hint) == "" || strings.TrimSpace(text.Explanation) == "" {
+			cand.Status = StatusCandidateRejected
+			cand.ValidationStatus = ValidationFailed
+			cand.RejectionReason = "teaching requires a nonempty short hint and explanation"
+			return cand, fmt.Errorf("%s", cand.RejectionReason)
+		}
+	}
 	if !bank.IsSupportedFamily(cand.FamilyID) {
 		cand.Status = StatusCandidateRejected
 		cand.ValidationStatus = ValidationFailed

@@ -108,6 +108,15 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 		buildGenericStages(instance, money, seed, processed)
 	}
 
+	if q.Status == bank.StatusApprovedActive {
+		for stage, text := range q.Teaching {
+			if answer, ok := instance.StageAnswers[stage]; ok {
+				answer.CausalHint = strings.ReplaceAll(text.Hint, "${amount_dollars}", money.FormatDollars())
+				answer.Explanation = strings.ReplaceAll(text.Explanation, "${amount_dollars}", money.FormatDollars())
+				instance.StageAnswers[stage] = answer
+			}
+		}
+	}
 	return instance, nil
 }
 

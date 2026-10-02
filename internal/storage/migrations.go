@@ -199,6 +199,25 @@ CREATE INDEX IF NOT EXISTS idx_exam_attempts_concept ON exam_attempts(concept_id
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_tag ON exam_attempts(error_tag);
 `,
 	},
+	{
+		Version:     6,
+		Description: "Add arcade_high_scores table for Stage 28 retro 3-initials high score persistence",
+		SQL: `
+CREATE TABLE IF NOT EXISTS arcade_high_scores (
+    id TEXT PRIMARY KEY,
+    initials TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    blasted_count INTEGER NOT NULL,
+    survival_seconds INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_arcade_score ON arcade_high_scores(score DESC);
+CREATE INDEX IF NOT EXISTS idx_arcade_created ON arcade_high_scores(created_at);
+`,
+	},
+	{Version: 7, Description: "Persist proposed candidate teaching for semantic review", SQL: `ALTER TABLE candidate_questions ADD COLUMN teaching_json TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE published_questions ADD COLUMN teaching_json TEXT NOT NULL DEFAULT '{}';`},
 }
 
 // ApplyMigrations applies all pending migrations in order.

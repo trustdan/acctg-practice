@@ -75,6 +75,11 @@ func (d *DB) PublishQuestion(q bank.QuestionJSON, candidateID string, event bank
 		return fmt.Errorf("failed to marshal concepts: %w", err)
 	}
 
+	teachingJSON, err := json.Marshal(q.Teaching)
+	if err != nil {
+		return fmt.Errorf("failed to marshal teaching: %w", err)
+	}
+
 	fixtureJSON, err := json.Marshal(q.ExpectedFixture)
 	if err != nil {
 		return fmt.Errorf("failed to marshal fixture: %w", err)
@@ -116,8 +121,8 @@ INSERT INTO approval_events (
 	pubSQL := `
 INSERT INTO published_questions (
     id, version, family_id, rule_version, status, scenario_template,
-    parameters_json, concepts_json, fixture_json, reviewer, approved_at, source, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    parameters_json, concepts_json, fixture_json, reviewer, approved_at, source, created_at, teaching_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     version = excluded.version,
     family_id = excluded.family_id,
@@ -129,12 +134,13 @@ ON CONFLICT(id) DO UPDATE SET
     fixture_json = excluded.fixture_json,
     reviewer = excluded.reviewer,
     approved_at = excluded.approved_at,
-    source = excluded.source;`
+    source = excluded.source,
+    teaching_json = excluded.teaching_json;`
 
 	_, err = tx.Exec(pubSQL,
 		q.ID, q.Version, q.FamilyID, q.RuleVersion, q.Status, q.ScenarioTemplate,
 		string(paramsJSON), string(conceptsJSON), string(fixtureJSON),
-		reviewer, approvedAt, q.Review.Source, time.Now().UTC(),
+		reviewer, approvedAt, q.Review.Source, time.Now().UTC(), string(teachingJSON),
 	)
 	if err != nil {
 		return fmt.Errorf("failed inserting published question: %w", err)
@@ -156,7 +162,7 @@ ON CONFLICT(id) DO UPDATE SET
 func (d *DB) GetPublishedQuestion(id string) (*bank.QuestionJSON, error) {
 	query := `
 SELECT id, version, family_id, rule_version, status, scenario_template,
-       parameters_json, concepts_json, fixture_json, reviewer, approved_at, source
+       parameters_json, concepts_json, fixture_json, reviewer, approved_at, source, teaching_json
 FROM published_questions WHERE id = ?;`
 
 	row := d.db.QueryRow(query, id)
@@ -167,7 +173,7 @@ FROM published_questions WHERE id = ?;`
 func (d *DB) ListPublishedQuestions(onlyActive bool) ([]bank.QuestionJSON, error) {
 	query := `
 SELECT id, version, family_id, rule_version, status, scenario_template,
-       parameters_json, concepts_json, fixture_json, reviewer, approved_at, source
+       parameters_json, concepts_json, fixture_json, reviewer, approved_at, source, teaching_json
 FROM published_questions`
 
 	if onlyActive {
@@ -352,13 +358,13 @@ func scanApprovalEvents(rows *sql.Rows) ([]bank.ApprovalEvent, error) {
 
 func scanPublishedQuestion(s rowScanner) (*bank.QuestionJSON, error) {
 	var q bank.QuestionJSON
-	var paramsJSON, conceptsJSON, fixtureJSON string
+	var paramsJSON, conceptsJSON, fixtureJSON, teachingJSON string
 	var reviewer, source string
 	var approvedAt time.Time
 
 	err := s.Scan(
 		&q.ID, &q.Version, &q.FamilyID, &q.RuleVersion, &q.Status, &q.ScenarioTemplate,
-		&paramsJSON, &conceptsJSON, &fixtureJSON, &reviewer, &approvedAt, &source,
+		&paramsJSON, &conceptsJSON, &fixtureJSON, &reviewer, &approvedAt, &source, &teachingJSON,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -384,5 +390,8 @@ func scanPublishedQuestion(s rowScanner) (*bank.QuestionJSON, error) {
 		Source:     source,
 	}
 
+	if err := json.Unmarshal([]byte(teachingJSON), &q.Teaching); err != nil {
+		return nil, fmt.Errorf("failed unmarshaling teaching: %w", err)
+	}
 	return &q, nil
 }

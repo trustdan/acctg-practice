@@ -44,14 +44,19 @@ func (d *DB) SaveCandidate(cand candidate.CandidateQuestion) error {
 		return fmt.Errorf("failed to marshal explanation: %w", err)
 	}
 
+	teachingJSON, err := json.Marshal(cand.Teaching)
+	if err != nil {
+		return fmt.Errorf("failed to marshal teaching: %w", err)
+	}
+
 	query := `
 INSERT INTO candidate_questions (
     id, family_id, rule_version, status, scenario_template,
     parameters_json, concepts_json, derived_postings_json,
     derived_equation_json, explanation_json, source, model,
     prompt_text, target_family, target_concept, created_at,
-    validation_status, rejection_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    validation_status, rejection_reason, teaching_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     family_id = excluded.family_id,
     rule_version = excluded.rule_version,
@@ -69,14 +74,15 @@ ON CONFLICT(id) DO UPDATE SET
     target_concept = excluded.target_concept,
     created_at = excluded.created_at,
     validation_status = excluded.validation_status,
-    rejection_reason = excluded.rejection_reason;`
+    rejection_reason = excluded.rejection_reason,
+    teaching_json = excluded.teaching_json;`
 
 	_, err = d.db.Exec(query,
 		cand.ID, cand.FamilyID, cand.RuleVersion, string(cand.Status), cand.ScenarioTemplate,
 		string(paramsJSON), string(conceptsJSON), string(derivedPostingsJSON),
 		string(derivedEquationJSON), string(explanationJSON), cand.Provenance.Source, cand.Provenance.Model,
 		cand.Provenance.PromptText, cand.Provenance.TargetFamily, cand.Provenance.TargetConcept, cand.Provenance.GeneratedAt.UTC(),
-		string(cand.ValidationStatus), cand.RejectionReason,
+		string(cand.ValidationStatus), cand.RejectionReason, string(teachingJSON),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to save candidate question: %w", err)
@@ -92,7 +98,7 @@ SELECT id, family_id, rule_version, status, scenario_template,
        parameters_json, concepts_json, derived_postings_json,
        derived_equation_json, explanation_json, source, model,
        prompt_text, target_family, target_concept, created_at,
-       validation_status, rejection_reason
+       validation_status, rejection_reason, teaching_json
 FROM candidate_questions WHERE id = ?;`
 
 	row := d.db.QueryRow(query, id)
@@ -122,7 +128,7 @@ SELECT id, family_id, rule_version, status, scenario_template,
        parameters_json, concepts_json, derived_postings_json,
        derived_equation_json, explanation_json, source, model,
        prompt_text, target_family, target_concept, created_at,
-       validation_status, rejection_reason
+       validation_status, rejection_reason, teaching_json
 FROM candidate_questions`
 
 	if len(conditions) > 0 {
@@ -160,7 +166,7 @@ type rowScanner interface {
 
 func scanCandidate(s rowScanner) (*candidate.CandidateQuestion, error) {
 	var c candidate.CandidateQuestion
-	var statusStr, valStatusStr string
+	var statusStr, valStatusStr, teachingJSON string
 	var paramsJSON, conceptsJSON, derivedPostingsJSON, derivedEqJSON, explJSON string
 	var modelVal, promptVal, targetFamilyVal, targetConceptVal, rejReasonVal sql.NullString
 
@@ -169,7 +175,7 @@ func scanCandidate(s rowScanner) (*candidate.CandidateQuestion, error) {
 		&paramsJSON, &conceptsJSON, &derivedPostingsJSON,
 		&derivedEqJSON, &explJSON, &c.Provenance.Source, &modelVal,
 		&promptVal, &targetFamilyVal, &targetConceptVal, &c.Provenance.GeneratedAt,
-		&valStatusStr, &rejReasonVal,
+		&valStatusStr, &rejReasonVal, &teachingJSON,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -212,5 +218,8 @@ func scanCandidate(s rowScanner) (*candidate.CandidateQuestion, error) {
 		return nil, fmt.Errorf("failed to unmarshal explanation: %w", err)
 	}
 
+	if err := json.Unmarshal([]byte(teachingJSON), &c.Teaching); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal teaching: %w", err)
+	}
 	return &c, nil
 }

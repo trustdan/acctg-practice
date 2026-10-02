@@ -2,7 +2,7 @@
 
 ## Course materials status
 
-No local syllabus, slide decks, or problem-set files were located in the repository root or subdirectories during Stage 00 orientation. Per `docs/AGENT-CONTRACT.md` and `PLAN.md`, course conventions must not be invented; generic accounting basics are labeled below and govern until official UW Foster ACCTG 502 materials are supplied.
+No local syllabus, slide decks, or problem-set files were located in the repository root or subdirectories during Stage 00 orientation. Per `docs/AGENT-CONTRACT.md` and `PLAN.md`, course conventions must not be invented; standard US GAAP financial accounting conventions govern.
 
 ## Convention status & evidence register
 

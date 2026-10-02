@@ -8,6 +8,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/trustdan/acctg-practice/curriculum"
 	"github.com/trustdan/acctg-practice/internal/bank"
 	"github.com/trustdan/acctg-practice/internal/domain"
@@ -49,6 +51,8 @@ func setupTestTUI(t *testing.T) (*tui.Model, *storage.DB) {
 		t.Fatalf("failed to create TUI model: %v", err)
 	}
 
+	// Content assertions use a tall terminal; viewport tests set explicit small sizes.
+	m.Width, m.Height = 120, 200
 	return m, db
 }
 
@@ -57,6 +61,12 @@ func sendKey(m *tui.Model, key string) {
 	*m = *newM.(*tui.Model)
 	if cmd != nil {
 		msg := cmd()
+		if batch, ok := msg.(tea.BatchMsg); ok {
+			for _, child := range batch {
+				m.Update(child())
+			}
+			return
+		}
 		if msg != nil {
 			newM2, _ := m.Update(msg)
 			*m = *newM2.(*tui.Model)
@@ -69,6 +79,12 @@ func sendSpecialKey(m *tui.Model, keyType tea.KeyType) {
 	*m = *newM.(*tui.Model)
 	if cmd != nil {
 		msg := cmd()
+		if batch, ok := msg.(tea.BatchMsg); ok {
+			for _, child := range batch {
+				m.Update(child())
+			}
+			return
+		}
 		if msg != nil {
 			newM2, _ := m.Update(msg)
 			*m = *newM2.(*tui.Model)
@@ -99,6 +115,87 @@ func TestModelInitialization(t *testing.T) {
 	}
 	if !strings.Contains(view, "NORMAL") {
 		t.Errorf("expected view to render status bar with NORMAL mode, got:\n%s", view)
+	}
+}
+
+func TestShortTerminalExplanationScrollAndReservedKeys(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+	m.Width, m.Height = 60, 12
+	m.ShowHint, m.TutorKind = true, "explain"
+	m.CurrentHint = "EXPLANATION START\n" + strings.Repeat("A long explanation of cash and revenue.\n", 40) + "EXPLANATION END"
+	selected, stage := m.SelectedOptionIndex, m.Session.CurrentIndex
+	view := m.View()
+	if len(strings.Split(view, "\n")) > m.Height || !strings.Contains(view, "[u/d]") {
+		t.Fatal("short terminal view must fit and advertise scrolling")
+	}
+	for i := 0; i < 100; i++ {
+		sendKey(m, "d")
+	}
+	if m.PageScroll == 0 || !strings.Contains(m.View(), "EXPLANATION END") {
+		t.Fatal("cannot reach end of long tutor explanation")
+	}
+	if selected != m.SelectedOptionIndex || stage != m.Session.CurrentIndex {
+		t.Fatal("scrolling changed the selected answer or drill progress")
+	}
+	for _, size := range []tea.WindowSizeMsg{{Width: 35, Height: 5}, {Width: 100, Height: 40}, {Width: 10, Height: 1}} {
+		m.Update(size)
+		resized := m.View()
+		if len(strings.Split(resized, "\n")) > size.Height {
+			t.Fatal("resized view exceeds terminal height")
+		}
+		for _, line := range strings.Split(resized, "\n") {
+			if ansi.StringWidth(line) > size.Width {
+				t.Fatal("resized view exceeds terminal width")
+			}
+		}
+	}
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 12})
+	for i := 0; i < 100; i++ {
+		sendKey(m, "u")
+	}
+	if m.PageScroll != 0 {
+		t.Fatal("scroll up must clamp at the top")
+	}
+	st, _ := m.Session.CurrentStage()
+	for len(st.Options) < 4 {
+		st.Options = append(st.Options, st.Options[0])
+	}
+	m.Session.Instance.StageAnswers[m.Session.StageSequence[m.Session.CurrentIndex]] = *st
+	sendKey(m, "4")
+	if m.SelectedOptionIndex != 3 {
+		t.Fatal("fourth answer shortcut unavailable")
+	}
+	// Dismissing the explanation resets the page to the question.
+	sendKey(m, "d")
+	sendSpecialKey(m, tea.KeyEsc)
+	if m.PageScroll != 0 || m.ShowHint {
+		t.Fatal("dismissal must reset scrolling")
+	}
+}
+
+func TestScrollKeysPreserveTextEntryAndCandidateData(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+	sendKey(m, "t")
+	sendKey(m, "3")
+	sendKey(m, "d")
+	sendKey(m, "u")
+	if m.TutorInputBuffer != "du" {
+		t.Fatal("scroll shortcuts consumed typed credentials")
+	}
+	sendSpecialKey(m, tea.KeyEsc)
+	sendSpecialKey(m, tea.KeyEsc)
+	sendKey(m, "p")
+	sendKey(m, "g")
+	count := len(m.Candidates)
+	sendKey(m, "d")
+	if len(m.Candidates) != count {
+		t.Fatal("scroll down deleted a candidate")
+	}
+	sendKey(m, "x")
+	if len(m.Candidates) != count-1 {
+		t.Fatal("replacement candidate delete shortcut failed")
 	}
 }
 
@@ -396,6 +493,139 @@ func TestCompleteQuestionRecapShowsTAccounts(t *testing.T) {
 	}
 	if m.CurrentQuestionIndex != 1 {
 		t.Errorf("expected CurrentQuestionIndex 1, got %d", m.CurrentQuestionIndex)
+	}
+}
+
+func TestRecapScrollingAndKeybindings(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+	m.Width, m.Height = 120, 24
+
+	// 1. Answer all stages to reach StateRecap
+	for !m.Session.IsCompleted {
+		st, err := m.Session.CurrentStage()
+		if err != nil {
+			t.Fatalf("stage error: %v", err)
+		}
+		for i, opt := range st.Options {
+			if opt.ID == st.CorrectOptionID {
+				m.SelectedOptionIndex = i
+				break
+			}
+		}
+		sendSpecialKey(m, tea.KeyEnter)
+		sendSpecialKey(m, tea.KeyEnter)
+	}
+
+	if m.State != tui.StateRecap {
+		t.Fatalf("expected StateRecap, got %d", m.State)
+	}
+	if m.RecapScroll != 0 {
+		t.Errorf("expected initial RecapScroll 0, got %d", m.RecapScroll)
+	}
+
+	// 2. Initial view at scroll 0 shows T-accounts and Balanced journal entry
+	v0 := m.View()
+	if !strings.Contains(v0, "Transaction Recap") {
+		t.Errorf("expected recap title in v0, got:\n%s", v0)
+	}
+	if !strings.Contains(v0, "BALANCED (Dr = Cr)") {
+		t.Errorf("expected BALANCED badge in v0, got:\n%s", v0)
+	}
+	if !strings.Contains(v0, "[u/d] Scroll") {
+		t.Errorf("expected scroll down indicator in v0, got:\n%s", v0)
+	}
+
+	// 3. Step scrolling down with 'j' and arrow Down
+	sendKey(m, "j")
+	if m.RecapScroll != 1 {
+		t.Errorf("expected RecapScroll 1 after 'j', got %d", m.RecapScroll)
+	}
+	sendSpecialKey(m, tea.KeyDown)
+	if m.RecapScroll != 2 {
+		t.Errorf("expected RecapScroll 2 after Down arrow, got %d", m.RecapScroll)
+	}
+
+	// 4. Page down with pgdown
+	sendSpecialKey(m, tea.KeyPgDown)
+	if m.RecapScroll != 12 {
+		t.Errorf("expected RecapScroll 7 after PgDn, got %d", m.RecapScroll)
+	}
+
+	// 5. Jump to bottom with 'G'
+	sendKey(m, "G")
+	if m.RecapScroll != 9999 {
+		t.Errorf("expected unconstrained bottom offset 9999 before render, got %d", m.RecapScroll)
+	}
+	vBottom := m.View()
+	// Rendering should have clamped RecapScroll
+	if m.RecapScroll <= 0 || m.RecapScroll >= 9999 {
+		t.Errorf("expected clamped positive RecapScroll, got %d", m.RecapScroll)
+	}
+	if !strings.Contains(vBottom, "[u/d] Scroll") {
+		t.Errorf("expected bottom scroll indicator, got:\n%s", vBottom)
+	}
+	if !strings.Contains(vBottom, "RECONCILIATION VERIFIED") && !strings.Contains(vBottom, "Accounting Equation") {
+		t.Errorf("expected equation effect or reconciliation at bottom of recap, got:\n%s", vBottom)
+	}
+
+	// 6. Step scrolling up with 'k' and arrow Up
+	prevScroll := m.RecapScroll
+	sendKey(m, "k")
+	if m.RecapScroll != prevScroll-1 {
+		t.Errorf("expected RecapScroll %d after 'k', got %d", prevScroll-1, m.RecapScroll)
+	}
+	sendSpecialKey(m, tea.KeyUp)
+	if m.RecapScroll != prevScroll-2 {
+		t.Errorf("expected RecapScroll %d after Up arrow, got %d", prevScroll-2, m.RecapScroll)
+	}
+
+	// 7. Page up with pgup
+	sendSpecialKey(m, tea.KeyPgUp)
+	if m.RecapScroll != prevScroll-12 {
+		t.Errorf("expected RecapScroll %d after PgUp, got %d", prevScroll-12, m.RecapScroll)
+	}
+
+	// 8. Jump to top with 'g'
+	sendKey(m, "g")
+	if m.RecapScroll != 0 {
+		t.Errorf("expected RecapScroll 0 after 'g', got %d", m.RecapScroll)
+	}
+
+	// 9. Cannot scroll past top (clamp at 0)
+	sendKey(m, "k")
+	sendSpecialKey(m, tea.KeyUp)
+	if m.RecapScroll != 0 {
+		t.Errorf("expected RecapScroll to stay 0, got %d", m.RecapScroll)
+	}
+
+	// 10. Advancing with Enter resets RecapScroll to 0
+	sendKey(m, "j")
+	sendKey(m, "j")
+	if m.RecapScroll != 2 {
+		t.Fatalf("expected RecapScroll 2, got %d", m.RecapScroll)
+	}
+	sendSpecialKey(m, tea.KeyEnter) // advance to Question 2
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected StateDrill after Enter, got %d", m.State)
+	}
+	if m.RecapScroll != 0 {
+		t.Errorf("expected RecapScroll reset to 0 after advancing, got %d", m.RecapScroll)
+	}
+
+	// 11. Test terminal height adaptation: compact height (15 rows)
+	m.Height = 15
+	m.State = tui.StateRecap
+	vCompact := m.View()
+	if !strings.Contains(vCompact, "Transaction Recap") {
+		t.Errorf("expected recap in compact view, got:\n%s", vCompact)
+	}
+
+	// 12. Test tall terminal (40 rows)
+	m.Height = 40
+	vTall := m.View()
+	if !strings.Contains(vTall, "BALANCED (Dr = Cr)") {
+		t.Errorf("expected balanced badge in tall view, got:\n%s", vTall)
 	}
 }
 
@@ -1000,6 +1230,26 @@ func TestTutorConfigScreenModalToggle(t *testing.T) {
 	}
 }
 
+func TestTutorModelPickerAndNoticeAreVisibleBeforeProviderDetails(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+	sendKey(m, "t")
+	m.TutorAuthNotice = "Model discovery failed: account unavailable"
+	view := m.View()
+	if strings.Index(view, m.TutorAuthNotice) > strings.Index(view, "Offline Machine Mode") {
+		t.Fatal("discovery notice appears below provider details")
+	}
+	m.TutorModelSelectActive = true
+	m.TutorModelList = []tutor.ModelInfo{{ID: "account-model", DisplayName: "Account Model"}}
+	view = m.View()
+	if !strings.Contains(view, "account-model") || !strings.Contains(view, m.TutorAuthNotice) {
+		t.Fatal("model picker or discovery notice missing")
+	}
+	if strings.Contains(view, "Offline Machine Mode") {
+		t.Fatal("provider list pushes active model picker below the screen")
+	}
+}
+
 func TestTutorConfigAPIKeyEntry(t *testing.T) {
 	m, db := setupTestTUI(t)
 	defer db.Close()
@@ -1055,6 +1305,7 @@ func TestTutorConfigChatGPTPlusOAuthSelection(t *testing.T) {
 
 	// 1. Configure a mock OAuth token in the AuthStore
 	_ = m.AuthStore.SetChatGPTPlanToken(&tutor.OAuthToken{
+		Subject: "user", Scope: tutor.DefaultOAuthScope, ClientID: "oaiapp_test",
 		AccessToken: "mock-valid-access-token",
 		ExpiresAt:   time.Now().Add(1 * time.Hour),
 		PlanType:    "plus",
@@ -1119,8 +1370,8 @@ func TestCandidatePreviewModalToggleAndGeneration(t *testing.T) {
 		t.Errorf("expected CandidateIndex=0, got %d", m.CandidateIndex)
 	}
 
-	// 4. Delete candidate with 'd'
-	sendKey(m, "d")
+	// 4. Delete candidate with x
+	sendKey(m, "x")
 	if len(m.Candidates) != initialCount {
 		t.Errorf("expected count %d after deletion, got %d", initialCount, len(m.Candidates))
 	}
@@ -1230,7 +1481,7 @@ func TestTUIJournalPracticeMode(t *testing.T) {
 	if m.JournalInputMode != "side" {
 		t.Fatalf("expected side mode")
 	}
-	sendKey(m, "d") // select Debit -> amount mode
+	sendKey(m, "D") // select Debit -> amount mode
 	if m.JournalInputMode != "amount" {
 		t.Fatalf("expected amount mode")
 	}
@@ -1403,6 +1654,8 @@ func TestTUIExamModeDirectLaunchAndSuppression(t *testing.T) {
 		t.Fatalf("failed initializing exam model: %v", err)
 	}
 
+	m.Width, m.Height = 120, 200
+
 	// 1. Verify initial state is StateExam
 	if m.State != tui.StateExam {
 		t.Fatalf("expected initial state StateExam, got %d", m.State)
@@ -1494,6 +1747,8 @@ func TestTUIExamModeCompletionAndReview(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed initializing model: %v", err)
 	}
+
+	m.Width, m.Height = 120, 200
 
 	// Answer all questions until exam completes
 	maxSteps := 10
@@ -1629,5 +1884,1003 @@ func TestTUIExamModeInterruptedSessionResumeAndAbandon(t *testing.T) {
 	}
 	if abandonedSess.Status != exam.ExamStatusAbandoned {
 		t.Errorf("expected status abandoned, got %s", abandonedSess.Status)
+	}
+}
+
+func TestTUIModelSelectionAndSwitching(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	// 1. Open Tutor settings
+	sendKey(m, "t")
+	if m.State != tui.StateTutorConfig {
+		t.Fatalf("expected StateTutorConfig after 't', got %d", m.State)
+	}
+
+	// 2. Try 'm' while in offline mode -> should notify not applicable
+	sendKey(m, "m")
+	if m.TutorModelSelectActive {
+		t.Errorf("expected TutorModelSelectActive=false for offline provider")
+	}
+	if !strings.Contains(m.TutorAuthNotice, "Offline") {
+		t.Errorf("expected notice about offline provider, got: %s", m.TutorAuthNotice)
+	}
+
+	// 3. Switch to Anthropic
+	sendKey(m, "3")
+	if !m.TutorInputActive || m.TutorInputProvider != tutor.ProviderAnthropic {
+		t.Fatalf("expected Anthropic input active")
+	}
+	for _, ch := range "sk-ant-testkey" {
+		sendKey(m, string(ch))
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+
+	if m.AuthStore.GetConfig().ActiveProvider != tutor.ProviderAnthropic {
+		t.Fatalf("expected active provider Anthropic")
+	}
+
+	// 4. Open Model Selection with 'm'
+	sendKey(m, "m")
+	if !m.TutorModelSelectActive {
+		t.Fatalf("expected TutorModelSelectActive=true after 'm'")
+	}
+	if len(m.TutorModelList) == 0 {
+		t.Fatalf("expected non-empty TutorModelList for Anthropic")
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "SELECT MODEL FOR ANTHROPIC") {
+		t.Errorf("expected view to contain model selection title, got:\n%s", view)
+	}
+
+	// Navigate down with 'j' and up with 'k'
+	initialCursor := m.TutorModelCursor
+	sendKey(m, "j")
+	if m.TutorModelCursor != initialCursor+1 {
+		t.Errorf("expected cursor to advance down to %d, got %d", initialCursor+1, m.TutorModelCursor)
+	}
+	sendKey(m, "k")
+	if m.TutorModelCursor != initialCursor {
+		t.Errorf("expected cursor to return to %d, got %d", initialCursor, m.TutorModelCursor)
+	}
+
+	// Select highlighted model with Enter
+	expectedModel := m.TutorModelList[m.TutorModelCursor].ID
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.TutorModelSelectActive {
+		t.Errorf("expected TutorModelSelectActive=false after Enter")
+	}
+	if sel := m.AuthStore.GetSelectedModel(tutor.ProviderAnthropic); sel != expectedModel {
+		t.Errorf("expected selected model %s, got %s", expectedModel, sel)
+	}
+	if !strings.Contains(m.TutorAuthNotice, expectedModel) {
+		t.Errorf("expected notice to mention selected model, got: %s", m.TutorAuthNotice)
+	}
+
+	// 5. Open model selection again and quick-pick option [2]
+	sendKey(m, "m")
+	if !m.TutorModelSelectActive {
+		t.Fatalf("expected TutorModelSelectActive=true")
+	}
+	secondModel := m.TutorModelList[1].ID
+	sendKey(m, "2")
+	if m.TutorModelSelectActive {
+		t.Errorf("expected TutorModelSelectActive=false after quick-pick")
+	}
+	if sel := m.AuthStore.GetSelectedModel(tutor.ProviderAnthropic); sel != secondModel {
+		t.Errorf("expected selected model %s after '2', got %s", secondModel, sel)
+	}
+
+	// 6. Custom model ID entry with 'c'
+	sendKey(m, "m")
+	sendKey(m, "c")
+	if !m.TutorCustomModelActive {
+		t.Fatalf("expected TutorCustomModelActive=true after 'c'")
+	}
+	for _, ch := range "claude-3-custom-special" {
+		sendKey(m, string(ch))
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.TutorCustomModelActive || m.TutorModelSelectActive {
+		t.Errorf("expected custom and model select modes closed after enter")
+	}
+	if sel := m.AuthStore.GetSelectedModel(tutor.ProviderAnthropic); sel != "claude-3-custom-special" {
+		t.Errorf("expected custom model saved, got %s", sel)
+	}
+
+	// 7. Verify view reflects the chosen model
+	viewAfterSelection := m.View()
+	if !strings.Contains(viewAfterSelection, "claude-3-custom-special") {
+		t.Errorf("expected tutor settings to render custom model name, got:\n%s", viewAfterSelection)
+	}
+}
+
+func TestTUISelectModelAfterDiscovery(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	// 1. Open tutor settings
+	sendKey(m, "t")
+	if m.State != tui.StateTutorConfig {
+		t.Fatalf("expected StateTutorConfig")
+	}
+
+	// 2. Configure Anthropic provider
+	sendKey(m, "3")
+	for _, ch := range "sk-ant-test-key-12345" {
+		sendKey(m, string(ch))
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+
+	if m.AuthStore.GetConfig().ActiveProvider != tutor.ProviderAnthropic {
+		t.Fatalf("expected active provider anthropic")
+	}
+
+	// 3. Simulate arrival of models discovered from remote API
+	discovered := []tutor.ModelInfo{
+		{ID: "claude-3-7-sonnet-20250219", DisplayName: "Claude 3.7 Sonnet (Hybrid Reasoning)"},
+		{ID: "claude-3-5-haiku-20241022", DisplayName: "Claude 3.5 Haiku (Fast & Efficient)"},
+		{ID: "claude-3-opus-20240229", DisplayName: "Claude 3 Opus (Deep Analysis)"},
+	}
+
+	// Update with modelsFetchedMsg
+	fetchMsg := struct {
+		Provider string
+		Models   []tutor.ModelInfo
+		Err      error
+	}{
+		Provider: tutor.ProviderAnthropic,
+		Models:   discovered,
+		Err:      nil,
+	}
+
+	// Deliver message by calling Update
+	// Note: We access Update through tea.Model
+	newModel, _ := m.Update(tui.ExportedModelsFetchedMsg(fetchMsg.Provider, fetchMsg.Models, fetchMsg.Err))
+	m = newModel.(*tui.Model)
+
+	// 4. Verify model picker automatically activated with retrieved models
+	if !m.TutorModelSelectActive {
+		t.Fatalf("expected TutorModelSelectActive=true after live models discovered")
+	}
+	if len(m.TutorModelList) != 3 {
+		t.Fatalf("expected 3 models in list, got %d", len(m.TutorModelList))
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "SELECT MODEL FOR ANTHROPIC") {
+		t.Errorf("expected view to render model selection title, got:\n%s", view)
+	}
+	if !strings.Contains(view, "claude-3-7-sonnet-20250219") {
+		t.Errorf("expected view to contain first retrieved model, got:\n%s", view)
+	}
+
+	// Active model (claude-3-5-haiku-20241022) is at index 1, so cursor should be at 1
+	if m.TutorModelCursor != 1 {
+		t.Errorf("expected cursor to highlight active model at index 1, got %d", m.TutorModelCursor)
+	}
+
+	// 5. Select model 0 (claude-3-7-sonnet-20250219) via navigation up 'k' and Enter
+	sendKey(m, "k") // Move up to index 0 (sonnet)
+	if m.TutorModelCursor != 0 {
+		t.Errorf("expected cursor to be 0 after 'k', got %d", m.TutorModelCursor)
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+
+	if m.TutorModelSelectActive {
+		t.Errorf("expected TutorModelSelectActive=false after selection")
+	}
+	if sel := m.AuthStore.GetSelectedModel(tutor.ProviderAnthropic); sel != "claude-3-7-sonnet-20250219" {
+		t.Errorf("expected selected model claude-3-7-sonnet-20250219, got %s", sel)
+	}
+	if res := m.AuthStore.ResolveModel(tutor.ProviderAnthropic); res != "claude-3-7-sonnet-20250219" {
+		t.Errorf("expected resolved model claude-3-7-sonnet-20250219, got %s", res)
+	}
+
+	// 6. Change model again via quick-pick '2' (claude-3-5-haiku-20241022)
+	sendKey(m, "m")
+	if !m.TutorModelSelectActive {
+		t.Fatalf("expected TutorModelSelectActive=true after pressing 'm'")
+	}
+	sendKey(m, "2")
+	if m.TutorModelSelectActive {
+		t.Errorf("expected TutorModelSelectActive=false after quick-pick")
+	}
+	if sel := m.AuthStore.GetSelectedModel(tutor.ProviderAnthropic); sel != "claude-3-5-haiku-20241022" {
+		t.Errorf("expected selected model changed to claude-3-5-haiku-20241022, got %s", sel)
+	}
+
+	// 7. Change model to third option via quick-pick '3' (claude-3-opus-20240229)
+	sendKey(m, "m")
+	sendKey(m, "3")
+	if sel := m.AuthStore.GetSelectedModel(tutor.ProviderAnthropic); sel != "claude-3-opus-20240229" {
+		t.Errorf("expected selected model changed to claude-3-opus-20240229, got %s", sel)
+	}
+
+	// 8. Change model to custom ID entry
+	sendKey(m, "m")
+	sendKey(m, "c")
+	for _, ch := range "claude-3-7-sonnet-thinking" {
+		sendKey(m, string(ch))
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+
+	if sel := m.AuthStore.GetSelectedModel(tutor.ProviderAnthropic); sel != "claude-3-7-sonnet-thinking" {
+		t.Errorf("expected custom model changed to claude-3-7-sonnet-thinking, got %s", sel)
+	}
+}
+
+func setupTestTUIWithIntro(t *testing.T) (*tui.Model, *storage.DB) {
+	db, err := storage.Open(":memory:")
+	if err != nil {
+		t.Fatalf("failed to open memory db: %v", err)
+	}
+
+	cat, _, err := bank.LoadAccounts(bytes.NewReader(curriculum.AccountsJSON))
+	if err != nil {
+		t.Fatalf("failed to load accounts: %v", err)
+	}
+
+	qBank, err := bank.LoadQuestionBank(bytes.NewReader(curriculum.SeedQuestionsJSON), cat)
+	if err != nil {
+		t.Fatalf("failed to load seed questions: %v", err)
+	}
+
+	cfg := tui.Config{
+		DB:             db,
+		Catalog:        cat,
+		Questions:      qBank.Questions,
+		TotalQuestions: 10,
+		Seed:           42,
+		Clock:          mastery.NewMockClock(time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)),
+		Intro:          true,
+	}
+
+	m, err := tui.NewModel(cfg)
+	if err != nil {
+		t.Fatalf("failed to create TUI model with intro: %v", err)
+	}
+
+	return m, db
+}
+
+func TestStartupAnimationInitializationAndRendering(t *testing.T) {
+	m, db := setupTestTUIWithIntro(t)
+	defer db.Close()
+
+	if m.State != tui.StateIntro {
+		t.Fatalf("expected state StateIntro, got %v", m.State)
+	}
+	if m.Intro == nil {
+		t.Fatalf("expected Intro state to be initialized")
+	}
+
+	// Verify Init cmd returns tick
+	cmd := m.Init()
+	if cmd == nil {
+		t.Fatalf("expected non-nil Init cmd for intro ticker")
+	}
+
+	// View rendering smoke check
+	view := m.View()
+	t.Logf("Intro View Rendered Frame:\n%s\n", view)
+	if !strings.Contains(view, "ACCOUNTUTOR 9000") {
+		t.Errorf("expected title banner in intro view, got: %s", view)
+	}
+	if !strings.Contains(view, "PRESS ENTER TO START ACCOUNTING DRILLS") {
+		t.Errorf("expected start prompt in intro view, got: %s", view)
+	}
+	if !strings.Contains(view, "[≡]=<") {
+		t.Errorf("expected spaceship engine nozzle in intro view, got: %s", view)
+	}
+}
+
+func TestStartupAnimation3DRollTransitions(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	if intro.ShipRoll != tui.RollLevel {
+		t.Errorf("expected initial roll RollLevel (0), got %v", intro.ShipRoll)
+	}
+
+	// 1. Bank up (RollHardUp +2)
+	intro.SteerUp()
+	if intro.ShipRoll != tui.RollHardUp {
+		t.Errorf("expected RollHardUp after SteerUp, got %v", intro.ShipRoll)
+	}
+	if intro.ShipVY >= 0 {
+		t.Errorf("expected negative vertical velocity for climb, got %f", intro.ShipVY)
+	}
+	viewUp := intro.Render()
+	t.Logf("3D Roll Hard Up (+45° Bank):\n%s\n", viewUp)
+	if !strings.Contains(viewUp, "╱▌") || strings.Contains(viewUp, "╲▌") {
+		t.Errorf("expected upper G-diffuser blade ╱▌ rotated vertical in RollHardUp view, got:\n%s", viewUp)
+	}
+
+	// 2. Bank down (RollHardDown -2)
+	intro.SteerDown()
+	if intro.ShipRoll != tui.RollHardDown {
+		t.Errorf("expected RollHardDown after SteerDown, got %v", intro.ShipRoll)
+	}
+	if intro.ShipVY <= 0 {
+		t.Errorf("expected positive vertical velocity for dive, got %f", intro.ShipVY)
+	}
+	viewDown := intro.Render()
+	t.Logf("3D Roll Hard Down (-45° Bank):\n%s\n", viewDown)
+	if !strings.Contains(viewDown, "╲▌") || strings.Contains(viewDown, "╱▌") {
+		t.Errorf("expected lower G-diffuser blade ╲▌ rotated vertical in RollHardDown view, got:\n%s", viewDown)
+	}
+
+	// 3. Level flight (RollLevel 0)
+	intro.ShipVY = 0.0
+	intro.ShipRoll = tui.RollLevel
+	viewLevel := intro.Render()
+	t.Logf("Level Flight (0° Neutral Roll):\n%s\n", viewLevel)
+	if !strings.Contains(viewLevel, "●") || strings.Contains(viewLevel, "╱▌") || strings.Contains(viewLevel, "╲▌") {
+		t.Errorf("expected canopy (●) with both wings swept flat in RollLevel view, got:\n%s", viewLevel)
+	}
+}
+
+func TestStartupAnimationBlastingAndCollisions(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+
+	// Inject a known target directly in the flight path
+	intro.Targets = []tui.IntroTarget{
+		{
+			ID:    99,
+			Type:  tui.TargetTAccount,
+			Text:  "[─┬─ CASH ─┬─]",
+			X:     30.0,
+			Y:     10.0,
+			Speed: 0.5,
+			Width: len([]rune("[─┬─ CASH ─┬─]")),
+		},
+	}
+
+	// Inject a laser bolt right before the target
+	intro.Lasers = []tui.IntroLaser{
+		{X: 28.0, Y: 10.0},
+	}
+
+	initialScore := intro.Score
+	initialBlasted := intro.BlastedCount
+
+	// Run update step: laser moves forward into target and explodes!
+	intro.Update()
+
+	if intro.BlastedCount != initialBlasted+1 {
+		t.Errorf("expected BlastedCount to increment to %d, got %d", initialBlasted+1, intro.BlastedCount)
+	}
+	if intro.Score != initialScore+100 {
+		t.Errorf("expected Score to increment to %d, got %d", initialScore+100, intro.Score)
+	}
+	if len(intro.Particles) == 0 {
+		t.Errorf("expected explosion particles to be spawned")
+	}
+	if len(intro.Callouts) == 0 {
+		t.Errorf("expected floating callout to be spawned")
+	}
+}
+
+func TestStartupAnimationManualControlsAndFiring(t *testing.T) {
+	m, db := setupTestTUIWithIntro(t)
+	defer db.Close()
+
+	// Steer up
+	oldY := m.Intro.ShipY
+	sendKey(m, "w")
+	if m.Intro.ShipVY >= 0 {
+		t.Errorf("expected negative VY after 'w', got %f", m.Intro.ShipVY)
+	}
+
+	// Steer down
+	sendKey(m, "s")
+	if m.Intro.ShipVY <= 0 {
+		t.Errorf("expected positive VY after 's', got %f", m.Intro.ShipVY)
+	}
+	_ = oldY
+
+	// Fire blaster
+	laserCountBefore := len(m.Intro.Lasers)
+	sendKey(m, "f")
+	if len(m.Intro.Lasers) <= laserCountBefore {
+		t.Errorf("expected manual laser fire to add lasers")
+	}
+}
+
+func TestStartupAnimationKeyTransitionsToDrill(t *testing.T) {
+	// 1. Enter key advances to drill
+	m1, db1 := setupTestTUIWithIntro(t)
+	defer db1.Close()
+	sendSpecialKey(m1, tea.KeyEnter)
+	if m1.State != tui.StateDrill {
+		t.Errorf("expected Enter to transition to StateDrill, got %v", m1.State)
+	}
+
+	// 2. Space key fires lasers in arcade mode and stays in StateIntro
+	m2, db2 := setupTestTUIWithIntro(t)
+	defer db2.Close()
+	sendKey(m2, " ")
+	if m2.State != tui.StateIntro {
+		t.Errorf("expected Space to stay in StateIntro for arcade combat, got %v", m2.State)
+	}
+	if m2.Intro == nil || !m2.Intro.ManualMode {
+		t.Errorf("expected Space to engage ManualMode")
+	}
+
+	// 3. Esc key advances to drill
+	m3, db3 := setupTestTUIWithIntro(t)
+	defer db3.Close()
+	sendSpecialKey(m3, tea.KeyEsc)
+	if m3.State != tui.StateDrill {
+		t.Errorf("expected Esc to transition to StateDrill, got %v", m3.State)
+	}
+
+	// 4. 'q' quits
+	m4, db4 := setupTestTUIWithIntro(t)
+	defer db4.Close()
+	sendKey(m4, "q")
+	if m4.State != tui.StateQuitting {
+		t.Errorf("expected 'q' to transition to StateQuitting, got %v", m4.State)
+	}
+}
+
+func TestStartupAnimationManualPlayAndAutoPilotOverride(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	if intro.ManualMode {
+		t.Errorf("expected initial ManualMode false (demo attract mode)")
+	}
+
+	// Taking controls engages manual mode permanently
+	intro.SteerUp()
+	if !intro.ManualMode {
+		t.Errorf("expected ManualMode true after SteerUp")
+	}
+
+	// Update in manual mode does not auto-fire lasers
+	intro.Lasers = nil
+	for i := 0; i < 20; i++ {
+		intro.Update()
+	}
+	if len(intro.Lasers) != 0 {
+		t.Errorf("expected zero auto-fired lasers in manual mode, got %d", len(intro.Lasers))
+	}
+
+	// Manual fire adds lasers
+	intro.Fire()
+	if len(intro.Lasers) == 0 {
+		t.Errorf("expected lasers added on manual Fire")
+	}
+
+	// Toggling back to demo mode
+	intro.SetManualMode(false)
+	if intro.ManualMode {
+		t.Errorf("expected ManualMode false after SetManualMode(false)")
+	}
+}
+
+func TestStartupAnimationReplayFromDrill(t *testing.T) {
+	m, db := setupTestTUI(t) // Starts in StateDrill
+	defer db.Close()
+
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected StateDrill initially, got %v", m.State)
+	}
+
+	// Press 'A' to replay startup animation
+	sendKey(m, "A")
+	if m.State != tui.StateIntro {
+		t.Fatalf("expected StateIntro after pressing 'A', got %v", m.State)
+	}
+	if m.Intro == nil {
+		t.Fatalf("expected intro state to be initialized on 'A'")
+	}
+
+	// Press Enter to return to drill
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected return to StateDrill after Enter, got %v", m.State)
+	}
+}
+
+func TestArcadeHallOfFameAndRelaunchShortcuts(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	// 'L' from a non-drill screen opens the Hall of Fame and Esc returns to that screen
+	sendKey(m, "h")
+	if m.State != tui.StateHelp {
+		t.Fatalf("expected StateHelp, got %v", m.State)
+	}
+	sendKey(m, "L")
+	if m.State != tui.StateIntro || !m.Intro.ShowLeaderboard {
+		t.Fatalf("expected Hall of Fame overlay after 'L', state=%v", m.State)
+	}
+	ticks := m.Intro.TickCount
+	m.Intro.Update()
+	if m.Intro.TickCount != ticks {
+		t.Errorf("expected flight paused while Hall of Fame is open")
+	}
+	if !strings.Contains(m.Intro.Render(), "AUDIT HALL OF FAME") {
+		t.Errorf("expected Hall of Fame modal in render")
+	}
+	sendSpecialKey(m, tea.KeyEsc)
+	if m.State != tui.StateHelp {
+		t.Fatalf("expected return to StateHelp after closing Hall of Fame, got %v", m.State)
+	}
+
+	// 'A' relaunches the game from Help; 'L' mid-flight toggles the overlay without leaving the game
+	sendKey(m, "A")
+	if m.State != tui.StateIntro || m.Intro.ShowLeaderboard {
+		t.Fatalf("expected active flight after 'A', state=%v", m.State)
+	}
+	sendKey(m, "L")
+	if !m.Intro.ShowLeaderboard {
+		t.Fatalf("expected Hall of Fame overlay mid-flight")
+	}
+	sendKey(m, "L")
+	if m.State != tui.StateIntro || m.Intro.ShowLeaderboard {
+		t.Fatalf("expected to resume flight after closing overlay, state=%v", m.State)
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.State != tui.StateHelp {
+		t.Fatalf("expected Enter to return to the screen the game was launched from, got %v", m.State)
+	}
+}
+
+func TestStartupAnimationWindowResize(t *testing.T) {
+	m, db := setupTestTUIWithIntro(t)
+	defer db.Close()
+
+	newM, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m = newM.(*tui.Model)
+
+	if m.Width != 100 || m.Height != 30 {
+		t.Errorf("expected dimensions 100x30, got %dx%d", m.Width, m.Height)
+	}
+	if m.Intro.Width != 100 || m.Intro.Height != 30 {
+		t.Errorf("expected intro dimensions 100x30, got %dx%d", m.Intro.Width, m.Intro.Height)
+	}
+
+	view := m.View()
+	if len(view) == 0 {
+		t.Errorf("expected non-empty view after resize")
+	}
+}
+
+func TestStartupAnimationMachineGunBurstAndSimultaneousSteering(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+
+	// Calling Fire() arms rapid fire burst
+	intro.Fire()
+	if intro.RapidFireRounds != tui.FireHoldTicks {
+		t.Errorf("expected RapidFireRounds %d, got %d", tui.FireHoldTicks, intro.RapidFireRounds)
+	}
+	if len(intro.Lasers) == 0 {
+		t.Errorf("expected lasers to be added on Fire")
+	}
+
+	// Steering up while rapid fire is active does NOT cancel rapid fire
+	intro.SteerUp()
+	if intro.ShipVY >= 0 {
+		t.Errorf("expected negative VY for climb")
+	}
+	if intro.RapidFireRounds != tui.FireHoldTicks {
+		t.Errorf("expected RapidFireRounds to stay at FireHoldTicks after steering")
+	}
+
+	// Update ticks decrement rapid fire rounds and continue firing
+	lasersBefore := len(intro.Lasers)
+	intro.Update()
+	if intro.RapidFireRounds != tui.FireHoldTicks-1 {
+		t.Errorf("expected RapidFireRounds to decrement by one, got %d", intro.RapidFireRounds)
+	}
+	_ = lasersBefore
+}
+
+func TestStartupAnimationSmartBombDetonation(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	if intro.BombsRemaining != 3 {
+		t.Fatalf("expected 3 bombs initially, got %d", intro.BombsRemaining)
+	}
+
+	// Inject normal target and hazard asteroid
+	intro.Targets = []tui.IntroTarget{
+		{
+			ID:    1,
+			Type:  tui.TargetTAccount,
+			Text:  "[─┬─ CASH ─┬─]",
+			X:     30.0,
+			Y:     10.0,
+			Speed: 0.3,
+			Width: 15,
+		},
+		{
+			ID:         2,
+			Type:       tui.TargetAsteroid,
+			Text:       "[🚨 FRAUD: HP 10/10]",
+			X:          45.0,
+			Y:          12.0,
+			Speed:      0.2,
+			Width:      20,
+			MaxHP:      10,
+			HP:         10,
+			IsHazard:   true,
+			HazardName: "🚨 FRAUD",
+		},
+	}
+
+	// Detonate smart bomb
+	ok := intro.DeployBomb()
+	if !ok {
+		t.Fatalf("expected DeployBomb to return true")
+	}
+	if intro.BombsRemaining != 2 {
+		t.Errorf("expected 2 bombs remaining, got %d", intro.BombsRemaining)
+	}
+	if len(intro.Shockwaves) == 0 {
+		t.Errorf("expected shockwave to be created")
+	}
+
+	// Normal target was vaporized (+100 score) and hazard took 15 dmg (>10 HP) and was destroyed (+1000 score)
+	if intro.Score < 1100 {
+		t.Errorf("expected Score >= 1100 from bomb clearance, got %d", intro.Score)
+	}
+	if len(intro.Particles) < 20 {
+		t.Errorf("expected substantial bomb explosion debris particles, got %d", len(intro.Particles))
+	}
+}
+
+func TestStartupAnimationDynamicAcceleration(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	if intro.SpeedFactor != 1.0 {
+		t.Errorf("expected initial SpeedFactor 1.0, got %f", intro.SpeedFactor)
+	}
+
+	// Demo mode never accelerates; the clock starts once a player takes over.
+	intro.Targets = nil
+	intro.Update()
+	if intro.SpeedFactor != 1.0 {
+		t.Errorf("expected demo SpeedFactor 1.0, got %f", intro.SpeedFactor)
+	}
+
+	// One full quarter in: gently faster, nowhere near the old 3.5x cap.
+	intro.SetManualMode(true)
+	intro.YearTick = tui.QuarterTicks
+	intro.Update()
+	if intro.SpeedFactor <= 1.2 || intro.SpeedFactor > 1.3 {
+		t.Errorf("expected SpeedFactor in (1.2, 1.3] after one quarter, got %f", intro.SpeedFactor)
+	}
+}
+
+func TestStartupAnimationSteeringKeepsHeldTriggerFiring(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	intro.Fire()
+
+	// Simulate the OS key-repeat delay: steering arrives, then the F repeat
+	// stream stops. Steering refreshes the trigger so the gun keeps firing.
+	for i := 0; i < tui.FireHoldTicks-2; i++ {
+		intro.Update()
+	}
+	intro.SteerUp()
+	if intro.RapidFireRounds != tui.FireHoldTicks {
+		t.Fatalf("expected steering to refresh held trigger, got %d", intro.RapidFireRounds)
+	}
+
+	// Steering alone never starts firing.
+	idle := tui.NewIntroState(80, 24, nil)
+	idle.SteerDown()
+	if idle.RapidFireRounds != 0 {
+		t.Errorf("expected steering without F to leave trigger released, got %d", idle.RapidFireRounds)
+	}
+}
+
+func TestStartupAnimationAutoFireToggle(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	intro.Targets = nil
+	intro.ToggleAutoFire()
+	if !intro.AutoFire || !intro.ManualMode {
+		t.Fatalf("expected auto-fire on in manual mode")
+	}
+	for i := 0; i < 40; i++ {
+		intro.Update()
+	}
+	if len(intro.Lasers) == 0 {
+		t.Errorf("expected auto-fire to keep shooting without F presses")
+	}
+	intro.ToggleAutoFire()
+	if intro.AutoFire {
+		t.Errorf("expected second toggle to release auto-fire")
+	}
+}
+
+func TestStartupAnimationPauseFreezesFlight(t *testing.T) {
+	m, db := setupTestTUIWithIntro(t)
+	defer db.Close()
+
+	sendKey(m, "w") // take the controls
+	sendKey(m, "p")
+	if !m.Intro.Paused {
+		t.Fatalf("expected [p] to pause the flight")
+	}
+	ticks := m.Intro.TickCount
+	m.Intro.Update()
+	if m.Intro.TickCount != ticks {
+		t.Errorf("expected paused flight to stay frozen")
+	}
+	if !strings.Contains(m.View(), "FLIGHT PAUSED") {
+		t.Errorf("expected pause overlay in view")
+	}
+
+	// Steering is ignored while paused; [p] resumes.
+	vy := m.Intro.ShipVY
+	m.Intro.SteerDown()
+	if m.Intro.ShipVY != vy {
+		t.Errorf("expected steering to be ignored while paused")
+	}
+	sendKey(m, "p")
+	if m.Intro.Paused {
+		t.Errorf("expected [p] to resume the flight")
+	}
+}
+
+func TestStartupAnimationHealthRegenAndCarePackages(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	intro.SetManualMode(true)
+	intro.Targets = nil
+	intro.ShieldHP = 50
+	intro.GlobalHP = 50
+
+	// Time-based regen while nothing hits the ship.
+	for i := 0; i < 300; i++ {
+		intro.Targets = nil
+		intro.Update()
+	}
+	if intro.ShieldHP <= 50 || intro.GlobalHP <= 50 {
+		t.Errorf("expected passive regen, got shield=%d global=%d", intro.ShieldHP, intro.GlobalHP)
+	}
+
+	// Flying into an audit kit repairs both meters instead of damaging them.
+	shield, global := intro.ShieldHP, intro.GlobalHP
+	intro.Targets = []tui.IntroTarget{{
+		ID: 1, Type: tui.TargetCarePackage, Text: "[✚ AUDIT KIT ✚]",
+		X: intro.ShipX + 5.0, Y: intro.ShipY, Speed: 0.1, Width: 15, Pickup: tui.PickupRepair,
+	}}
+	intro.Update()
+	if intro.ShieldHP <= shield || intro.GlobalHP <= global {
+		t.Errorf("expected audit kit to repair, got shield %d->%d global %d->%d", shield, intro.ShieldHP, global, intro.GlobalHP)
+	}
+
+	// Kits that drift away cost nothing, and lasers pass through them.
+	global = intro.GlobalHP
+	intro.Targets = []tui.IntroTarget{{
+		ID: 2, Type: tui.TargetCarePackage, Text: "[✚ +1 BOMB ✚]",
+		X: -20.0, Y: intro.ShipY + 6, Speed: 0.1, Width: 13, Pickup: tui.PickupBomb,
+	}}
+	intro.Update()
+	if intro.GlobalHP < global {
+		t.Errorf("expected escaped care package not to damage external audit")
+	}
+}
+
+func TestStartupAnimationFiscalYearVictoryAndContinue(t *testing.T) {
+	m, db := setupTestTUIWithIntro(t)
+	defer db.Close()
+
+	sendKey(m, "w")
+	m.Intro.YearTick = tui.YearTicks - 1
+	m.Intro.Update()
+	if !m.Intro.YearComplete || m.Intro.YearBonus <= 0 {
+		t.Fatalf("expected year close with bonus, got complete=%v bonus=%d", m.Intro.YearComplete, m.Intro.YearBonus)
+	}
+	if !strings.Contains(m.View(), "CONTINUE INTO FISCAL YEAR 2") {
+		t.Errorf("expected continue prompt in view")
+	}
+
+	// [Y] starts a faster, higher-multiplier year.
+	sendKey(m, "y")
+	if m.Intro.YearComplete || m.Intro.Year != 2 || m.Intro.YearTick != 0 {
+		t.Fatalf("expected FY2 to begin, got year=%d tick=%d", m.Intro.Year, m.Intro.YearTick)
+	}
+	m.Intro.Update()
+	if m.Intro.SpeedFactor < 1.4 {
+		t.Errorf("expected FY2 to start faster, got %f", m.Intro.SpeedFactor)
+	}
+
+	// Closing FY2 and answering [N] ends the run as a win.
+	m.Intro.YearTick = tui.YearTicks - 1
+	m.Intro.Update()
+	sendKey(m, "n")
+	if !m.Intro.GameOver || !m.Intro.Victory {
+		t.Fatalf("expected retire to end the run as a victory")
+	}
+	if !strings.Contains(m.View(), "MISSION COMPLETE") {
+		t.Errorf("expected victory modal in view")
+	}
+}
+
+func TestStartupAnimationModalRowsKeepWidth(t *testing.T) {
+	intro := tui.NewIntroState(100, 30, nil)
+	intro.GameOver = true
+	intro.GameOverReason = "EXTERNAL AUDIT FAILURE: ADVERSE OPINION (UNAUDITED ENTITIES)"
+	for i, line := range strings.Split(intro.Render(), "\n") {
+		if w := lipgloss.Width(line); w != 100 {
+			t.Errorf("row %d width %d, want 100: %q", i, w, line)
+		}
+	}
+}
+
+func TestStartupAnimationDualAuditHitPointsAndGameOver(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+	if intro.ShieldHP != 100 || intro.GlobalHP != 100 {
+		t.Fatalf("expected 100%% Shield and Global HP initially, got shield=%d, global=%d", intro.ShieldHP, intro.GlobalHP)
+	}
+
+	// 1. Direct collision with ship reduces internal shield HP
+	intro.Targets = []tui.IntroTarget{
+		{
+			ID:    1,
+			Text:  "[─┬─ CASH ─┬─]",
+			X:     intro.ShipX + 5.0, // directly overlapping ship
+			Y:     intro.ShipY,
+			Speed: 0.1,
+			Width: 10,
+		},
+	}
+	intro.Update()
+	if intro.ShieldHP != 80 {
+		t.Errorf("expected ShieldHP to drop to 80 after collision, got %d", intro.ShieldHP)
+	}
+
+	// 2. Off-screen escape reduces external audit global HP
+	intro.Targets = []tui.IntroTarget{
+		{
+			ID:    2,
+			Text:  "[─┬─ RENT ─┬─]",
+			X:     -15.0, // off screen left
+			Y:     intro.ShipY,
+			Speed: 0.1,
+			Width: 10,
+		},
+	}
+	intro.Update()
+	if intro.GlobalHP != 90 {
+		t.Errorf("expected GlobalHP to drop to 90 after offscreen escape, got %d", intro.GlobalHP)
+	}
+
+	// 3. Complete audit failure triggers GameOver
+	intro.ShieldHP = 10
+	intro.Targets = []tui.IntroTarget{
+		{
+			ID:    3,
+			Text:  "[─┬─ DEBT ─┬─]",
+			X:     intro.ShipX + 5.0,
+			Y:     intro.ShipY,
+			Speed: 0.1,
+			Width: 10,
+		},
+	}
+	intro.Update()
+	if !intro.GameOver {
+		t.Errorf("expected GameOver to be true when ShieldHP reaches 0")
+	}
+	if intro.ShieldHP != 0 {
+		t.Errorf("expected ShieldHP clamped at 0, got %d", intro.ShieldHP)
+	}
+	if !strings.Contains(intro.GameOverReason, "INTERNAL AUDIT FAILURE") {
+		t.Errorf("expected GameOverReason to mention INTERNAL AUDIT FAILURE, got %s", intro.GameOverReason)
+	}
+
+	// Render check for Game Over modal
+	view := intro.Render()
+	if !strings.Contains(view, "AUDIT FAILURE // MISSION TERMINATED") {
+		t.Errorf("expected Game Over modal title in view, got:\n%s", view)
+	}
+}
+
+func TestStartupAnimationHazardAsteroidsMultiHitAndFragmentation(t *testing.T) {
+	intro := tui.NewIntroState(80, 24, nil)
+
+	intro.Targets = []tui.IntroTarget{
+		{
+			ID:         10,
+			Type:       tui.TargetAsteroid,
+			Text:       "[🚨 FRAUD: HP 10/10]",
+			X:          30.0,
+			Y:          10.0,
+			Speed:      0.2,
+			Width:      20,
+			MaxHP:      10,
+			HP:         10,
+			IsHazard:   true,
+			HazardName: "🚨 FRAUD",
+		},
+	}
+
+	// Hit with 1 laser
+	intro.Lasers = []tui.IntroLaser{
+		{X: 28.0, Y: 10.0},
+	}
+	intro.Update()
+
+	// Hazard survives with 9 HP
+	if len(intro.Targets) != 1 {
+		t.Fatalf("expected hazard asteroid to survive 1 laser hit, targets count: %d", len(intro.Targets))
+	}
+	if intro.Targets[0].HP != 9 {
+		t.Errorf("expected hazard HP 9, got %d", intro.Targets[0].HP)
+	}
+
+	// Deplete remaining 9 HP
+	intro.Targets[0].HP = 1
+	intro.Lasers = []tui.IntroLaser{
+		{X: 28.0, Y: 10.0},
+	}
+	intro.Update()
+
+	// Destroyed and fragmented!
+	if intro.Score < 1000 {
+		t.Errorf("expected Score >= 1000 after destroying hazard asteroid, got %d", intro.Score)
+	}
+	hasFragment := false
+	for _, t := range intro.Targets {
+		if t.Type == tui.TargetFragment {
+			hasFragment = true
+			break
+		}
+	}
+	if !hasFragment {
+		t.Errorf("expected fragments to spawn from shattered hazard asteroid")
+	}
+}
+
+func TestStartupAnimationHighScorePersistenceAndInitialsEntry(t *testing.T) {
+	m, db := setupTestTUIWithIntro(t)
+	defer db.Close()
+
+	intro := m.Intro
+	intro.SetHighScore(5000, "DAN")
+	intro.Score = 7500 // Beat high score!
+
+	// 1. Pressing 'Enter' activates initials entry modal because player beat high score
+	sendSpecialKey(m, tea.KeyEnter)
+	if !intro.InitialsEntryActive {
+		t.Fatalf("expected InitialsEntryActive true after beating high score")
+	}
+
+	// 2. Letters can be set directly
+	sendKey(m, "W")
+	if intro.Initials[0] != 'W' {
+		t.Errorf("expected first initial 'W', got %c", intro.Initials[0])
+	}
+	if intro.InitialsCursor != 1 {
+		t.Errorf("expected cursor to advance to 1, got %d", intro.InitialsCursor)
+	}
+
+	sendKey(m, "A")
+	if intro.Initials[1] != 'A' {
+		t.Errorf("expected second initial 'A', got %c", intro.Initials[1])
+	}
+
+	sendKey(m, "R")
+	if intro.Initials[2] != 'R' {
+		t.Errorf("expected third initial 'R', got %c", intro.Initials[2])
+	}
+
+	// 3. Confirming saves to SQLite database and exits to drills
+	sendSpecialKey(m, tea.KeyEnter)
+
+	topScore, err := db.GetTopArcadeHighScore()
+	if err != nil {
+		t.Fatalf("failed querying top arcade high score: %v", err)
+	}
+	if topScore == nil {
+		t.Fatalf("expected top score in database, got nil")
+	}
+	if topScore.Score != 7500 || topScore.Initials != "WAR" {
+		t.Errorf("expected score 7500 by 'WAR', got score=%d, initials=%s", topScore.Score, topScore.Initials)
+	}
+
+	if m.State != tui.StateDrill {
+		t.Errorf("expected transition to StateDrill after submitting initials, got %v", m.State)
 	}
 }

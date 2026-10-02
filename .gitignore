@@ -21,4 +21,7 @@ dist/
 *.dylib
 *.test
 *.out
+acctg
+acctg-mac*
+acctg-linux*
 

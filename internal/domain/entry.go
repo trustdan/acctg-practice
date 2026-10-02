@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Posting represents a single debit or credit line to an account.
@@ -262,4 +263,167 @@ func (e Entry) EqualNormalized(other Entry) bool {
 	normA := e.AggregatePostings()
 	normB := other.AggregatePostings()
 	return normA.EqualPostings(normB)
+}
+
+// PostingEquationEffect determines the (+A), (-A), (+L), (-L), (+E), or (-E) tag
+// based on the account's category, contra status, and debit/credit side.
+func PostingEquationEffect(p Posting, catalog *AccountCatalog) string {
+	if catalog == nil {
+		return ""
+	}
+	acc, ok := catalog.Get(p.AccountID)
+	if !ok {
+		return ""
+	}
+
+	switch acc.Category {
+	case CategoryAsset:
+		if acc.ContraOf != "" {
+			if p.Side == SideCredit {
+				return "(-A)"
+			}
+			return "(+A)"
+		}
+		if p.Side == SideDebit {
+			return "(+A)"
+		}
+		return "(-A)"
+
+	case CategoryLiability:
+		if p.Side == SideCredit {
+			return "(+L)"
+		}
+		return "(-L)"
+
+	case CategoryEquity:
+		if p.Side == SideCredit {
+			return "(+E)"
+		}
+		return "(-E)"
+
+	case CategoryRevenue:
+		// Revenue increases equity
+		if p.Side == SideCredit {
+			return "(+E)"
+		}
+		return "(-E)"
+
+	case CategoryExpense:
+		// Expense reduces equity
+		if p.Side == SideDebit {
+			return "(-E)"
+		}
+		return "(+E)"
+
+	case CategoryDividends:
+		// Dividends reduce equity
+		if p.Side == SideDebit {
+			return "(-E)"
+		}
+		return "(+E)"
+
+	default:
+		return ""
+	}
+}
+
+// RenderClassroomGrid renders postings into the 4-column bordered grid format
+// directly matching the instructor slides:
+// Column 1: Dr. / Cr.
+// Column 2: Account Name with Equation Effect (e.g. Cash (+A), Loan (+L))
+// Column 3: Debit amount
+// Column 4: Credit amount
+func RenderClassroomGrid(postings []Posting, catalog *AccountCatalog, totalWidth int, includeTotals bool) string {
+	if totalWidth < 60 {
+		totalWidth = 60
+	}
+	if totalWidth > 86 {
+		totalWidth = 86
+	}
+
+	sideWidth := 6
+	amtWidth := 13
+	// Borders: │ Side │ Account │ Dr │ Cr │ -> 5 vertical bars
+	accWidth := totalWidth - sideWidth - (amtWidth * 2) - 5
+	if accWidth < 24 {
+		accWidth = 24
+	}
+
+	var b strings.Builder
+
+	// Top border
+	b.WriteString("┌" + strings.Repeat("─", sideWidth) +
+		"┬" + strings.Repeat("─", accWidth) +
+		"┬" + strings.Repeat("─", amtWidth) +
+		"┬" + strings.Repeat("─", amtWidth) + "┐\n")
+
+	var totalDr, totalCr Money
+
+	for i, p := range postings {
+		if i > 0 {
+			b.WriteString("├" + strings.Repeat("─", sideWidth) +
+				"┼" + strings.Repeat("─", accWidth) +
+				"┼" + strings.Repeat("─", amtWidth) +
+				"┼" + strings.Repeat("─", amtWidth) + "┤\n")
+		}
+
+		accName := string(p.AccountID)
+		if catalog != nil && catalog.Has(p.AccountID) {
+			acc, _ := catalog.Get(p.AccountID)
+			accName = acc.Name
+		}
+		effect := PostingEquationEffect(p, catalog)
+
+		var sideStr, accLabel, drStr, crStr string
+		if p.Side == SideDebit {
+			sideStr = " Dr.  "
+			accLabel = fmt.Sprintf(" %s %s", accName, effect)
+			drStr = fmt.Sprintf("%11s  ", p.Amount.FormatCommas())
+			crStr = strings.Repeat(" ", amtWidth)
+			totalDr = totalDr.Add(p.Amount)
+		} else {
+			sideStr = " Cr.  "
+			accLabel = fmt.Sprintf("   %s %s", accName, effect)
+			drStr = strings.Repeat(" ", amtWidth)
+			crStr = fmt.Sprintf("%11s  ", p.Amount.FormatCommas())
+			totalCr = totalCr.Add(p.Amount)
+		}
+
+		if len(accLabel) > accWidth {
+			accLabel = accLabel[:accWidth]
+		} else {
+			accLabel = accLabel + strings.Repeat(" ", accWidth-len(accLabel))
+		}
+
+		b.WriteString(fmt.Sprintf("│%s│%s│%s│%s│\n", sideStr, accLabel, drStr, crStr))
+	}
+
+	if includeTotals && len(postings) > 0 {
+		b.WriteString("╞" + strings.Repeat("═", sideWidth) +
+			"╪" + strings.Repeat("═", accWidth) +
+			"╪" + strings.Repeat("═", amtWidth) +
+			"╪" + strings.Repeat("═", amtWidth) + "╡\n")
+
+		totalsLabel := " Totals"
+		if len(totalsLabel) < accWidth {
+			totalsLabel = totalsLabel + strings.Repeat(" ", accWidth-len(totalsLabel))
+		}
+		totalDrStr := fmt.Sprintf("%11s  ", totalDr.FormatCommas())
+		totalCrStr := fmt.Sprintf("%11s  ", totalCr.FormatCommas())
+
+		b.WriteString(fmt.Sprintf("│%s│%s│%s│%s│\n",
+			strings.Repeat(" ", sideWidth),
+			totalsLabel,
+			totalDrStr,
+			totalCrStr,
+		))
+	}
+
+	// Bottom border
+	b.WriteString("└" + strings.Repeat("─", sideWidth) +
+		"┴" + strings.Repeat("─", accWidth) +
+		"┴" + strings.Repeat("─", amtWidth) +
+		"┴" + strings.Repeat("─", amtWidth) + "┘")
+
+	return b.String()
 }

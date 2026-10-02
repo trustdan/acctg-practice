@@ -19,6 +19,9 @@ Follow these pedagogical invariants strictly:
 
 // FormatUserPrompt prepares the prompt for the LLM based on vetted request data.
 func FormatUserPrompt(req Request, isHint bool) string {
+	if req.CandidateGeneration {
+		return "MODE: Candidate Generation. Return only the requested JSON proposal for human review; do not give a conceptual explanation.\n\n" + req.ProblemPrompt
+	}
 	var sb strings.Builder
 
 	if isHint {

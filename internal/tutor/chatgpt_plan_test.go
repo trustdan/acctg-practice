@@ -2,13 +2,19 @@ package tutor
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -48,7 +54,7 @@ func TestOAuthLoopbackServerCallbackSuccess(t *testing.T) {
 	}
 
 	// Simulate browser callback
-	callbackURL := fmt.Sprintf("%s?code=test-auth-code-123&state=%s", flow.RedirectURI, flow.PKCE.State)
+	callbackURL := fmt.Sprintf("%s?code=test-auth-code-123&client_id=oaiapp_test&state=%s", flow.RedirectURI, flow.PKCE.State)
 
 	go func() {
 		time.Sleep(20 * time.Millisecond)
@@ -59,7 +65,7 @@ func TestOAuthLoopbackServerCallbackSuccess(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(resp.Body)
-		if !strings.Contains(string(body), "Authentication Successful") {
+		if !strings.Contains(string(body), "Authorization received") {
 			t.Errorf("expected success HTML, got: %s", string(body))
 		}
 	}()
@@ -102,8 +108,9 @@ func TestOAuthLoopbackServerCallbackStateMismatch(t *testing.T) {
 }
 
 func TestTokenExchangeAndRefreshMock(t *testing.T) {
+	signingKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 	mockOAuthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/token" {
+		if r.URL.Path != "/oauth/token" {
 			http.NotFound(w, r)
 			return
 		}
@@ -121,7 +128,8 @@ func TestTokenExchangeAndRefreshMock(t *testing.T) {
 				"access_token":  "mock-access-token-1",
 				"refresh_token": "mock-refresh-token-1",
 				"expires_in":    3600,
-				"scope":         "openid model.request",
+				"scope":         DefaultOAuthScope,
+				"id_token":      signedIdentity(t, signingKey, "oaiapp_test", "nonce"),
 			})
 			return
 		}
@@ -146,9 +154,11 @@ func TestTokenExchangeAndRefreshMock(t *testing.T) {
 
 	tutor := NewOpenAIChatGPTPlanTutor(ChatGPTPlanConfig{
 		AuthURL:    mockOAuthServer.URL,
-		HTTPClient: mockOAuthServer.Client(),
+		HTTPClient: identityClient(mockOAuthServer.Client(), signingKey),
+		ClientID:   "oaiapp_test",
 	})
 
+	tutor.pendingNonce = "nonce"
 	ctx := context.Background()
 
 	// 1. Exchange Code
@@ -211,16 +221,16 @@ func TestStreamedResponsesAPIPreviewLimitationsEnforced(t *testing.T) {
 		}
 
 		events := []string{
-			`{"type":"response.text.delta","delta":"Consider the economic "}`,
-			`{"type":"response.text.delta","delta":"reality: cash was received before "}`,
-			`{"type":"response.text.delta","delta":"work was performed."}`,
+			`{"type":"response.output_text.delta","delta":"Consider the economic "}`,
+			`{"type":"response.output_text.delta","delta":"reality: cash was received before "}`,
+			`{"type":"response.output_text.delta","delta":"work was performed."}`,
 		}
 
 		for _, ev := range events {
 			fmt.Fprintf(w, "data: %s\n\n", ev)
 			flusher.Flush()
 		}
-		fmt.Fprintf(w, "data: [DONE]\n\n")
+		fmt.Fprintf(w, "data: {\"type\":\"response.completed\"}\n\n")
 		flusher.Flush()
 	}))
 	defer mockAPIServer.Close()
@@ -228,7 +238,8 @@ func TestStreamedResponsesAPIPreviewLimitationsEnforced(t *testing.T) {
 	authStore, _ := NewAuthStore("")
 	_ = authStore.SetChatGPTPlanToken(&OAuthToken{
 		AccessToken: "test-valid-jwt",
-		ExpiresAt:   time.Now().UTC().Add(1 * time.Hour),
+		Subject:     "user", Scope: DefaultOAuthScope, ClientID: "oaiapp_test",
+		ExpiresAt: time.Now().UTC().Add(1 * time.Hour),
 	})
 
 	tutor := NewOpenAIChatGPTPlanTutor(ChatGPTPlanConfig{
@@ -276,5 +287,114 @@ func TestChatGPTPlanFallbackOnUnauthenticated(t *testing.T) {
 	}
 	if resp.Provider != "offline" {
 		t.Errorf("expected offline provider, got %s", resp.Provider)
+	}
+}
+
+func signedIdentity(t *testing.T, key *rsa.PrivateKey, client, nonce string) string {
+	t.Helper()
+	h, _ := json.Marshal(map[string]string{"alg": "RS256", "kid": "test"})
+	p, _ := json.Marshal(map[string]interface{}{"iss": "https://auth.openai.com", "sub": "user", "aud": client, "nonce": nonce, "exp": time.Now().Add(time.Hour).Unix(), "iat": time.Now().Unix()})
+	message := base64.RawURLEncoding.EncodeToString(h) + "." + base64.RawURLEncoding.EncodeToString(p)
+	hash := sha256.Sum256([]byte(message))
+	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hash[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return message + "." + base64.RawURLEncoding.EncodeToString(sig)
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+func identityClient(base *http.Client, key *rsa.PrivateKey) *http.Client {
+	return &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host != "auth.openai.com" {
+			return base.Transport.RoundTrip(r)
+		}
+		body, _ := json.Marshal(map[string]interface{}{"keys": []map[string]string{{"kid": "test", "kty": "RSA", "n": base64.RawURLEncoding.EncodeToString(key.N.Bytes()), "e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes())}}})
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(string(body))), Header: make(http.Header)}, nil
+	})}
+}
+
+func TestDynamicRegistrationHostAndCallback(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "auth.json")
+	store, err := NewAuthStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = store.SetChatGPTClientID("acctg-practice")
+	provider := NewOpenAIChatGPTPlanTutor(ChatGPTPlanConfig{AuthStore: store})
+	flow, raw, err := provider.StartOAuthFlow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer flow.Close()
+	u, _ := url.Parse(raw)
+	q := u.Query()
+	if u.Path != "/api/accounts/authorize" || q.Get("client_id") != DefaultDCRClientID || q.Get("resource") != DefaultOpenAIAPIURL || q.Get("agent_name_hint") != "AccountTutor 9000" || !hasPlanScope(q.Get("scope")) {
+		t.Fatalf("incorrect registration request: %s", raw)
+	}
+	reloaded, err := NewAuthStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	host, err := reloaded.EnsureHostID()
+	if err != nil || host != q.Get("ext_agent_host_id") || !strings.HasPrefix(host, "urn:uuid:") {
+		t.Fatal("host identity not persisted")
+	}
+	resp, err := http.Get(flow.RedirectURI + "?state=" + flow.PKCE.State + "&code=code&client_id=oaiapp_issued")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	_, err = flow.WaitForCallback(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if provider.GetClientID() != "oaiapp_issued" || store.IsConfigured(ProviderChatGPTPlan) {
+		t.Fatal("callback should retain issued ID without trusting credentials yet")
+	}
+}
+
+func TestIDTokenValidationRejectsInvalidIdentity(t *testing.T) {
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	provider := NewOpenAIChatGPTPlanTutor(ChatGPTPlanConfig{HTTPClient: identityClient(http.DefaultClient, key)})
+	valid := signedIdentity(t, key, "oaiapp_test", "nonce")
+	if _, err := provider.validateIDToken(context.Background(), valid, "oaiapp_test", "nonce"); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ token, client, nonce string }{
+		{valid, "wrong-client", "nonce"}, {valid, "oaiapp_test", "wrong-nonce"}, {valid + "x", "oaiapp_test", "nonce"}, {"unsigned", "oaiapp_test", "nonce"},
+	} {
+		if _, err := provider.validateIDToken(context.Background(), tc.token, tc.client, tc.nonce); err == nil {
+			t.Fatal("invalid identity accepted")
+		}
+	}
+}
+
+func TestOAuthCancellationAndMissingRegistration(t *testing.T) {
+	provider := NewOpenAIChatGPTPlanTutor(ChatGPTPlanConfig{})
+	flow, _, err := provider.StartOAuthFlow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	flow.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if _, err := flow.WaitForCallback(ctx); err == nil {
+		t.Fatal("closed sign-in did not cancel")
+	}
+	flow, _, err = provider.StartOAuthFlow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer flow.Close()
+	resp, err := http.Get(flow.RedirectURI + "?state=" + flow.PKCE.State + "&code=code")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if _, err := flow.WaitForCallback(ctx); err == nil {
+		t.Fatal("missing issued ID accepted")
 	}
 }

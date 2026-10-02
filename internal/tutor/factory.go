@@ -7,6 +7,7 @@ import (
 // FactoryOptions configures tutor creation.
 type FactoryOptions struct {
 	Provider       string        // "offline", "chatgpt_plan", "anthropic", "google", "openai"
+	Model          string        // Model override (e.g. "gpt-4o", "claude-3-5-sonnet-20241022")
 	Timeout        time.Duration // Default 5s
 	Budget         *Budget       // Optional session limiter
 	AuthStore      *AuthStore    // Credentials store
@@ -33,12 +34,18 @@ func BuildTutor(opts FactoryOptions) Tutor {
 		provider = ProviderOffline
 	}
 
+	model := opts.Model
+	if model == "" && opts.AuthStore != nil {
+		model = opts.AuthStore.ResolveModel(provider)
+	}
+
 	switch provider {
 	case ProviderChatGPTPlan:
 		chatgpt := NewOpenAIChatGPTPlanTutor(ChatGPTPlanConfig{
 			AuthStore: opts.AuthStore,
 			AuthURL:   opts.ChatGPTAuthURL,
 			APIURL:    opts.ChatGPTAPIURL,
+			Model:     model,
 			Budget:    opts.Budget,
 		})
 		return NewFallbackTutor(chatgpt, offline, timeout)
@@ -47,6 +54,7 @@ func BuildTutor(opts FactoryOptions) Tutor {
 		anthropic := NewAnthropicTutor(APIKeyConfig{
 			AuthStore: opts.AuthStore,
 			BaseURL:   opts.AnthropicURL,
+			Model:     model,
 			Budget:    opts.Budget,
 		})
 		return NewFallbackTutor(anthropic, offline, timeout)
@@ -55,6 +63,7 @@ func BuildTutor(opts FactoryOptions) Tutor {
 		gemini := NewGeminiTutor(APIKeyConfig{
 			AuthStore: opts.AuthStore,
 			BaseURL:   opts.GeminiURL,
+			Model:     model,
 			Budget:    opts.Budget,
 		})
 		return NewFallbackTutor(gemini, offline, timeout)
@@ -63,6 +72,7 @@ func BuildTutor(opts FactoryOptions) Tutor {
 		openai := NewOpenAIAPITutor(APIKeyConfig{
 			AuthStore: opts.AuthStore,
 			BaseURL:   opts.OpenAIURL,
+			Model:     model,
 			Budget:    opts.Budget,
 		})
 		return NewFallbackTutor(openai, offline, timeout)

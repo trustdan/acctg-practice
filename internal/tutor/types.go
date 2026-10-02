@@ -35,25 +35,27 @@ type Tutor interface {
 
 // Request contains the minimum problem and pedagogical context needed for assistance.
 type Request struct {
-	ProblemPrompt  string
-	FamilyID       string
-	Stage          domain.DrillStage
-	StagePrompt    string
-	Options        []domain.AnswerOption
-	SelectedOption *domain.AnswerOption
-	CausalHint     string
-	Explanation    string
-	ErrorTag       string
-	ConceptID      string
-	ReferenceRule  string
-	MaxTokens      int
+	CandidateGeneration bool
+	ProblemPrompt       string
+	FamilyID            string
+	Stage               domain.DrillStage
+	StagePrompt         string
+	Options             []domain.AnswerOption
+	SelectedOption      *domain.AnswerOption
+	CausalHint          string
+	Explanation         string
+	ErrorTag            string
+	ConceptID           string
+	ReferenceRule       string
+	MaxTokens           int
 }
 
 // Response contains the generated advice and provider provenance metadata.
 type Response struct {
-	Text        string
-	Provider    string
-	TokensUsed  int
-	Fallback    bool
-	GeneratedAt time.Time
+	Text           string
+	Provider       string
+	TokensUsed     int
+	FallbackReason string
+	Fallback       bool
+	GeneratedAt    time.Time
 }

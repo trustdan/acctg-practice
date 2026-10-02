@@ -2,7 +2,7 @@
 
 ## Goal and learner context
 
-Build a local, keyboard-driven financial-accounting practice environment for UW Foster ACCTG 502. The immediate goal is useful catch-up practice within one week; the architecture should support the quarter without requiring a full accounting simulator first.
+Build a local, keyboard-driven deliberate practice environment for Financial Accounting (**AccountTutor 9000**). The immediate goal is useful catch-up practice within one week; the architecture should support ongoing learning without requiring a full accounting simulator first.
 
 The learner prefers Go and model-agnostic tooling, trivial dollar amounts, progressive questions, Socratic hints, and persistent mastery with time-based forgetting. The hardest distinction is cash movement versus income, alongside debit/credit direction. The course currently uses journal entries, T-accounts, a spreadsheet, and a reported two-row, three-column debit/credit visual. The precise visual is unverified. Exercises begin with a fact pattern and ask for accounts, categories, direction, and debit/credit.
 
@@ -33,16 +33,27 @@ Likewise, a percentage displayed as mastery is a scheduling estimate, not a clin
 | Go, TUI, SQLite, offline-first | Go/Bubble Tea/SQLite dependency versions and target OS |
 | Machine and creative modes; offline fallback | Course vocabulary and actual Week 1–2 scope |
 | Optional tutor: ChatGPT Plus (OAuth) or API keys (Anthropic, Google, OpenAI) | Exact professor grid and statement formats |
+| Dynamic live model selection across providers (not frozen snapshots) | Provider model catalog API deprecations/rate limits |
 | Canonical reusable question bank | Exam rules and permitted aids |
 | Socratic progressive drills; contrast scenarios | Half-life tuning from observed performance |
 | Time-decayed concept scheduling | |
+| Viewport vertical scrolling on recap and tall views | Terminal dimension edge cases (< 15 rows) |
 
-Provider options for the optional AI tutor in Stage 11 accommodate both subscription and direct-key workflows:
-1. **ChatGPT Plus / Subscription**: OpenAI's official "Sign in with ChatGPT" flow for personal/open-source apps (token sharing) using DCR, PKCE, local loopback callback, and streamed Responses API (`store: false`, `stream: true`). No API key or client secret required.
+Provider options for the optional AI tutor accommodate both subscription and direct-key workflows:
+1. **ChatGPT Plus / Subscription**: OpenAI's official "Sign in with ChatGPT" flow for personal/open-source apps using PKCE, local loopback callback, registered client ID configuration, and streamed Responses API (`store: false`, `stream: true`).
 2. **User API Keys**: Direct adapters for Anthropic Claude (`ANTHROPIC_API_KEY`), Google Gemini (`GEMINI_API_KEY`), or OpenAI API (`OPENAI_API_KEY`), loaded via environment variables or interactive TUI entry.
+3. **Dynamic Model Discovery**: Live queries to provider model catalog endpoints (`/v1/models` and `/v1beta/models`) with local disk caching and offline fallbacks, allowing learners to select current model releases over time.
 
 All credentials and tokens reside securely in local user-data storage and are never committed to git. Machine-mode drills remain strictly offline, and the application will never silently switch between subscription allowance and paid API billing.
 
 ## Initial release and later growth
 
-The first release delivers offline progressive drills, reviewed seed families, immediate feedback, attempts saved durably, concept scheduling, and a readable mastery screen. AI integration, creative candidate review, full journal-entry input, T-account rendering, statement construction, and exam mode follow that release. A learner can begin practicing before the whole roadmap is complete.
+The application delivers offline progressive drills, reviewed seed families, immediate feedback, attempts saved durably, concept scheduling, and a readable mastery screen. Subsequent extensions added provider integration, creative candidate generation/review, full journal-entry input, T-account rendering, statement construction, and exam mode. 
+
+The immediate hardening roadmap addresses real-world student and contributor ergonomics:
+- **TUI Viewport Ergonomics**: Vertical scrolling on recap and tall card displays to prevent visual clipping on standard terminals.
+- **Provider Auth & Discovery**: Repairing OpenAI OAuth authorization parameters and supporting live model catalog selection across OpenAI, Anthropic, and Google.
+- **Comprehensive Documentation & Mac/Wine Guide**: Rewriting the README with an engaging intro, hyperlinked Table of Contents, and prominent macOS/Wine instructions.
+- **Contributor Governance**: Formalizing Pull Request templates, issue reporting guidelines, accounting rule verification checklists, and release packaging.
+- **Startup Arcade Game Enhancements**: Continuous machine-gun bursts with simultaneous steering, tactical smart bombs (`B`), progressive speed acceleration, dual audit health systems (Internal Audit Shields and External Audit Global Integrity), heavy accounting obstacles (`[FRAUD]`, `[INSIDER TRADING]`), and persistent SQLite high score leaderboard with retro 3-initials arcade entry.
+

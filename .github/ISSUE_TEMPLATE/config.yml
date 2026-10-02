@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "AccountTutor 9000 Contributing Guidelines"
+    url: "https://github.com/trustdan/acctg-practice/blob/main/CONTRIBUTING.md"
+    about: "Read our developer setup, accounting invariants, and PR guidelines before contributing."
+  - name: "Documentation & User Guide"
+    url: "https://github.com/trustdan/acctg-practice/blob/main/README.md"
+    about: "Explore the full user guide, CLI flags, and master keyboard cheatsheet."

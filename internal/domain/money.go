@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Money represents a monetary amount stored in integer minor units (cents).
@@ -63,6 +64,33 @@ func (m Money) FormatExact() string {
 		return fmt.Sprintf("-$%d.%02d", abs/100, abs%100)
 	}
 	return fmt.Sprintf("$%d.%02d", cents/100, cents%100)
+}
+
+// FormatCommas returns a formatted dollar string with thousands comma separators, e.g. "$80,000" or "$1,250.50".
+func (m Money) FormatCommas() string {
+	cents := int64(m)
+	sign := ""
+	if cents < 0 {
+		sign = "-"
+		cents = -cents
+	}
+	dollars := cents / 100
+	remainder := cents % 100
+
+	dStr := fmt.Sprintf("%d", dollars)
+	var formattedDollars strings.Builder
+	l := len(dStr)
+	for i, c := range dStr {
+		if i > 0 && (l-i)%3 == 0 {
+			formattedDollars.WriteRune(',')
+		}
+		formattedDollars.WriteRune(c)
+	}
+
+	if remainder == 0 {
+		return fmt.Sprintf("%s$%s", sign, formattedDollars.String())
+	}
+	return fmt.Sprintf("%s$%s.%02d", sign, formattedDollars.String(), remainder)
 }
 
 func (m Money) Add(other Money) Money {

@@ -38,6 +38,7 @@ const (
 	StateExam
 	StateExamSummary
 	StateExamResumePrompt
+	StateIntro
 	StateQuitting
 )
 
@@ -66,21 +67,37 @@ type Model struct {
 	ShowHint             bool
 
 	// Tutor integration
-	Tutor         tutor.Tutor
-	TutorTimeout  time.Duration
-	TutorActive   bool
-	TutorCancel   context.CancelFunc
-	TutorKind     string // "hint" or "explain"
-	TutorResponse *tutor.Response
-	TutorError    string
+	Tutor              tutor.Tutor
+	TutorTimeout       time.Duration
+	TutorActive        bool
+	TutorCancel        context.CancelFunc
+	TutorKind          string // "hint" or "explain"
+	TutorResponse      *tutor.Response
+	TutorError         string
+	LoadingFrame       int
+	TutorRequestID     int
+	CandidateActive    bool
+	CandidateCancel    context.CancelFunc
+	CandidateRequestID int
 
-	// Tutor settings state (Stage 11)
+	// Tutor settings state (Stage 11 & Stage 18)
 	AuthStore          *tutor.AuthStore
+	ModelCache         *tutor.ModelCache
 	TutorInputActive   bool
 	TutorInputBuffer   string
 	TutorInputProvider string
 	TutorAuthNotice    string
 	OAuthActiveFlow    *tutor.OAuthFlow
+
+	// Model Selection & Discovery (Stage 18)
+	TutorModelSelectActive bool
+	TutorModelList         []tutor.ModelInfo
+	TutorModelCursor       int
+	TutorCustomModelActive bool
+	TutorCustomModelBuffer string
+	TutorFetchingModels    bool
+	TutorOAuthInputActive  bool
+	TutorOAuthInputBuffer  string
 
 	// Candidate Preview state (Stage 12)
 	Candidates      []candidate.CandidateQuestion
@@ -106,6 +123,14 @@ type Model struct {
 	// Financial Statements & Case Study state (Stage 15)
 	StatementsReport *statements.AccountingCycleReport
 	StatementsScroll int
+
+	// Recap state (Stage 17)
+	RecapScroll int
+	PageScroll  int
+
+	// Startup Intro Animation
+	Intro       *IntroState
+	IntroReturn UIState // screen to restore when leaving the arcade
 
 	// Exam Mode state (Stage 16)
 	ExamRunner      *exam.ExamRunner
@@ -145,9 +170,13 @@ type Config struct {
 	Tutor          tutor.Tutor
 	TutorTimeout   time.Duration
 	AuthStore      *tutor.AuthStore
+	ModelCache     *tutor.ModelCache
+	TutorModel     string
+	OAuthClientID  string
 	ExamMode       bool
 	ExamTimeLimit  time.Duration
 	ResumeExam     bool
+	Intro          bool
 }
 
 // NewModel constructs and initializes a new TUI Model.
@@ -170,9 +199,26 @@ func NewModel(cfg Config) (*Model, error) {
 	if cfg.AuthStore == nil {
 		cfg.AuthStore, _ = tutor.NewAuthStore("")
 	}
+	modelCache := cfg.ModelCache
+	if modelCache == nil {
+		cachePath, err := tutor.DefaultModelCachePath()
+		if err == nil {
+			modelCache, _ = tutor.NewModelCache(cachePath)
+		}
+	}
+	if cfg.TutorModel != "" && cfg.AuthStore != nil {
+		active := cfg.AuthStore.GetConfig().ActiveProvider
+		if active != tutor.ProviderOffline {
+			_ = cfg.AuthStore.SetSelectedModel(active, cfg.TutorModel)
+		}
+	}
+	if cfg.OAuthClientID != "" && cfg.AuthStore != nil {
+		_ = cfg.AuthStore.SetChatGPTClientID(cfg.OAuthClientID)
+	}
 	if cfg.TutorTimeout <= 0 {
 		cfg.TutorTimeout = 3 * time.Second
 	}
+
 	if cfg.Tutor == nil {
 		cfg.Tutor = tutor.BuildTutor(tutor.FactoryOptions{
 			AuthStore: cfg.AuthStore,
@@ -202,6 +248,7 @@ func NewModel(cfg Config) (*Model, error) {
 		Tutor:          cfg.Tutor,
 		TutorTimeout:   cfg.TutorTimeout,
 		AuthStore:      cfg.AuthStore,
+		ModelCache:     modelCache,
 		SessionID:      sessID,
 		TotalQuestions: cfg.TotalQuestions,
 		RNG:            rng,
@@ -257,11 +304,21 @@ func NewModel(cfg Config) (*Model, error) {
 		m.State = StateExam
 	}
 
+	if cfg.Intro {
+		m.PreviousState = m.State
+		m.IntroReturn = m.State
+		m.State = StateIntro
+		m.initIntro()
+	}
+
 	return m, nil
 }
 
 // Init implements tea.Model.
 func (m *Model) Init() tea.Cmd {
+	if m.State == StateIntro {
+		return introTick()
+	}
 	if m.State == StateExam {
 		return tea.Tick(time.Second, func(t time.Time) tea.Msg { return examTickMsg{} })
 	}
@@ -273,6 +330,7 @@ type examTickMsg struct{}
 
 // tutorResponseMsg represents an asynchronous response from a tutor provider.
 type tutorResponseMsg struct {
+	ID   int
 	Kind string
 	Resp tutor.Response
 	Err  error
@@ -284,12 +342,75 @@ type oauthCompleteMsg struct {
 	Err   error
 }
 
+// modelsFetchedMsg represents completion of dynamic model discovery.
+type modelsFetchedMsg struct {
+	Provider string
+	Models   []tutor.ModelInfo
+	Err      error
+}
+
+// ExportedModelsFetchedMsg creates a modelsFetchedMsg for testing model discovery handlers.
+func ExportedModelsFetchedMsg(provider string, models []tutor.ModelInfo, err error) tea.Msg {
+	return modelsFetchedMsg{
+		Provider: provider,
+		Models:   models,
+		Err:      err,
+	}
+}
+
+// ExportedIntroTickMsg creates an introTickMsg for testing startup animation ticks.
+func ExportedIntroTickMsg() tea.Msg {
+	return introTickMsg{}
+}
+
 // Update implements tea.Model.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case loadingTickMsg:
+		if m.TutorActive || m.CandidateActive {
+			m.LoadingFrame++
+			return m, loadingTick()
+		}
+		return m, nil
+	case candidateResponseMsg:
+		if msg.ID != m.CandidateRequestID || !m.CandidateActive {
+			return m, nil
+		}
+		m.CandidateActive = false
+		if m.CandidateCancel != nil {
+			m.CandidateCancel()
+			m.CandidateCancel = nil
+		}
+		m.PageScroll = 0
+		if msg.Candidate != nil {
+			if m.DB != nil {
+				if err := m.DB.SaveCandidate(*msg.Candidate); err != nil {
+					m.CandidateNotice = "Could not save candidate: " + err.Error()
+					return m, nil
+				}
+			}
+			m.Candidates = append([]candidate.CandidateQuestion{*msg.Candidate}, m.Candidates...)
+			m.CandidateIndex = 0
+		}
+		if msg.Err != nil {
+			m.CandidateNotice = "LLM generation failed: " + msg.Err.Error()
+		} else {
+			m.CandidateNotice = "Generated LLM candidate; saved for review. Read the wording and derived answer, then [a] approve."
+		}
+		return m, nil
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
+		if m.Intro != nil {
+			m.Intro.Resize(msg.Width, msg.Height)
+		}
+		return m, nil
+
+	case introTickMsg:
+		if m.State == StateIntro && m.Intro != nil {
+			m.Intro.Update()
+			return m, introTick()
+		}
 		return m, nil
 
 	case examTickMsg:
@@ -308,6 +429,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tutorResponseMsg:
+		if msg.ID != m.TutorRequestID || !m.TutorActive {
+			return m, nil
+		}
+		if m.TutorCancel != nil {
+			m.TutorCancel()
+			m.TutorCancel = nil
+		}
+		m.PageScroll = 0
 		m.TutorActive = false
 		if msg.Err != nil {
 			if !errors.Is(msg.Err, context.Canceled) {
@@ -319,7 +448,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.TutorKind = msg.Kind
 		m.CurrentHint = msg.Resp.Text
 		m.ShowHint = true
-		m.TutorError = ""
+		m.TutorError = msg.Resp.FallbackReason
 		return m, nil
 
 	case oauthCompleteMsg:
@@ -330,17 +459,84 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.rebuildTutor()
 		}
 		m.OAuthActiveFlow = nil
+		if msg.Err == nil {
+			m.TutorFetchingModels = true
+			return m, m.cmdRefreshModels(tutor.ProviderChatGPTPlan)
+		}
+		return m, nil
+
+	case modelsFetchedMsg:
+		m.TutorFetchingModels = false
+		if msg.Err != nil {
+			m.TutorAuthNotice = "Model discovery failed: " + msg.Err.Error()
+		} else {
+			m.TutorModelList = msg.Models
+			if m.ModelCache != nil {
+				_ = m.ModelCache.SetModels(msg.Provider, msg.Models)
+			}
+			m.TutorModelSelectActive = true
+			m.TutorCustomModelActive = false
+			m.TutorAuthNotice = fmt.Sprintf("✓ Discovered %d live models from %s API! Select with [1-9] or [↑/↓/Enter].", len(msg.Models), strings.ToUpper(msg.Provider))
+			// Position cursor on current active model if present
+			m.TutorModelCursor = 0
+			if m.AuthStore != nil {
+				currentModel := m.AuthStore.ResolveModel(msg.Provider)
+				for idx, item := range m.TutorModelList {
+					if item.ID == currentModel {
+						m.TutorModelCursor = idx
+						break
+					}
+				}
+			}
+		}
 		return m, nil
 
 	case tea.KeyMsg:
 		key := msg.String()
+		if m.State != StateIntro && m.State != StateQuitting && !m.pageTextEntryActive() {
+			if key == "u" || key == "d" || key == "pgup" || key == "pgdown" {
+				step := (m.Height - 3) / 2
+				if step < 1 {
+					step = 1
+				}
+				if key == "u" || key == "pgup" {
+					step = -step
+				}
+				scroll := &m.PageScroll
+				if m.State == StateRecap {
+					scroll = &m.RecapScroll
+				}
+				if m.State == StateStatements {
+					scroll = &m.StatementsScroll
+				}
+				*scroll += step
+				if *scroll < 0 {
+					*scroll = 0
+				}
+				// Rendering clamps the offset to the current content and terminal size.
+				_ = m.View()
+				return m, nil
+			}
+		}
+		m.PageScroll = 0
 
 		// Global emergency exit
 		if key == "ctrl+c" {
+			m.cancelCandidate()
 			m.cancelTutor()
 			m.closeExamInterrupted()
 			m.State = StateQuitting
 			return m, tea.Quit
+		}
+
+		// Arcade shortcuts work from any screen that has no text entry or running timer.
+		if m.arcadeKeysAllowed() {
+			switch key {
+			case "A", "ctrl+a":
+				return m.launchArcade(false)
+			case "L":
+				return m.launchArcade(true)
+			}
 		}
 
 		switch m.State {
@@ -383,6 +579,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case StateExamResumePrompt:
 			return m.updateExamResumePrompt(key)
 
+		case StateIntro:
+			return m.updateIntro(key)
+
 		case StateQuitting:
 			return m, tea.Quit
 		}
@@ -392,11 +591,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) cancelTutor() {
+	m.TutorRequestID++
 	if m.TutorCancel != nil {
 		m.TutorCancel()
 		m.TutorCancel = nil
 	}
 	m.TutorActive = false
+}
+
+// Only free-form text entry consumes the page scrolling letters.
+func (m *Model) pageTextEntryActive() bool {
+	return m.State == StateTutorConfig && (m.TutorInputActive || m.TutorOAuthInputActive || m.TutorCustomModelActive) ||
+		m.State == StateJournalPractice && m.JournalInputActive && m.JournalInputMode == "amount"
 }
 
 func (m *Model) rebuildTutor() {
@@ -431,6 +637,7 @@ func (m *Model) requestTutor(kind string) (tea.Model, tea.Cmd) {
 	m.TutorError = ""
 
 	req := m.buildTutorRequest(st)
+	id := m.TutorRequestID
 	tut := m.Tutor
 
 	cmd := func() tea.Msg {
@@ -442,13 +649,14 @@ func (m *Model) requestTutor(kind string) (tea.Model, tea.Cmd) {
 			resp, err = tut.Explain(ctx, req)
 		}
 		return tutorResponseMsg{
+			ID:   id,
 			Kind: kind,
 			Resp: resp,
 			Err:  err,
 		}
 	}
 
-	return m, cmd
+	return m, tea.Batch(cmd, loadingTick())
 }
 
 func (m *Model) buildTutorRequest(st *domain.StageAnswer) tutor.Request {
@@ -499,6 +707,8 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 		m.State = StateCandidatePreview
 		m.loadCandidates()
 		return m, nil
+	case "n":
+		return m.requestCandidate()
 
 	case "t":
 		m.cancelTutor()
@@ -610,26 +820,26 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	// Direct option jump by alphanumeric label (a-d)
-	case "a":
+	// Numeric choices keep lowercase u/d available for page scrolling.
+	case "a", "1":
 		if numOpts > 0 {
 			m.SelectedOptionIndex = 0
 		}
 		return m, nil
 
-	case "b":
+	case "b", "2":
 		if numOpts > 1 {
 			m.SelectedOptionIndex = 1
 		}
 		return m, nil
 
-	case "c":
+	case "c", "3":
 		if numOpts > 2 {
 			m.SelectedOptionIndex = 2
 		}
 		return m, nil
 
-	case "d":
+	case "4":
 		if numOpts > 3 {
 			m.SelectedOptionIndex = 3
 		}
@@ -686,6 +896,8 @@ func (m *Model) submitSelectedAnswer() (tea.Model, tea.Cmd) {
 
 func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 	switch key {
+	case "n":
+		return m.requestCandidate()
 	case "q":
 		m.cancelTutor()
 		m.closeSession()
@@ -726,14 +938,14 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "enter", " ", "a", "b", "c", "d":
+	case "enter", " ", "a", "b", "c", "1", "2", "3", "4":
 		m.cancelTutor()
 		if m.LastFeedback != nil && !m.LastFeedback.AdvanceStage {
 			// Retry is available! Return to drill so learner can answer again
 			m.State = StateDrill
 			m.ShowHint = true
 			m.CurrentHint = m.LastFeedback.Hint
-			if key == "a" || key == "b" || key == "c" || key == "d" {
+			if key != "enter" && key != " " {
 				return m.updateDrill(key)
 			}
 			return m, nil
@@ -741,6 +953,7 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 
 		// Stage was completed (either correct or revealed answer)
 		if m.Session.IsCompleted {
+			m.RecapScroll = 0
 			m.State = StateRecap
 		} else {
 			m.State = StateDrill
@@ -783,8 +996,38 @@ func (m *Model) updateRecap(key string) (tea.Model, tea.Cmd) {
 		m.State = StateHelp
 		return m, nil
 
+	case "up", "k":
+		if m.RecapScroll > 0 {
+			m.RecapScroll--
+		}
+		return m, nil
+
+	case "down", "j":
+		m.RecapScroll++
+		return m, nil
+
+	case "pgup", "pageup":
+		m.RecapScroll -= 5
+		if m.RecapScroll < 0 {
+			m.RecapScroll = 0
+		}
+		return m, nil
+
+	case "pgdown", "pagedown":
+		m.RecapScroll += 5
+		return m, nil
+
+	case "g", "home":
+		m.RecapScroll = 0
+		return m, nil
+
+	case "G", "end":
+		m.RecapScroll = 9999
+		return m, nil
+
 	case "enter", " ":
 		m.QuestionsCompleted++
+		m.RecapScroll = 0
 		if m.CurrentQuestionIndex+1 >= m.TotalQuestions {
 			m.closeSession()
 			m.State = StateSessionComplete
@@ -924,6 +1167,21 @@ func (m *Model) updateSessionComplete(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) cmdRefreshModels(provider string) tea.Cmd {
+	cache := m.ModelCache
+	authStore := m.AuthStore
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		models, err := cache.RefreshProvider(ctx, provider, authStore, "", nil)
+		return modelsFetchedMsg{
+			Provider: provider,
+			Models:   models,
+			Err:      err,
+		}
+	}
+}
+
 func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 	if m.TutorInputActive {
 		switch key {
@@ -957,6 +1215,134 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if m.TutorOAuthInputActive {
+		switch key {
+		case "enter":
+			if m.AuthStore != nil {
+				_ = m.AuthStore.SetChatGPTClientID(m.TutorOAuthInputBuffer)
+				m.rebuildTutor()
+				m.TutorAuthNotice = fmt.Sprintf("✓ OpenAI OAuth Client ID saved: %s", m.TutorOAuthInputBuffer)
+			}
+			m.TutorOAuthInputActive = false
+			m.TutorOAuthInputBuffer = ""
+			return m, nil
+
+		case "esc":
+			m.TutorOAuthInputActive = false
+			m.TutorOAuthInputBuffer = ""
+			return m, nil
+
+		case "backspace":
+			if len(m.TutorOAuthInputBuffer) > 0 {
+				m.TutorOAuthInputBuffer = m.TutorOAuthInputBuffer[:len(m.TutorOAuthInputBuffer)-1]
+			}
+			return m, nil
+
+		default:
+			if len(key) == 1 {
+				m.TutorOAuthInputBuffer += key
+			}
+			return m, nil
+		}
+	}
+
+	if m.TutorModelSelectActive {
+		if m.TutorCustomModelActive {
+			switch key {
+			case "enter":
+				trimmed := strings.TrimSpace(m.TutorCustomModelBuffer)
+				if trimmed != "" && m.AuthStore != nil {
+					activeProvider := m.AuthStore.GetConfig().ActiveProvider
+					_ = m.AuthStore.SetSelectedModel(activeProvider, trimmed)
+					m.rebuildTutor()
+					m.TutorAuthNotice = fmt.Sprintf("✓ Active model for %s set to custom: %s", strings.ToUpper(activeProvider), trimmed)
+				}
+				m.TutorCustomModelActive = false
+				m.TutorCustomModelBuffer = ""
+				m.TutorModelSelectActive = false
+				return m, nil
+
+			case "esc":
+				m.TutorCustomModelActive = false
+				m.TutorCustomModelBuffer = ""
+				return m, nil
+
+			case "backspace":
+				if len(m.TutorCustomModelBuffer) > 0 {
+					m.TutorCustomModelBuffer = m.TutorCustomModelBuffer[:len(m.TutorCustomModelBuffer)-1]
+				}
+				return m, nil
+
+			default:
+				if len(key) == 1 {
+					m.TutorCustomModelBuffer += key
+				}
+				return m, nil
+			}
+		}
+
+		switch key {
+		case "j", "down":
+			if len(m.TutorModelList) > 0 && m.TutorModelCursor < len(m.TutorModelList)-1 {
+				m.TutorModelCursor++
+			}
+			return m, nil
+
+		case "k", "up":
+			if m.TutorModelCursor > 0 {
+				m.TutorModelCursor--
+			}
+			return m, nil
+
+		case "enter":
+			if len(m.TutorModelList) > 0 && m.TutorModelCursor < len(m.TutorModelList) && m.AuthStore != nil {
+				activeProvider := m.AuthStore.GetConfig().ActiveProvider
+				chosen := m.TutorModelList[m.TutorModelCursor].ID
+				_ = m.AuthStore.SetSelectedModel(activeProvider, chosen)
+				m.rebuildTutor()
+				m.TutorAuthNotice = fmt.Sprintf("✓ Active model for %s set to: %s", strings.ToUpper(activeProvider), chosen)
+				m.TutorModelSelectActive = false
+			}
+			return m, nil
+
+		case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			idx := int(key[0] - '1')
+			if idx >= 0 && idx < len(m.TutorModelList) && m.AuthStore != nil {
+				activeProvider := m.AuthStore.GetConfig().ActiveProvider
+				chosen := m.TutorModelList[idx].ID
+				_ = m.AuthStore.SetSelectedModel(activeProvider, chosen)
+				m.rebuildTutor()
+				m.TutorAuthNotice = fmt.Sprintf("✓ Active model for %s set to: %s", strings.ToUpper(activeProvider), chosen)
+				m.TutorModelSelectActive = false
+			}
+			return m, nil
+
+		case "r":
+			if m.AuthStore != nil {
+				activeProvider := m.AuthStore.GetConfig().ActiveProvider
+				if activeProvider == tutor.ProviderOffline {
+					m.TutorAuthNotice = "Offline provider uses deterministic rules; no remote models to discover."
+					return m, nil
+				}
+				m.TutorFetchingModels = true
+				m.TutorAuthNotice = fmt.Sprintf("Discovering live models from %s API...", strings.ToUpper(activeProvider))
+				return m, m.cmdRefreshModels(activeProvider)
+			}
+			return m, nil
+
+		case "c":
+			m.TutorCustomModelActive = true
+			m.TutorCustomModelBuffer = ""
+			return m, nil
+
+		case "esc":
+			m.TutorModelSelectActive = false
+			return m, nil
+		}
+
+		return m, nil
+	}
+
 	switch key {
 	case "1":
 		if m.AuthStore != nil {
@@ -967,6 +1353,9 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "2":
+		if m.OAuthActiveFlow != nil {
+			return m, nil
+		}
 		// Continue with ChatGPT Plus (OAuth)
 		if m.AuthStore != nil && m.AuthStore.IsConfigured(tutor.ProviderChatGPTPlan) {
 			_ = m.AuthStore.SetActiveProvider(tutor.ProviderChatGPTPlan)
@@ -987,13 +1376,10 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 		m.TutorAuthNotice = fmt.Sprintf("Login listener active at %s\nPlease authorize in browser: %s", flow.RedirectURI, authURL)
 
 		return m, func() tea.Msg {
+			_ = tutor.OpenSignInBrowser(authURL)
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
-			code, err := flow.WaitForCallback(ctx)
-			if err != nil {
-				return oauthCompleteMsg{Err: err}
-			}
-			tok, err := chatgptTutor.ExchangeCode(ctx, code, flow.RedirectURI, flow.PKCE.Verifier)
+			tok, err := flow.Complete(ctx)
 			return oauthCompleteMsg{Token: tok, Err: err}
 		}
 
@@ -1016,6 +1402,56 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 		m.TutorInputProvider = tutor.ProviderOpenAI
 		m.TutorInputBuffer = ""
 		m.TutorAuthNotice = ""
+		return m, nil
+
+	case "m":
+		if m.AuthStore != nil {
+			activeProvider := m.AuthStore.GetConfig().ActiveProvider
+			if activeProvider == tutor.ProviderOffline {
+				m.TutorAuthNotice = "Offline tutor uses deterministic rule engine. Choose an AI provider [2-5] first, then press 'm' to select or change its model."
+				return m, nil
+			}
+			m.TutorModelSelectActive = true
+			m.TutorCustomModelActive = false
+			m.TutorModelList = m.ModelCache.GetModels(activeProvider)
+			currentModel := m.AuthStore.ResolveModel(activeProvider)
+			m.TutorModelCursor = 0
+			for idx, item := range m.TutorModelList {
+				if item.ID == currentModel {
+					m.TutorModelCursor = idx
+					break
+				}
+			}
+		}
+		return m, nil
+
+	case "r":
+		if m.AuthStore != nil {
+			activeProvider := m.AuthStore.GetConfig().ActiveProvider
+			if activeProvider == tutor.ProviderOffline {
+				m.TutorAuthNotice = "Offline provider uses deterministic rules; no remote models to discover."
+				return m, nil
+			}
+			m.TutorFetchingModels = true
+			m.TutorAuthNotice = fmt.Sprintf("Discovering live models from %s API...", strings.ToUpper(activeProvider))
+			return m, m.cmdRefreshModels(activeProvider)
+		}
+		return m, nil
+
+	case "a":
+		if m.OAuthActiveFlow != nil {
+			m.OAuthActiveFlow.Close()
+			m.OAuthActiveFlow = nil
+		}
+		if m.AuthStore != nil {
+			if err := m.AuthStore.ClearCredentials(tutor.ProviderChatGPTPlan); err != nil {
+				m.TutorAuthNotice = err.Error()
+				return m, nil
+			}
+			_ = m.AuthStore.SetActiveProvider(tutor.ProviderOffline)
+			m.rebuildTutor()
+			m.TutorAuthNotice = "ChatGPT disconnected locally. Access can also be revoked in ChatGPT Settings. Press [2] to connect another account."
+		}
 		return m, nil
 
 	case "x":
@@ -1053,6 +1489,7 @@ func (m *Model) loadNextQuestion() error {
 	m.TutorResponse = nil
 	m.ShowHint = false
 	m.CurrentHint = ""
+	m.RecapScroll = 0
 
 	// Rebuild projections from all historical attempts
 	var allAttempts []domain.Attempt
@@ -1133,7 +1570,16 @@ func (m *Model) loadCandidates() {
 }
 
 func (m *Model) updateCandidatePreview(key string) (tea.Model, tea.Cmd) {
+	if m.CandidateActive {
+		if key == "esc" {
+			m.cancelCandidate()
+			m.CandidateNotice = "LLM generation canceled."
+		}
+		return m, nil
+	}
 	switch key {
+	case "n":
+		return m.requestCandidate()
 	case "esc", "p", "q":
 		m.State = m.PreviousState
 		m.CandidateNotice = ""
@@ -1237,7 +1683,7 @@ func (m *Model) updateCandidatePreview(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "d":
+	case "x", "delete":
 		// Delete current candidate
 		if len(m.Candidates) > 0 {
 			toDelete := m.Candidates[m.CandidateIndex]
@@ -1360,7 +1806,7 @@ func (m *Model) updateJournalPractice(key string) (tea.Model, tea.Cmd) {
 
 		case "side":
 			switch key {
-			case "d", "D":
+			case "D":
 				m.JournalSide = domain.SideDebit
 				m.JournalInputMode = "amount"
 				return m, nil
@@ -1453,7 +1899,7 @@ func (m *Model) updateJournalPractice(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "d", "D":
+	case "D":
 		if len(m.JournalLines) > 0 && m.JournalSelectedLine < len(m.JournalLines) {
 			m.JournalLines[m.JournalSelectedLine].Side = domain.SideDebit
 			m.JournalNotice = "Updated line to Debit."
@@ -1552,12 +1998,23 @@ func (m *Model) updateStatements(key string) (tea.Model, tea.Cmd) {
 		m.StatementsScroll++
 		return m, nil
 
-	case "g":
+	case "pgup", "pageup":
+		m.StatementsScroll -= 5
+		if m.StatementsScroll < 0 {
+			m.StatementsScroll = 0
+		}
+		return m, nil
+
+	case "pgdown", "pagedown":
+		m.StatementsScroll += 5
+		return m, nil
+
+	case "g", "home":
 		m.StatementsScroll = 0
 		return m, nil
 
-	case "G":
-		m.StatementsScroll = 80
+	case "G", "end":
+		m.StatementsScroll = 9999
 		return m, nil
 	}
 	return m, nil
@@ -1707,28 +2164,28 @@ func (m *Model) updateExam(key string) (tea.Model, tea.Cmd) {
 		m.ExamNotice = ""
 		return m, nil
 
-	case "a":
+	case "a", "1":
 		if numOpts > 0 {
 			m.SelectedOptionIndex = 0
 		}
 		m.ExamNotice = ""
 		return m, nil
 
-	case "b":
+	case "b", "2":
 		if numOpts > 1 {
 			m.SelectedOptionIndex = 1
 		}
 		m.ExamNotice = ""
 		return m, nil
 
-	case "c":
+	case "c", "3":
 		if numOpts > 2 {
 			m.SelectedOptionIndex = 2
 		}
 		m.ExamNotice = ""
 		return m, nil
 
-	case "d":
+	case "4":
 		if numOpts > 3 {
 			m.SelectedOptionIndex = 3
 		}
@@ -1848,4 +2305,250 @@ func (m *Model) updateExamResumePrompt(key string) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) initIntro() {
+	m.Intro = NewIntroState(m.Width, m.Height, m.RNG)
+	if m.DB != nil {
+		top, err := m.DB.GetTopArcadeHighScore()
+		if err == nil && top != nil {
+			m.Intro.SetHighScore(top.Score, top.Initials)
+		}
+	}
+}
+
+func (m *Model) saveArcadeScore() {
+	if m.Intro == nil || m.DB == nil || m.Intro.ScoreSaved {
+		return
+	}
+	initials := m.Intro.GetInitialsString()
+	if initials == "" {
+		initials = "AAA"
+	}
+	_ = m.DB.SaveArcadeHighScore(storage.ArcadeHighScore{
+		Initials:        initials,
+		Score:           m.Intro.Score,
+		BlastedCount:    m.Intro.BlastedCount,
+		SurvivalSeconds: m.Intro.TickCount / 30,
+	})
+	m.Intro.ScoreSaved = true
+	m.Intro.SetHighScore(m.Intro.Score, initials)
+}
+
+func (m *Model) arcadeKeysAllowed() bool {
+	switch m.State {
+	case StateDrill, StateFeedback, StateRecap, StateMastery, StateHelp, StateSessionComplete, StateStatements:
+		return true
+	}
+	return false
+}
+
+// launchArcade replays the startup game from the current screen, optionally
+// opening straight onto the Hall of Fame.
+func (m *Model) launchArcade(showScores bool) (tea.Model, tea.Cmd) {
+	m.cancelTutor()
+	m.IntroReturn = m.State
+	m.initIntro()
+	m.State = StateIntro
+	if showScores {
+		m.openLeaderboard()
+		m.Intro.LeaderboardOnly = true
+	}
+	return m, introTick()
+}
+
+func (m *Model) openLeaderboard() {
+	m.Intro.Leaderboard = nil
+	if m.DB != nil {
+		if top, err := m.DB.ListTopArcadeHighScores(10); err == nil {
+			m.Intro.Leaderboard = top
+		}
+	}
+	m.Intro.ShowLeaderboard = true
+}
+
+func (m *Model) exitIntro() (tea.Model, tea.Cmd) {
+	targetState := m.IntroReturn
+	if targetState == StateIntro || targetState == 0 {
+		targetState = StateDrill
+	}
+	m.State = targetState
+	if m.State == StateExam {
+		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return examTickMsg{} })
+	}
+	return m, nil
+}
+
+func (m *Model) updateIntro(key string) (tea.Model, tea.Cmd) {
+	if m.Intro == nil {
+		return m, nil
+	}
+
+	// 0. Hall of Fame overlay (flight is paused underneath)
+	if m.Intro.ShowLeaderboard {
+		switch key {
+		case "L", "l", "esc":
+			if m.Intro.LeaderboardOnly {
+				return m.exitIntro()
+			}
+			m.Intro.ShowLeaderboard = false
+		case "r", "R":
+			m.initIntro()
+		case "enter":
+			m.Intro.ShowLeaderboard = false
+			if !m.Intro.LeaderboardOnly {
+				return m.updateIntro("enter")
+			}
+			return m.exitIntro()
+		case "q":
+			m.State = StateQuitting
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+
+	// 1. Retro 3-Initials Entry Modal
+	if m.Intro.InitialsEntryActive {
+		switch key {
+		case "up", "w", "k":
+			m.Intro.CycleInitial(1)
+			return m, nil
+		case "down", "s", "j":
+			m.Intro.CycleInitial(-1)
+			return m, nil
+		case "left", "h", "backspace":
+			m.Intro.PrevInitial()
+			return m, nil
+		case "right", "l":
+			m.Intro.NextInitial()
+			return m, nil
+		case "enter", "space":
+			done := m.Intro.NextInitial()
+			if done {
+				m.saveArcadeScore()
+				m.Intro.InitialsEntryActive = false
+				if m.Intro.GameOver {
+					return m, nil
+				}
+				return m.exitIntro()
+			}
+			return m, nil
+		case "esc":
+			m.saveArcadeScore()
+			m.Intro.InitialsEntryActive = false
+			return m, nil
+		default:
+			if len(key) == 1 {
+				ch := rune(key[0])
+				if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') {
+					m.Intro.SetInitial(ch)
+					return m, nil
+				}
+			}
+			return m, nil
+		}
+	}
+
+	// 2. Fiscal year closed: continue for a higher score, or retire as a win.
+	if m.Intro.YearComplete {
+		switch key {
+		case "y", "Y":
+			m.Intro.ContinueYear()
+		case "n", "N":
+			m.Intro.RetireAfterYear()
+		case "L", "l":
+			m.openLeaderboard()
+		case "q":
+			m.State = StateQuitting
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+
+	// 3. Pause overlay
+	if m.Intro.Paused {
+		switch key {
+		case "p", "P":
+			m.Intro.TogglePause()
+		case "L", "l":
+			m.openLeaderboard()
+		case "enter", "esc":
+			return m.leaveFlight()
+		case "q":
+			m.State = StateQuitting
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+
+	// 4. Game Over Modal Handling
+	if m.Intro.GameOver {
+		switch key {
+		case "r", "R":
+			m.initIntro()
+			return m, nil
+		case "L", "l":
+			m.openLeaderboard()
+			return m, nil
+		case "enter", "esc":
+			return m.leaveFlight()
+		case "q":
+			m.State = StateQuitting
+			return m, tea.Quit
+		default:
+			return m, nil
+		}
+	}
+
+	// 5. Active Flight & Combat
+	switch key {
+	case "enter", "esc":
+		return m.leaveFlight()
+
+	case "q":
+		m.State = StateQuitting
+		return m, tea.Quit
+
+	case "up", "w", "k":
+		m.Intro.SteerUp()
+		return m, nil
+
+	case "down", "s", "j":
+		m.Intro.SteerDown()
+		return m, nil
+
+	case "b", "B":
+		m.Intro.DeployBomb()
+		return m, nil
+
+	case "f", " ", "space":
+		m.Intro.Fire()
+		return m, nil
+
+	case "g", "G":
+		m.Intro.ToggleAutoFire()
+		return m, nil
+
+	case "p", "P":
+		m.Intro.TogglePause()
+		return m, nil
+
+	case "L", "l":
+		m.openLeaderboard()
+		return m, nil
+
+	default:
+		return m, nil
+	}
+}
+
+// leaveFlight heads to the drills, first asking for initials when the run set
+// a new all-time high score.
+func (m *Model) leaveFlight() (tea.Model, tea.Cmd) {
+	if m.Intro.Score > m.Intro.HighScore && m.Intro.Score > 0 && !m.Intro.ScoreSaved {
+		m.Intro.Paused = false
+		m.Intro.InitialsEntryActive = true
+		return m, nil
+	}
+	return m.exitIntro()
 }

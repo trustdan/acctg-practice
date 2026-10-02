@@ -1,6 +1,7 @@
 package bank
 
 import (
+	"github.com/trustdan/acctg-practice/internal/domain"
 	"time"
 )
 
@@ -83,16 +84,23 @@ type QuestionBankFile struct {
 
 // QuestionJSON represents a single question template in JSON.
 type QuestionJSON struct {
-	ID               string             `json:"id"`
-	Version          int                `json:"version"`
-	FamilyID         string             `json:"family_id"`
-	RuleVersion      int                `json:"rule_version"`
-	Status           string             `json:"status"`
-	ScenarioTemplate string             `json:"scenario_template"`
-	Parameters       map[string][]int64 `json:"parameters"`
-	Concepts         []string           `json:"concepts"`
-	ExpectedFixture  FixtureJSON        `json:"expected_fixture"`
-	Review           ReviewJSON         `json:"review"`
+	Teaching         map[domain.DrillStage]TeachingText `json:"teaching,omitempty"`
+	ID               string                             `json:"id"`
+	Version          int                                `json:"version"`
+	FamilyID         string                             `json:"family_id"`
+	RuleVersion      int                                `json:"rule_version"`
+	Status           string                             `json:"status"`
+	ScenarioTemplate string                             `json:"scenario_template"`
+	Parameters       map[string][]int64                 `json:"parameters"`
+	Concepts         []string                           `json:"concepts"`
+	ExpectedFixture  FixtureJSON                        `json:"expected_fixture"`
+	Review           ReviewJSON                         `json:"review"`
+}
+
+// TeachingText is reviewed wording only; it cannot change stage answers.
+type TeachingText struct {
+	Hint        string `json:"hint"`
+	Explanation string `json:"explanation"`
 }
 
 // FixtureJSON defines the expected journal postings for testing and regression.

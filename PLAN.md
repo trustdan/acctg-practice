@@ -130,12 +130,208 @@ Reuse engine and approved bank with hints/reference/feedback suppressed until fi
 
 Gate: answers withheld throughout session; results reproducible; history preserved; interrupted session resumes or closes explicitly.
 
-## Stage 17 — Quarter maintenance and release hardening
+## Stage 17 — TUI viewport ergonomics and recap scrolling
 
-Document build/run/backup/provider configuration and new-family review procedures. Test target OS and terminal, database upgrade, bank upgrade, and no-provider startup. Add new course units only from evidence. Review accessibility, response latency, and private-data handling.
+Implement smooth keyboard-driven vertical scrolling in the transaction recap view (`StateRecap`) and audit all multi-component screens for standard terminal dimensions (e.g., 80x24 rows).
+- Support scrolling in `StateRecap` with `j`/`k`, `↑`/`↓`, `PageUp`/`PageDown`, `g` (jump to top), and `G` (jump to bottom).
+- Maintain an explicit scroll offset clamped between `0` and `max(0, totalLines - viewportHeight)`.
+- Render a clear, subtle visual scroll indicator (e.g. `▲ Scroll: [Line X/Y] (j/k or ↑/↓) ▼`) when content exceeds the terminal height.
+- Reset scroll offset to `0` upon loading a new question or re-entering recap.
+- Audit tall modal/view components (Financial Statements `StateStatements`, Journal Entry Practice `StateJournalPractice`, Exam Summary `StateExamSummary`, and Candidate Review `StateCandidateReview`) for consistent scroll boundaries and zero visual clipping.
 
-Gate: clean setup and offline drill from a fresh clone; upgrade preserves history; dependency locks and instruction files agree; unresolved limitations documented.
+Gate: Transaction recap can be scrolled smoothly via keyboard without clipping on standard terminal heights (>= 15 rows); scroll offset is strictly clamped; indicators reflect position accurately; advancement (`Enter`/`Space`) and navigation remain responsive.
 
-## Suggested first-week allocation
+## Stage 18 — Provider authentication repair and dynamic model discovery (Complete)
 
-Day 1: repository/course grounding and contracts. Days 2–3: engine and progressive slice. Days 3–4: persistence and scheduler. Days 4–5: offline TUI. Days 6–7: actual practice, contrast bank review, and fixes. Defer providers and creative UI if offline release needs attention. Adjust this allocation to observed progress rather than rushing gates.
+Resolve external tutor authentication failures and enable real-time model discovery across providers rather than relying on frozen snapshots:
+- **OpenAI OAuth Login Repair & Diagnostics**:
+  - Diagnosed and resolved the `auth.openai.com` authorization rejection caused by unverified/unregistered client IDs (`client_id=acctg-practice-client`).
+  - Supported user-configured or organization OAuth client registration parameters via `OPENAI_OAUTH_CLIENT_ID` env var, `--oauth-client-id` CLI flag, and TUI Tutor Settings modal (`o`).
+  - Surfaced rich, actionable error messages and diagnostics to the learner via the local callback server HTML page and TUI notice if OAuth configuration is incomplete or rejected.
+  - Ensured zero disruption to offline practice and seamless fallback to `APIKeyTutor` (`OPENAI_API_KEY`) or `OfflineTutor`.
+- **Dynamic Multi-Provider Model Discovery & Caching**:
+  - Implemented dynamic model catalog discovery for all supported AI providers:
+    - **OpenAI**: Query `GET /v1/models` (filtering for chat and reasoning models like `gpt-4o`, `gpt-4o-mini`, `o1`, `o3-mini`).
+    - **Anthropic**: Query Anthropic Models API `GET /v1/models` (listing active Claude models like `claude-3-7-sonnet`, `claude-3-5-sonnet`, `claude-3-5-haiku`).
+    - **Google Gemini**: Query Gemini API `GET /v1beta/models` (filtering for models supporting `generateContent`).
+  - Cached discovered model catalogs locally in user data directory (`models_cache.json`) with timestamps and instant, non-blocking startup.
+  - Maintained vetted offline fallback defaults if network or discovery calls fail.
+- **Dynamic Model Selection & Switching**:
+  - Implemented an interactive model selector within the TUI Tutor Settings modal (`t` -> `m`), allowing learners to browse discovered models, select with Enter or quick-keys `[1-9]`, dynamically change models, or input arbitrary custom model IDs (`c`).
+  - Persisted user-selected models per provider in `AuthConfig` (`SelectedModels map[string]string`) and passed dynamically into all subsequent tutor hint/explanation requests.
+  - Exposed CLI options for model listing and selection (`--tutor-model=<name>`, `--list-models`, `--fetch-models` / `--refresh-models`).
+
+Gate: PASSED. TUI Tutor Settings modal allows browsing and selecting live models fetched from OpenAI, Anthropic, and Google APIs; discovered models are cached locally; OpenAI OAuth authorization is repaired with explicit registration setup, actionable diagnostics, and graceful fallback; mock tests verify API parsing, caching, and error resilience without external network dependencies.
+## Stage 19 — Comprehensive documentation, hyperlinked Table of Contents, and Mac/Wine guide (Complete)
+
+Transform `README.md` from an initial planning starter into an authoritative, publication-quality user hub:
+- **Introductory Overview**: Concise, compelling blurb explaining the keyboard-driven, offline-first accounting tutor (**AccountTutor 9000**).
+- **Prominent Table of Contents**: Directly following the intro blurb, provide a clean, hyperlinked Table of Contents with working markdown anchor links to all major document sections.
+- **Prominent macOS / Wine Execution Guide**:
+  - First-class, detailed instructions for running the pre-built Windows binary on macOS using Wine (`brew install --cask wine-stable`, running `wine ./acctg.exe`, terminal font/cursor rendering tips, keyboard mapping notes).
+  - Alternative native macOS execution via Go (`brew install go`, `go build -o acctg ./cmd/acctg`, `./acctg`).
+  - Cross-compilation instructions for Apple Silicon and Intel Macs (`GOOS=darwin GOARCH=arm64 go build -o acctg-mac ./cmd/acctg`).
+- **Feature Tour & Keyboard Cheatsheet**: Exhaustive documentation of all practice modes (Progressive Drill, Journal Entry Practice, Financial Statements, Exam Mode, Tutor Configuration, Candidate Review).
+- **CLI Reference & Curriculum**: Complete reference of CLI flags, embedded curriculum accounts, and accounting invariants.
+
+Gate: PASSED. `README.md` fully rewritten with zero placeholder text; all internal markdown links navigate to valid anchors; macOS Wine instructions tested and prominently featured; complete CLI and keyboard cheat sheets match current binary capabilities.
+
+## Stage 20 — Contributor workflow, PR/issue instructions, and release hardening (Complete)
+
+Establish structured collaboration guidelines and finalize quarter maintenance:
+- **Pull Request Guidelines & Template**:
+  - Add `.github/PULL_REQUEST_TEMPLATE.md` and `CONTRIBUTING.md`.
+  - Enforce automated quality gates: `gofmt -s -w .`, `go vet ./...`, `go test ./...`.
+  - Guidelines for contributing new accounting families and fixtures (requiring reviewed rules, table-driven semantic tests, distractor tagging, and balanced postings).
+  - Invariant enforcement: strictly prevent secrets, API keys, or personal learner attempt history from entering git commits.
+- **Issue Filing Guidelines & Templates**:
+  - Create issue templates for Accounting Error / Reconciliation Disputes, Feature Requests / Curriculum Scope, and Terminal / Cross-Platform Bugs.
+- **Quarter Maintenance, Multi-Platform Packaging, and Release Hardening**:
+  - Validate clean setup and offline practice from a fresh repository clone.
+  - Native pre-compiled macOS release packaging (`acctg-mac-arm64` for Apple Silicon M1-M4, `acctg-mac-amd64` for Intel Macs, and universal binary).
+  - Double-clickable [`Launch-Tutor.command`](Launch-Tutor.command) launcher script allowing Mac classmates to launch without typing terminal commands.
+  - Document macOS Gatekeeper quarantine removal (`xattr -d com.apple.quarantine`) and Finder Right-Click override.
+  - Retain and maintain Wine execution (`wine ./acctg.exe`) as a tested secondary fallback for users who only receive the Windows binary.
+  - Multi-platform smoke test matrix (Windows PowerShell, macOS native ARM64 & Terminal via Wine, Linux).
+  - SQLite database migration and upgrade regression verification.
+  - Final binary packaging and release notes.
+
+Gate: PASSED. Contribution and issue filing templates in place; PR template enforces test and accounting invariant checklists; clean build from fresh clone verified; zero unresolved lint or vet issues; release packaging complete.
+
+## Stage 21 — Classroom Transaction Analysis Grid (Verified Slide Format) (Complete)
+
+Incorporate verified classroom visual conventions from instructor slides:
+- Inspect and match the 4-column classroom transaction analysis grid:
+  - Column 1: `Dr.` / `Cr.` side indicator.
+  - Column 2: Account Name with Equation Effect indicator: `Cash (+A)`, `Loan (+L)`, `Common Stock (+E)`, `Rent Expense (-E)`, `Accounts Payable (-L)`.
+  - Column 3: Debit amount (e.g. `$80,000`).
+  - Column 4: Credit amount (e.g. `$80,000`).
+  - Clean rectangular grid / box borders around all cells.
+- Calculate equation effect per posting based on normal balance and direction ($\Delta A$, $\Delta L$, $\Delta E$).
+- Update `internal/domain`: add posting equation effect calculations and grid rendering.
+- Update `internal/tui/view.go`: upgrade `renderRecap` and `renderJournalPractice` to use the 4-column classroom grid.
+- Update `GenericVisualNotice` to reflect verified classroom grid format.
+
+Gate: PASSED. Transaction recaps and journal practice render 4-column bordered grids matching instructor slides; equation indicators accurately reflect account category and direction; debits and credits align to dedicated columns; unit tests verify formatting and equation tags.
+
+## Stage 22 — Unencumbered Arcade Intro Flight & Combat Override (Complete)
+
+Enhance the startup spaceship arcade animation (`StateIntro`) with persistent manual piloting:
+- Auto-pilot and auto-firing remain active by default as demo/attract mode.
+- Transition immediately to persistent manual control as soon as user presses a game control key (`W`, `S`, `↑`, `↓`, `F`, `Space`).
+- Disable auto-movement and auto-steering once user takes control: ship flies responsive to user input with aerodynamic friction.
+- Disable auto-shooting once user takes control: blaster cannons only fire when explicitly triggered by the user (`F` or `Space`).
+- Allow the player to play unencumbered indefinitely until they decide to transition to accounting drills (`Enter` or `Esc`).
+- Display clear HUD status badges: `PILOT: MANUAL [PLAY]` vs `PILOT: AUTO-PILOT [DEMO]`.
+
+Gate: PASSED. Touching controls permanently disengages auto-pilot and auto-cannons for the session; player flies and shoots with zero automated interference; drill begins cleanly on Enter/Esc; unit tests cover manual transition and state persistence.
+
+## Stage 23 — Complete Linux Distribution & Desktop Integration (Complete)
+
+Provide first-class Linux support matching macOS and Windows:
+- Standalone native binaries for both `linux/amd64` and `linux/arm64` (Raspberry Pi, ARM cloud, Asahi Linux, Chromebooks).
+- Create `launch-tutor.sh` double-clickable launcher with terminal emulator auto-detection (`gnome-terminal`, `konsole`, `xfce4-terminal`, `xterm`, etc.) and Wine fallback.
+- Create standard XDG desktop entry `accounttutor.desktop`.
+- Update release packaging scripts (`build_releases.sh`, `build_releases.ps1`) to bundle Linux distributions.
+- Expand `README.md` with comprehensive Linux guide (installation, execution, terminal settings, shortcuts, and troubleshooting).
+
+Gate: PASSED. Clean cross-compilation for `linux/amd64` and `linux/arm64`; `launch-tutor.sh` detects environment and architecture; desktop entry conforms to XDG standards; documentation provides complete Linux onboarding.
+
+## Stage 24 — LLM Linkages Verification & OAuth Diagnostics (Complete)
+
+Test, diagnose, and harden external AI tutor connections:
+- Update default OpenAI OAuth client ID to `acctg-practice`.
+- Provide actionable in-app and browser diagnostics for OpenAI `invalid_client` ("This app is unavailable"): use automatic open-source dynamic registration (supersedes the original developer-registration diagnosis) and offer immediate 1-click fallback to API keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`) or 100% offline mode.
+- Add `--test-llm` / `--test-providers` CLI command to verify all configured LLM provider connections and report diagnostic status.
+- Table-driven unit tests for all provider adapters and OAuth error scenarios without external network dependencies.
+
+Gate: PASSED. `DefaultDCRClientID` matches registered identifier `acctg-practice`; `--test-llm` reports status across all 5 providers; OAuth errors display actionable resolution guidance; mock tests verify resilience.
+
+## Stage 25 — Startup Arcade Combat Enhancements (Rapid Machine Gun & Smart Bombs) (Complete)
+
+Enhance the startup spaceship arcade game (`StateIntro`) with responsive continuous firing mechanics and smart bomb capabilities:
+- **Continuous Machine Gun Fire & Simultaneous Steering**:
+  - Support holding down `F` (or `Space`) for rapid machine-gun blaster fire.
+  - Implement a rapid-fire burst counter / cooldown in `IntroState` so that pressing or holding `F` initiates sustained blaster bursts across game ticks.
+  - Ensure flight steering inputs (`W`, `S`, `↑`, `↓`, `k`, `j`) and laser firing operate seamlessly without cancelling or blocking each other in Bubble Tea's event stream.
+- **Smart Bomb Deployment (`B` key)**:
+  - Separate bomb deployment from normal laser blasters (reassign `B` / `b` to smart bomb).
+  - Track player bomb ordnance stock (e.g. 3 tactical bombs per flight).
+  - Trigger expanding ASCII shockwave ring (`IntroShockwave`) spanning the viewport with radial debris and screen flash.
+  - Deal massive damage to all active threats on screen (vaporizing standard accounting entities and heavily damaging heavy obstacles).
+  - Add combat callouts (`BOMB DETONATED!`, `EMERGENCY AUDIT!`, `TOTAL CLEARANCE!`) and HUD bomb counter display (`BOMBS: 💣💣💣 [B]`).
+
+Gate: PASSED. Holding `F` produces continuous blaster fire; steering during fire does not stall movement or lasers; pressing `B` consumes ordnance, renders an expanding shockwave, damages entities, and awards points; unit tests verify rapid fire cooldown and bomb detonation.
+
+## Stage 26 — Progressive Acceleration & Dual Audit Hit Points (Internal & External Audit HP) (Complete)
+
+Transform the startup animation into a high-stakes, escalating arcade challenge with survival stakes and dual health systems:
+- **Progressive Flight Acceleration**:
+  - Start at a measured, accessible cruise velocity (`SpeedMultiplier = 1.0`).
+  - Progressively accelerate entity speeds, starfield parallax drift, and spawn density over time based on elapsed ticks and player score.
+- **Dual Audit Health System**:
+  - **Internal Audit Shields (`ShieldHP`, 100%)**: Decreases when incoming accounting entities or obstacles collide directly with the spaceship's fuselage/wings (failed to dodge or blast threats in time).
+  - **Global / External Audit Integrity (`GlobalHP`, 100%)**: Decreases whenever an accounting item escapes off the left edge of the screen into the wild without being audited/blasted.
+  - Color-coded dual health bars on the arcade HUD:
+    `INT AUDIT [SHIELD]: [████████░░] 80%  │  EXT AUDIT [GLOBAL]: [██████████] 100%`
+- **Audit Failure & Remediation Flow**:
+  - If `ShieldHP <= 0`, trigger "INTERNAL AUDIT FAILURE — DEFICIENT CONTROLS!"
+  - If `GlobalHP <= 0`, trigger "EXTERNAL AUDIT FAILURE — ADVERSE OPINION!"
+  - Visual explosion sequence with Game Over summary, final score, and prompt to retry flight (`R`) or begin accounting drills (`Enter`/`Esc`).
+
+Gate: PASSED. Target speed and starfield parallax accelerate over time; ship collision reduces internal shield HP; missed entities reduce external audit global HP; reaching 0 HP in either meter triggers audit failure game over screen; unit tests verify damage and acceleration math.
+
+## Stage 27 — Heavy Accounting Obstacles (Fraud & Insider Trading Asteroids) (Complete)
+
+Introduce large, multi-hit accounting hazard obstacles requiring concentrated fire or tactical bombs:
+- **Hazard Asteroids Catalog**:
+  - Multi-line, high-visibility ASCII obstacles representing severe accounting violations:
+    - `[🚨 FRAUD: HP 10/10]` (10 HP)
+    - `[⚠️ INSIDER TRADING: HP 12/12]` (12 HP)
+    - `[💣 MATERIAL WEAKNESS: HP 8/8]` (8 HP)
+    - `[💸 PONZI SCHEME: HP 14/14]` (14 HP)
+- **Multi-Hit Durability & Visual Feedback**:
+  - Require multiple laser hits or a direct smart bomb detonation to neutralize.
+  - Display remaining hazard HP or flashing damage indicator on hit with spark particle emissions.
+- **Fragmentation & High-Value Rewards**:
+  - When destroyed, break into 2–3 smaller sub-targets (e.g. `[SHREDDED EVIDENCE]`, `[SEC PENALTY]`, `[RESTITUTION]`) that drift and can be blasted for bonus score.
+  - Large explosion effect and floating callouts (`SEC INJUNCTION! +1,000`, `CRIMINAL REFERRAL!`).
+  - Severe penalty to Internal Audit Shield HP on direct collision, and major hit to External Audit Global HP if allowed to escape off-screen.
+
+Gate: PASSED. Heavy obstacles spawn at higher difficulty intervals; require multiple laser hits or smart bomb to destroy; fragment into sub-targets upon destruction; deal amplified damage on collision or escape; unit tests verify multi-hit damage and fragmentation.
+
+## Stage 28 — Persistent Arcade High Scores & 3-Initials Hall of Fame (SQLite Integration) (Complete)
+
+Preserve arcade performance across sessions in the local SQLite database with retro arcade initials entry:
+- **SQLite Database Migration (Migration 6)**:
+  - Add `arcade_high_scores` table (`id`, `initials`, `score`, `blasted_count`, `survival_seconds`, `created_at`).
+  - Pure-Go implementation with index on `score DESC`.
+  - Methods in `internal/storage`: `GetTopArcadeHighScore()`, `SaveArcadeHighScore()`, `ListTopArcadeHighScores()`.
+- **Conditional 3-Initials Arcade Entry**:
+  - When game concludes (game over or exit to drills), check if the current score beats the all-time high score in the database.
+  - If new high score achieved: prompt with retro arcade 3-character initials selector (`[ _ ] [ _ ] [ _ ]`) using `↑`/`↓` or `A-Z` to cycle characters, and `Enter`/`Space` to advance and commit.
+  - If score does NOT beat the high score: do NOT prompt for initials; display standard score summary and preserve existing high score.
+- **HUD & Leaderboard Integration**:
+  - Display all-time high score on HUD: `HIGH: [DAN] 12,450`.
+  - Flashing indicator when player surpasses the high score during live flight (`*** NEW ALL-TIME HIGH! ***`).
+  - CLI flag `--high-scores` to view the top 10 arcade pilots from the terminal.
+
+Gate: PASSED. Migration 6 applies cleanly on fresh and upgraded databases; high scores persist in SQLite; player is only prompted for initials when setting a new all-time high score; top score renders on arcade HUD; unit tests verify storage operations and initials entry state machine.
+
+## Implementation roadmap allocation
+
+- Stages 00–07: Core offline machine drill, accounting engine, SQLite persistence, and Bubble Tea TUI (Complete).
+- Stages 08–11: Bank breadth, adaptive scaffolding, read-only tutor abstraction, and provider integrations (Complete).
+- Stages 12–16: Candidate generation/review, journal entry & T-accounts, financial statements, and exam mode (Complete).
+- Stage 17: TUI viewport ergonomics and recap scrolling (Complete).
+- Stage 18: Provider authentication repair and dynamic multi-provider model discovery (Complete).
+- Stage 19: Comprehensive documentation, hyperlinked Table of Contents, and prominent Mac/Wine guide (Complete).
+- Stage 20: Contributor workflow, PR/issue instructions, and release hardening (Complete).
+- Stage 21: Classroom Transaction Analysis Grid (Verified Slide Format) (Complete).
+- Stage 22: Unencumbered Arcade Intro Flight & Combat Override (Complete).
+- Stage 23: Complete Linux Distribution & Desktop Integration (Complete).
+- Stage 24: LLM Linkages Verification & OAuth Diagnostics (Complete).
+- Stage 25: Startup Arcade Combat Enhancements — Machine Gun Autofire & Smart Bomb Detonation (Complete).
+- Stage 26: Dynamic Flight Acceleration & Dual Audit Hit Points (Internal Audit Shields & External Audit Integrity) (Complete).
+- Stage 27: Heavy Accounting Hazards — Multi-Hit Fraud & Insider Trading Asteroids with Fragmentation Debris (Complete).
+- Stage 28: Persistent Arcade High Scores & Old-School 3-Initials Hall of Fame (SQLite Schema Migration & TUI Entry) (Complete).

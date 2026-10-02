@@ -69,6 +69,7 @@ func ApproveCandidate(cand *CandidateQuestion, reviewer string, notes string, cl
 
 	// 3. Construct immutable published bank question
 	pub := &bank.QuestionJSON{
+		Teaching:         cand.Teaching,
 		ID:               cand.ID,
 		Version:          1,
 		FamilyID:         cand.FamilyID,

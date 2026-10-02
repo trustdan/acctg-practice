@@ -45,6 +45,9 @@ func NewAnthropicTutor(cfg APIKeyConfig) *AnthropicTutor {
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultAnthropicURL
 	}
+	if cfg.Model == "" && cfg.AuthStore != nil {
+		cfg.Model = cfg.AuthStore.ResolveModel(ProviderAnthropic)
+	}
 	if cfg.Model == "" {
 		cfg.Model = DefaultAnthropicModel
 	}
@@ -52,6 +55,16 @@ func NewAnthropicTutor(cfg APIKeyConfig) *AnthropicTutor {
 		cfg.HTTPClient = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &AnthropicTutor{cfg: cfg}
+}
+
+// SetModel updates the active Anthropic model.
+func (a *AnthropicTutor) SetModel(model string) {
+	a.cfg.Model = model
+}
+
+// GetModel returns the current Anthropic model.
+func (a *AnthropicTutor) GetModel() string {
+	return a.cfg.Model
 }
 
 func (a *AnthropicTutor) Name() string {
@@ -182,6 +195,9 @@ func NewGeminiTutor(cfg APIKeyConfig) *GeminiTutor {
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultGeminiURL
 	}
+	if cfg.Model == "" && cfg.AuthStore != nil {
+		cfg.Model = cfg.AuthStore.ResolveModel(ProviderGoogle)
+	}
 	if cfg.Model == "" {
 		cfg.Model = DefaultGeminiModel
 	}
@@ -189,6 +205,16 @@ func NewGeminiTutor(cfg APIKeyConfig) *GeminiTutor {
 		cfg.HTTPClient = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &GeminiTutor{cfg: cfg}
+}
+
+// SetModel updates the active Gemini model.
+func (g *GeminiTutor) SetModel(model string) {
+	g.cfg.Model = model
+}
+
+// GetModel returns the current Gemini model.
+func (g *GeminiTutor) GetModel() string {
+	return g.cfg.Model
 }
 
 func (g *GeminiTutor) Name() string {
@@ -322,6 +348,9 @@ func NewOpenAIAPITutor(cfg APIKeyConfig) *OpenAIAPITutor {
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultOpenAIAPIURL
 	}
+	if cfg.Model == "" && cfg.AuthStore != nil {
+		cfg.Model = cfg.AuthStore.ResolveModel(ProviderOpenAI)
+	}
 	if cfg.Model == "" {
 		cfg.Model = DefaultOpenAIAPIModel
 	}
@@ -329,6 +358,16 @@ func NewOpenAIAPITutor(cfg APIKeyConfig) *OpenAIAPITutor {
 		cfg.HTTPClient = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &OpenAIAPITutor{cfg: cfg}
+}
+
+// SetModel updates the active OpenAI model.
+func (o *OpenAIAPITutor) SetModel(model string) {
+	o.cfg.Model = model
+}
+
+// GetModel returns the current OpenAI model.
+func (o *OpenAIAPITutor) GetModel() string {
+	return o.cfg.Model
 }
 
 func (o *OpenAIAPITutor) Name() string {

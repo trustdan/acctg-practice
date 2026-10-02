@@ -83,6 +83,7 @@ type Styles struct {
 	KeyBadge          lipgloss.Style
 	KeyDesc           lipgloss.Style
 	HelpText          lipgloss.Style
+	ScrollIndicator   lipgloss.Style
 }
 
 // DefaultStyles creates a vibrant, high-contrast, modern terminal aesthetic.
@@ -462,6 +463,11 @@ func DefaultStyles() Styles {
 
 	s.HelpText = lipgloss.NewStyle().
 		Foreground(slateMuted)
+
+	s.ScrollIndicator = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(amber).
+		Padding(0, 1)
 
 	_ = emeraldBg
 	_ = purple

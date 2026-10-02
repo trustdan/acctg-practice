@@ -49,10 +49,12 @@ func (f *FallbackTutor) Hint(ctx context.Context, req Request) (Response, error)
 		return Response{}, err
 	}
 
+	var primaryErr error
 	if f.primary != nil {
 		childCtx, cancel := context.WithTimeout(ctx, f.timeout)
 		resp, err := f.primary.Hint(childCtx, req)
 		cancel()
+		primaryErr = err
 
 		if err == nil {
 			return resp, nil
@@ -70,6 +72,9 @@ func (f *FallbackTutor) Hint(ctx context.Context, req Request) (Response, error)
 		return Response{}, err
 	}
 	fallbackResp.Fallback = true
+	if primaryErr != nil {
+		fallbackResp.FallbackReason = primaryErr.Error()
+	}
 	return fallbackResp, nil
 }
 
@@ -79,10 +84,12 @@ func (f *FallbackTutor) Explain(ctx context.Context, req Request) (Response, err
 		return Response{}, err
 	}
 
+	var primaryErr error
 	if f.primary != nil {
 		childCtx, cancel := context.WithTimeout(ctx, f.timeout)
 		resp, err := f.primary.Explain(childCtx, req)
 		cancel()
+		primaryErr = err
 
 		if err == nil {
 			return resp, nil
@@ -100,5 +107,8 @@ func (f *FallbackTutor) Explain(ctx context.Context, req Request) (Response, err
 		return Response{}, err
 	}
 	fallbackResp.Fallback = true
+	if primaryErr != nil {
+		fallbackResp.FallbackReason = primaryErr.Error()
+	}
 	return fallbackResp, nil
 }

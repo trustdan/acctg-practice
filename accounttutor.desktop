@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=AccountTutor 9000
+GenericName=Accounting Practice Tutor
+Comment=Interactive Keyboard Accounting Drill for UW Foster ACCTG 502
+Exec=bash -c "$(dirname %k)/launch-tutor.sh"
+Path=%k
+Icon=utilities-terminal
+Terminal=true
+Categories=Education;Science;ConsoleOnly;
+Keywords=accounting;tutor;finance;debit;credit;drill;

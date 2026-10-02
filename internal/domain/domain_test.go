@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -160,8 +161,10 @@ func setupTestCatalog() *domain.AccountCatalog {
 		{ID: "cash", Name: "Cash", Category: domain.CategoryAsset, NormalSide: domain.SideDebit},
 		{ID: "accounts_receivable", Name: "Accounts Receivable", Category: domain.CategoryAsset, NormalSide: domain.SideDebit},
 		{ID: "equipment", Name: "Equipment", Category: domain.CategoryAsset, NormalSide: domain.SideDebit},
+		{ID: "accounts_payable", Name: "Accounts Payable", Category: domain.CategoryLiability, NormalSide: domain.SideCredit},
 		{ID: "unearned_revenue", Name: "Unearned Revenue", Category: domain.CategoryLiability, NormalSide: domain.SideCredit},
 		{ID: "notes_payable", Name: "Notes Payable", Category: domain.CategoryLiability, NormalSide: domain.SideCredit},
+		{ID: "dividends_payable", Name: "Dividends Payable", Category: domain.CategoryLiability, NormalSide: domain.SideCredit},
 		{ID: "common_stock", Name: "Common Stock", Category: domain.CategoryEquity, NormalSide: domain.SideCredit},
 		{ID: "service_revenue", Name: "Service Revenue", Category: domain.CategoryRevenue, NormalSide: domain.SideCredit},
 		{ID: "rent_expense", Name: "Rent Expense", Category: domain.CategoryExpense, NormalSide: domain.SideDebit},
@@ -303,5 +306,78 @@ func TestAttemptValidation(t *testing.T) {
 	invalid.GradingVersion = 0
 	if err := invalid.Validate(); err == nil {
 		t.Fatalf("expected error for non-positive GradingVersion")
+	}
+}
+
+func TestPostingEquationEffect(t *testing.T) {
+	catalog := setupTestCatalog()
+
+	tests := []struct {
+		accountID domain.AccountID
+		side      domain.Side
+		expected  string
+	}{
+		{"cash", domain.SideDebit, "(+A)"},
+		{"cash", domain.SideCredit, "(-A)"},
+		{"accounts_payable", domain.SideCredit, "(+L)"},
+		{"accounts_payable", domain.SideDebit, "(-L)"},
+		{"notes_payable", domain.SideCredit, "(+L)"},
+		{"common_stock", domain.SideCredit, "(+E)"},
+		{"common_stock", domain.SideDebit, "(-E)"},
+		{"service_revenue", domain.SideCredit, "(+E)"},
+		{"rent_expense", domain.SideDebit, "(-E)"},
+		{"dividends", domain.SideDebit, "(-E)"},
+		{"dividends_payable", domain.SideCredit, "(+L)"},
+		{"dividends_payable", domain.SideDebit, "(-L)"},
+	}
+
+	for _, tt := range tests {
+		p := domain.Posting{
+			AccountID: tt.accountID,
+			Side:      tt.side,
+			Amount:    domain.NewMoney(8000000),
+		}
+		got := domain.PostingEquationEffect(p, catalog)
+		if got != tt.expected {
+			t.Errorf("PostingEquationEffect(%s, %s): got %s, want %s", tt.accountID, tt.side, got, tt.expected)
+		}
+	}
+}
+
+func TestRenderClassroomGrid(t *testing.T) {
+	catalog := setupTestCatalog()
+	postings := []domain.Posting{
+		{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(8000000)},
+		{AccountID: "notes_payable", Side: domain.SideCredit, Amount: domain.NewMoney(8000000)},
+	}
+
+	grid := domain.RenderClassroomGrid(postings, catalog, 72, true)
+
+	// Verify Dr. and Cr. column indicators
+	if !strings.Contains(grid, "Dr.") || !strings.Contains(grid, "Cr.") {
+		t.Errorf("expected grid to contain 'Dr.' and 'Cr.', got:\n%s", grid)
+	}
+
+	// Verify Account names and Equation effects
+	if !strings.Contains(grid, "Cash (+A)") {
+		t.Errorf("expected grid to contain 'Cash (+A)', got:\n%s", grid)
+	}
+	if !strings.Contains(grid, "Notes Payable (+L)") {
+		t.Errorf("expected grid to contain 'Notes Payable (+L)', got:\n%s", grid)
+	}
+
+	// Verify Amounts
+	if !strings.Contains(grid, "$80,000") {
+		t.Errorf("expected grid to contain '$80,000', got:\n%s", grid)
+	}
+
+	// Verify Box Drawing borders
+	if !strings.Contains(grid, "┌") || !strings.Contains(grid, "└") || !strings.Contains(grid, "│") {
+		t.Errorf("expected grid to contain box borders, got:\n%s", grid)
+	}
+
+	// Verify Totals row
+	if !strings.Contains(grid, "Totals") {
+		t.Errorf("expected grid to contain 'Totals', got:\n%s", grid)
 	}
 }

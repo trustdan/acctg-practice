@@ -1,0 +1,57 @@
+name: "Terminal / Cross-Platform Bug"
+description: "Report terminal display rendering glitches, keyboard handling issues, Wine emulation bugs, or crashes."
+title: "[Bug]: "
+labels: ["bug", "tui", "platform"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report an issue related to the terminal user interface, keyboard navigation, cross-platform execution (Windows, macOS, Linux, Wine), or application crashes.
+  - type: input
+    id: environment
+    attributes:
+      label: Operating System & Terminal Environment
+      description: Specific OS version and terminal emulator used.
+      placeholder: "e.g. macOS Sonoma 14.5 (Apple Silicon M2) + Terminal.app; or Windows 11 + Windows Terminal (PowerShell 7.4); or Ubuntu 22.04 + GNOME Terminal"
+    validations:
+      required: true
+  - type: dropdown
+    id: execution_method
+    attributes:
+      label: Execution Method
+      description: How are you running the application?
+      options:
+        - "Native Windows binary (acctg.exe)"
+        - "Native macOS Apple Silicon binary (acctg-mac-arm64 via Launch-Tutor.command or terminal)"
+        - "Native macOS Intel binary (acctg-mac-amd64 via Launch-Tutor.command or terminal)"
+        - "macOS via Wine (wine ./acctg.exe)"
+        - "Native Linux binary (acctg-linux-amd64)"
+        - "Built from source via `go run` or `go build`"
+    validations:
+      required: true
+  - type: input
+    id: terminal_dimensions
+    attributes:
+      label: Terminal Dimensions (Columns x Rows)
+      description: Approximate terminal dimensions (e.g. 80x24, 120x40, fullscreen).
+      placeholder: "e.g. 100x30"
+    validations:
+      required: false
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: What keyboard commands or actions triggered the issue?
+      placeholder: |
+        1. Launched `./acctg`
+        2. Pressed 'J' to enter Journal Entry Practice
+        3. Pressed 'a' to add a debit posting...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      label: Expected vs. Actual Behavior
+      description: What did you expect to see, and what happened instead? Include any crash panic traces or rendering glitches.
+    validations:
+      required: true

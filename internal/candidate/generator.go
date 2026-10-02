@@ -341,13 +341,17 @@ func (p *ProviderCandidateGenerator) Generate(ctx context.Context, req GenerateR
 	prompt := FormatCandidateGenerationPrompt(familyID, req.TargetConcept)
 
 	tutorReq := tutor.Request{
-		ProblemPrompt: prompt,
-		FamilyID:      familyID,
-		ConceptID:     req.TargetConcept,
-		MaxTokens:     500,
+		CandidateGeneration: true,
+		ProblemPrompt:       prompt,
+		FamilyID:            familyID,
+		ConceptID:           req.TargetConcept,
+		MaxTokens:           1500,
 	}
 
 	resp, err := p.tut.Explain(ctx, tutorReq)
+	if err == nil && resp.Fallback {
+		err = fmt.Errorf("connected provider unavailable: %s", resp.FallbackReason)
+	}
 	if err != nil {
 		prov := Provenance{
 			Source:        p.tut.Name(),
@@ -378,6 +382,16 @@ func (p *ProviderCandidateGenerator) Generate(ctx context.Context, req GenerateR
 
 	// Strictly parse untrusted LLM output and derive answers locally via engine
 	cand, parseErr := ParseProposal(resp.Text, p.eng, p.catalog, prov)
+	if cand != nil {
+		// Provider-selected IDs must never overwrite an existing local candidate.
+		cand.ID = generateCandidateID(familyID, time.Now().UTC())
+	}
+	if parseErr == nil && cand.FamilyID != familyID {
+		cand.Status = StatusCandidateRejected
+		cand.ValidationStatus = ValidationFailed
+		cand.RejectionReason = "provider returned a different transaction family"
+		parseErr = fmt.Errorf("%s", cand.RejectionReason)
+	}
 	if parseErr != nil {
 		// Even if parse fails, cand holds the failed validation state and reason
 		return cand, parseErr
@@ -403,11 +417,22 @@ func FormatCandidateGenerationPrompt(familyID string, targetConcept string) stri
 	sb.WriteString("5. JSON SCHEMA:\n")
 	sb.WriteString("{\n")
 	sb.WriteString(fmt.Sprintf("  \"family_id\": %q,\n", familyID))
-	sb.WriteString("  \"scenario_template\": \"A client pays ${amount_dollars} cash today for consulting services to be performed next month.\",\n")
+	if examples := offlineVariations[familyID]; len(examples) > 0 {
+		sb.WriteString(fmt.Sprintf("  \"scenario_template\": %q,\n", examples[0].scenarioTemplate))
+	}
 	sb.WriteString("  \"parameters\": {\n")
 	sb.WriteString("    \"amount_minor_units\": [5000, 10000, 20000]\n")
 	sb.WriteString("  },\n")
 	sb.WriteString("  \"concepts\": [\"cash_vs_revenue\", \"unearned_revenue_classification\"]\n")
 	sb.WriteString("}\n")
+	// Examples use the requested family, avoiding misleading cross-family wording.
+	for i, example := range offlineVariations[familyID] {
+		if i == 2 {
+			break
+		}
+		payload, _ := json.Marshal(RawProposal{FamilyID: familyID, ScenarioTemplate: example.scenarioTemplate, Parameters: example.parameters, Concepts: example.concepts})
+		sb.WriteString("\nStyle example (write a fresh variation): " + string(payload) + "\n")
+	}
+	sb.WriteString("Use simple dollar amounts and preserve this family's economic meaning. Answers are derived locally. Add a teaching object mapping balanced_entry and counter_account to objects with hint and explanation strings. Hints should ask one short causal question without revealing the answer; explanations should explain cash versus earning and debit=left, credit=right. Do not include option letters. All teaching prose requires human review.\n")
 	return sb.String()
 }

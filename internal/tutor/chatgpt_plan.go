@@ -21,11 +21,11 @@ import (
 
 // Default OpenAI OAuth and API endpoints
 const (
-	DefaultOpenAIAuthURL = "https://auth.openai.com/oauth"
+	DefaultOpenAIAuthURL = "https://auth.openai.com/api/accounts"
 	DefaultOpenAIAPIURL  = "https://api.openai.com/v1"
 	DefaultChatGPTModel  = "gpt-4o-mini"
-	DefaultDCRClientID   = "acctg-practice-client"
-	DefaultOAuthScope    = "openid profile email model.request"
+	DefaultDCRClientID   = "dynamic_agent_client"
+	DefaultOAuthScope    = "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct"
 )
 
 // OpenAIChatGPTPlanTutor implements the ChatGPT Plus subscription path.
@@ -35,14 +35,15 @@ const (
 // Subscription-route preview limitations strictly enforced: store=false, stream=true.
 // Tokens are saved securely in local user data dir with 0600 permissions.
 type OpenAIChatGPTPlanTutor struct {
-	mu         sync.Mutex
-	authStore  *AuthStore
-	authURL    string
-	apiURL     string
-	model      string
-	clientID   string
-	httpClient *http.Client
-	budget     *Budget
+	mu           sync.Mutex
+	authStore    *AuthStore
+	authURL      string
+	apiURL       string
+	model        string
+	clientID     string
+	pendingNonce string
+	httpClient   *http.Client
+	budget       *Budget
 }
 
 // ChatGPTPlanConfig configures OpenAIChatGPTPlanTutor.
@@ -67,16 +68,22 @@ func NewOpenAIChatGPTPlanTutor(cfg ChatGPTPlanConfig) *OpenAIChatGPTPlanTutor {
 		apiURL = DefaultOpenAIAPIURL
 	}
 	model := cfg.Model
+	if model == "" && cfg.AuthStore != nil {
+		model = cfg.AuthStore.ResolveModel(ProviderChatGPTPlan)
+	}
 	if model == "" {
 		model = DefaultChatGPTModel
 	}
 	clientID := cfg.ClientID
+	if clientID == "" && cfg.AuthStore != nil {
+		clientID = cfg.AuthStore.ResolveChatGPTClientID()
+	}
 	if clientID == "" {
 		clientID = DefaultDCRClientID
 	}
 	httpClient := cfg.HTTPClient
 	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 30 * time.Second}
+		httpClient = &http.Client{Timeout: 60 * time.Second}
 	}
 
 	return &OpenAIChatGPTPlanTutor{
@@ -88,6 +95,34 @@ func NewOpenAIChatGPTPlanTutor(cfg ChatGPTPlanConfig) *OpenAIChatGPTPlanTutor {
 		httpClient: httpClient,
 		budget:     cfg.Budget,
 	}
+}
+
+// SetModel updates the active model dynamically.
+func (t *OpenAIChatGPTPlanTutor) SetModel(model string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.model = model
+}
+
+// GetModel returns the current model name.
+func (t *OpenAIChatGPTPlanTutor) GetModel() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.model
+}
+
+// SetClientID updates the OAuth client ID.
+func (t *OpenAIChatGPTPlanTutor) SetClientID(clientID string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.clientID = clientID
+}
+
+// GetClientID returns the current OAuth client ID.
+func (t *OpenAIChatGPTPlanTutor) GetClientID() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.clientID
 }
 
 // Name implements Tutor.
@@ -153,10 +188,21 @@ type OAuthFlow struct {
 	codeChan    chan string
 	errChan     chan error
 	server      *http.Server
+	ClientID    string
+	once        sync.Once
+	closeOnce   sync.Once
+	closed      chan struct{}
 }
 
 // StartOAuthFlow starts an ephemeral loopback HTTP listener on 127.0.0.1:0 for the OAuth callback.
 func (t *OpenAIChatGPTPlanTutor) StartOAuthFlow() (*OAuthFlow, string, error) {
+	if t.authStore == nil {
+		t.authStore, _ = NewAuthStore("")
+	}
+	hostID, err := t.authStore.EnsureHostID()
+	if err != nil {
+		return nil, "", err
+	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
 		return nil, "", err
@@ -168,7 +214,7 @@ func (t *OpenAIChatGPTPlanTutor) StartOAuthFlow() (*OAuthFlow, string, error) {
 	}
 
 	port := listener.Addr().(*net.TCPAddr).Port
-	redirectURI := fmt.Sprintf("http://127.0.0.1:%d/callback", port)
+	redirectURI := fmt.Sprintf("http://127.0.0.1:%d/auth/callback", port)
 
 	authURL, err := url.Parse(t.authURL + "/authorize")
 	if err != nil {
@@ -178,7 +224,13 @@ func (t *OpenAIChatGPTPlanTutor) StartOAuthFlow() (*OAuthFlow, string, error) {
 
 	q := authURL.Query()
 	q.Set("response_type", "code")
-	q.Set("client_id", t.clientID)
+	clientID := t.authStore.ResolveChatGPTClientID()
+	q.Set("client_id", clientID)
+	q.Set("ext_agent_host_id", hostID)
+	q.Set("resource", DefaultOpenAIAPIURL)
+	if clientID == DefaultDCRClientID {
+		q.Set("agent_name_hint", "AccountTutor 9000")
+	}
 	q.Set("redirect_uri", redirectURI)
 	q.Set("scope", DefaultOAuthScope)
 	q.Set("state", pkce.State)
@@ -192,12 +244,14 @@ func (t *OpenAIChatGPTPlanTutor) StartOAuthFlow() (*OAuthFlow, string, error) {
 		listener:    listener,
 		RedirectURI: redirectURI,
 		PKCE:        pkce,
+		ClientID:    clientID,
+		closed:      make(chan struct{}),
 		codeChan:    make(chan string, 1),
 		errChan:     make(chan error, 1),
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/callback", flow.handleCallback)
+	mux.HandleFunc("/auth/callback", flow.handleCallback)
 
 	flow.server = &http.Server{
 		Handler:      mux,
@@ -213,39 +267,70 @@ func (t *OpenAIChatGPTPlanTutor) StartOAuthFlow() (*OAuthFlow, string, error) {
 }
 
 func (f *OAuthFlow) handleCallback(w http.ResponseWriter, r *http.Request) {
-	receivedState := r.URL.Query().Get("state")
-	if receivedState != f.PKCE.State {
-		http.Error(w, "Invalid state parameter", http.StatusBadRequest)
-		f.errChan <- errors.New("oauth callback state mismatch")
+	if r.Method != http.MethodGet {
+		http.Error(w, "GET required", 405)
 		return
 	}
-
-	code := r.URL.Query().Get("code")
-	if code == "" {
-		errDesc := r.URL.Query().Get("error_description")
-		if errDesc == "" {
-			errDesc = r.URL.Query().Get("error")
+	q := r.URL.Query()
+	if q.Get("state") != f.PKCE.State {
+		http.Error(w, "Invalid state parameter", 400)
+		select {
+		case f.errChan <- errors.New("oauth callback state mismatch"):
+		default:
 		}
-		if errDesc == "" {
-			errDesc = "missing authorization code"
-		}
-		http.Error(w, "Authentication error: "+errDesc, http.StatusBadRequest)
-		f.errChan <- fmt.Errorf("oauth error: %s", errDesc)
 		return
 	}
+	f.once.Do(func() {
+		fail := func(msg string) { http.Error(w, msg, 400); f.errChan <- errors.New(msg) }
+		if q.Get("error") != "" {
+			fail("ChatGPT authorization declined or failed; try again")
+			return
+		}
+		id := q.Get("client_id")
+		if f.ClientID == DefaultDCRClientID {
+			if !strings.HasPrefix(id, "oaiapp_") {
+				fail("registration incomplete: missing issued client ID")
+				return
+			}
+		} else {
+			if id != "" && id != f.ClientID {
+				fail("callback client ID mismatch")
+				return
+			}
+			id = f.ClientID
+		}
+		if q.Get("code") == "" {
+			fail("missing authorization code")
+			return
+		}
+		f.ClientID = id
+		f.tutor.SetClientID(id)
+		f.tutor.pendingNonce = f.PKCE.Nonce
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, "<h1>Authorization received</h1><p>Return to AccountTutor 9000 to finish verifying your connection.</p>")
+		f.codeChan <- q.Get("code")
+	})
+}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, `<!DOCTYPE html>
-<html>
-<head><title>Authentication Successful</title></head>
-<body style="font-family: sans-serif; text-align: center; padding-top: 50px;">
-  <h2>Authentication Successful!</h2>
-  <p>Your ChatGPT Plus plan has been connected to <strong>acctg-practice</strong>.</p>
-  <p>You can close this tab and return to the terminal drill.</p>
-</body>
-</html>`)
-
-	f.codeChan <- code
+func (f *OAuthFlow) Complete(ctx context.Context) (*OAuthToken, error) {
+	code, err := f.WaitForCallback(ctx)
+	if err != nil {
+		return nil, err
+	}
+	token, err := f.tutor.ExchangeCode(ctx, code, f.RedirectURI, f.PKCE.Verifier)
+	if err != nil {
+		return nil, err
+	}
+	if old := f.tutor.authStore.GetConfig().ChatGPTPlanToken; old != nil && old.ClientID == f.ClientID && old.Subject != "" && old.Subject != token.Subject {
+		return nil, errors.New("returning account identity changed")
+	}
+	if err := f.tutor.authStore.SetChatGPTPlanToken(token); err != nil {
+		return nil, err
+	}
+	if err := f.tutor.authStore.SetActiveProvider(ProviderChatGPTPlan); err != nil {
+		return nil, err
+	}
+	return token, nil
 }
 
 // WaitForCallback waits for the user to complete the browser authorization.
@@ -253,6 +338,8 @@ func (f *OAuthFlow) WaitForCallback(ctx context.Context) (string, error) {
 	defer f.Close()
 
 	select {
+	case <-f.closed:
+		return "", errors.New("ChatGPT sign-in cancelled")
 	case <-ctx.Done():
 		return "", ctx.Err()
 	case err := <-f.errChan:
@@ -264,6 +351,7 @@ func (f *OAuthFlow) WaitForCallback(ctx context.Context) (string, error) {
 
 // Close shuts down the loopback listener.
 func (f *OAuthFlow) Close() {
+	f.closeOnce.Do(func() { close(f.closed) })
 	if f.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -273,9 +361,13 @@ func (f *OAuthFlow) Close() {
 
 // ExchangeCode exchanges an authorization code for access and refresh tokens.
 func (t *OpenAIChatGPTPlanTutor) ExchangeCode(ctx context.Context, code string, redirectURI string, verifier string) (*OAuthToken, error) {
-	tokenURL := t.authURL + "/token"
+	tokenURL := t.authURL + "/oauth/token"
 
 	data := url.Values{}
+	if t.GetClientID() == DefaultDCRClientID {
+		return nil, errors.New("issued client ID required")
+	}
+	data.Set("resource", DefaultOpenAIAPIURL)
 	data.Set("grant_type", "authorization_code")
 	data.Set("client_id", t.clientID)
 	data.Set("code", code)
@@ -296,7 +388,19 @@ func (t *OpenAIChatGPTPlanTutor) ExchangeCode(ctx context.Context, code string, 
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("token exchange rejected (%d): %s", resp.StatusCode, string(bodyBytes))
+		var errObj struct {
+			Error            string `json:"error"`
+			ErrorDescription string `json:"error_description"`
+		}
+		detail := string(bodyBytes)
+		if err := json.Unmarshal(bodyBytes, &errObj); err == nil {
+			if errObj.ErrorDescription != "" {
+				detail = fmt.Sprintf("%s (%s)", errObj.Error, errObj.ErrorDescription)
+			} else if errObj.Error != "" {
+				detail = errObj.Error
+			}
+		}
+		return nil, fmt.Errorf("token exchange rejected by OpenAI (%d): %s. Verify client ID '%s' or use commercial API key [5]", resp.StatusCode, detail, t.clientID)
 	}
 
 	var tokenResp struct {
@@ -304,24 +408,33 @@ func (t *OpenAIChatGPTPlanTutor) ExchangeCode(ctx context.Context, code string, 
 		RefreshToken string `json:"refresh_token"`
 		ExpiresIn    int    `json:"expires_in"`
 		Scope        string `json:"scope"`
+		IDToken      string `json:"id_token"`
 	}
 	if err := json.Unmarshal(bodyBytes, &tokenResp); err != nil {
 		return nil, fmt.Errorf("failed decoding token response: %w", err)
 	}
 
+	if tokenResp.AccessToken == "" || tokenResp.ExpiresIn <= 0 {
+		return nil, errors.New("invalid token response")
+	}
+	if !hasPlanScope(tokenResp.Scope) {
+		return nil, errors.New("ChatGPT plan usage was not authorized")
+	}
+	identity, err := t.validateIDToken(ctx, tokenResp.IDToken, t.clientID, t.pendingNonce)
+	if err != nil {
+		return nil, err
+	}
 	expiresAt := time.Now().UTC().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	token := &OAuthToken{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresAt:    expiresAt,
 		ClientID:     t.clientID,
+		IDToken:      tokenResp.IDToken,
+		Subject:      identity.Subject,
+		Email:        identity.Email,
 		PlanType:     "chatgpt_plus",
 		Scope:        tokenResp.Scope,
-	}
-
-	if t.authStore != nil {
-		_ = t.authStore.SetChatGPTPlanToken(token)
-		_ = t.authStore.SetActiveProvider(ProviderChatGPTPlan)
 	}
 
 	return token, nil
@@ -333,10 +446,14 @@ func (t *OpenAIChatGPTPlanTutor) RefreshToken(ctx context.Context, token *OAuthT
 		return nil, errors.New("cannot refresh without refresh token")
 	}
 
-	tokenURL := t.authURL + "/token"
+	tokenURL := t.authURL + "/oauth/token"
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", t.clientID)
+	if token.ClientID == "" || token.ClientID == DefaultDCRClientID {
+		return nil, errors.New("saved issued client ID missing; reconnect ChatGPT")
+	}
+	data.Set("client_id", token.ClientID)
+	data.Set("resource", DefaultOpenAIAPIURL)
 	data.Set("refresh_token", token.RefreshToken)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(data.Encode()))
@@ -353,7 +470,19 @@ func (t *OpenAIChatGPTPlanTutor) RefreshToken(ctx context.Context, token *OAuthT
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("token refresh rejected (%d): %s", resp.StatusCode, string(bodyBytes))
+		var errObj struct {
+			Error            string `json:"error"`
+			ErrorDescription string `json:"error_description"`
+		}
+		detail := string(bodyBytes)
+		if err := json.Unmarshal(bodyBytes, &errObj); err == nil {
+			if errObj.ErrorDescription != "" {
+				detail = fmt.Sprintf("%s (%s)", errObj.Error, errObj.ErrorDescription)
+			} else if errObj.Error != "" {
+				detail = errObj.Error
+			}
+		}
+		return nil, fmt.Errorf("token refresh rejected by OpenAI (%d): %s. Re-authenticate in Tutor Settings ('t')", resp.StatusCode, detail)
 	}
 
 	var tokenResp struct {
@@ -365,6 +494,11 @@ func (t *OpenAIChatGPTPlanTutor) RefreshToken(ctx context.Context, token *OAuthT
 		return nil, fmt.Errorf("failed decoding refresh response: %w", err)
 	}
 
+	if tokenResp.AccessToken == "" || tokenResp.ExpiresIn <= 0 {
+		return nil, errors.New("invalid refresh response")
+	}
+	copyToken := *token
+	token = &copyToken
 	token.AccessToken = tokenResp.AccessToken
 	if tokenResp.RefreshToken != "" {
 		token.RefreshToken = tokenResp.RefreshToken
@@ -372,7 +506,9 @@ func (t *OpenAIChatGPTPlanTutor) RefreshToken(ctx context.Context, token *OAuthT
 	token.ExpiresAt = time.Now().UTC().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 
 	if t.authStore != nil {
-		_ = t.authStore.SetChatGPTPlanToken(token)
+		if err := t.authStore.SetChatGPTPlanToken(token); err != nil {
+			return nil, err
+		}
 	}
 
 	return token, nil
@@ -389,6 +525,9 @@ func (t *OpenAIChatGPTPlanTutor) getValidAccessToken(ctx context.Context) (strin
 		return "", errors.New("chatgpt plus subscription not connected (sign in via 't' settings)")
 	}
 
+	if !hasPlanScope(token.Scope) || token.Subject == "" {
+		return "", errors.New("ChatGPT connection needs verified plan permission; reconnect in Tutor Settings")
+	}
 	if token.IsExpired() {
 		refreshed, err := t.RefreshToken(ctx, token)
 		if err != nil {
@@ -456,7 +595,9 @@ func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Reque
 
 	// Stream reader for SSE
 	var accumulated strings.Builder
+	completed := false
 	scanner := bufio.NewScanner(httpResp.Body)
+	scanner.Buffer(make([]byte, 4096), 1<<20)
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
@@ -474,10 +615,19 @@ func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Reque
 		}
 
 		var event struct {
-			Type     string `json:"type"`
-			Delta    string `json:"delta"`
-			Text     string `json:"text"`
+			Type  string `json:"type"`
+			Delta string `json:"delta"`
+			Text  string `json:"text"`
+			Code  string `json:"code"`
+			Error struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+			} `json:"error"`
 			Response struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
 				Output []struct {
 					Content []struct {
 						Text string `json:"text"`
@@ -485,19 +635,33 @@ func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Reque
 				} `json:"output"`
 			} `json:"response"`
 		}
-		if err := json.Unmarshal([]byte(data), &event); err == nil {
-			if event.Delta != "" {
-				accumulated.WriteString(event.Delta)
-			} else if event.Text != "" {
-				accumulated.WriteString(event.Text)
-			}
+		if err := json.Unmarshal([]byte(data), &event); err != nil {
+			return Response{}, errors.New("invalid Responses stream event")
 		}
+		switch event.Type {
+		case "response.output_text.delta":
+			accumulated.WriteString(event.Delta)
+		case "response.completed":
+			completed = true
+		case "error", "response.failed", "response.incomplete":
+			return Response{}, fmt.Errorf("ChatGPT response failed or incomplete: %s %s %s", event.Code, event.Error.Code, event.Response.Error.Code)
+		}
+		if completed {
+			break
+		}
+		if accumulated.Len() > 1<<20 {
+			return Response{}, errors.New("ChatGPT response exceeds size limit")
+		}
+
 	}
 
 	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
 		return Response{}, fmt.Errorf("error reading streamed response: %w", err)
 	}
 
+	if !completed {
+		return Response{}, errors.New("ChatGPT stream ended before response.completed")
+	}
 	resultText := strings.TrimSpace(accumulated.String())
 	if resultText == "" {
 		return Response{}, errors.New("empty response received from chatgpt responses api")

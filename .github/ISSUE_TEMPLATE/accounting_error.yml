@@ -1,0 +1,52 @@
+name: "Accounting Error / Reconciliation Dispute"
+description: "Report an accounting contradiction, incorrect answer key, equation mismatch, or syllabus alignment dispute."
+title: "[Accounting Dispute]: "
+labels: ["accounting-engine", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an accounting inaccuracy or curriculum dispute!
+        Accounting accuracy is the central invariant of this application. All transactions must strictly reflect US GAAP and standard financial accounting principles.
+  - type: input
+    id: question_or_family
+    attributes:
+      label: Question ID or Transaction Family
+      description: Enter the specific question ID (e.g. `customer_advance_basic`, `prepaid_insurance_12m`) or semantic transaction family (e.g. `customer_advance`, `declare_dividend`).
+      placeholder: "e.g. customer_advance_basic"
+    validations:
+      required: true
+  - type: textarea
+    id: problem_description
+    attributes:
+      label: Description of the Dispute
+      description: Explain why you believe the current question wording, debit/credit entry, or financial statement effect is incorrect or misleading.
+      placeholder: "e.g. In question X, the scenario states services were delivered today, but the engine expects Dr Cash / Cr Unearned Revenue instead of Service Revenue..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected_treatment
+    attributes:
+      label: Expected Accounting Treatment
+      description: Provide the exact double-entry debit/credit postings, amounts, and accounting equation deltas (ΔA = ΔL + ΔE) you believe should be credited.
+      placeholder: |
+        Debit: Account Name ($Amount)
+        Credit: Account Name ($Amount)
+        Equation impact: ΔA = +$X, ΔL = +$Y, ΔE = $0
+    validations:
+      required: true
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual Application Behavior
+      description: What did the tutor or grading engine do instead? Include option labels or error tags if applicable.
+    validations:
+      required: false
+  - type: textarea
+    id: syllabus_reference
+    attributes:
+      label: Textbook / Standard Reference
+      description: Cite the relevant textbook chapter, lecture reference, or US GAAP standard (e.g. ASC 606) supporting your proposed treatment.
+      placeholder: "e.g. Kieso/Weygandt/Warfield Chapter 3 (Adjusting Entries); Spiceland Chapter 2; or ASC 606"
+    validations:
+      required: false

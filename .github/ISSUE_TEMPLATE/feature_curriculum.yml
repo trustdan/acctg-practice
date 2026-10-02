@@ -1,0 +1,44 @@
+name: "Feature Request / Curriculum Scope"
+description: "Suggest a new accounting transaction family, practice mode, statement feature, or curriculum enhancement."
+title: "[Feature Request]: "
+labels: ["enhancement", "curriculum"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest an enhancement or new curriculum topic for AccountTutor 9000.
+        Proposed accounting additions must include balanced debit/credit mechanics and fit standard financial accounting pedagogy.
+  - type: input
+    id: feature_summary
+    attributes:
+      label: Proposed Feature / Topic Summary
+      description: A concise summary of the proposed enhancement or transaction family.
+      placeholder: "e.g. Add Allowance for Doubtful Accounts / Bad Debt Expense family"
+    validations:
+      required: true
+  - type: textarea
+    id: pedagogical_rationale
+    attributes:
+      label: Pedagogical Rationale & Learning Objectives
+      description: How does this help accounting students overcome learning bottlenecks? Which accounting topic does it target?
+      placeholder: "e.g. When learning receivables, students struggle with the difference between the direct write-off method and the allowance method..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_mechanics
+    attributes:
+      label: Accounting Mechanics & Balanced Postings
+      description: Outline the accounts, normal balances, debit/credit postings, and equation effects (ΔA = ΔL + ΔE) involved.
+      placeholder: |
+        Debit: Bad Debt Expense (Equity decrease)
+        Credit: Allowance for Doubtful Accounts (Contra-Asset, Asset decrease)
+        Equation impact: ΔA = -$X, ΔL = $0, ΔE = -$X
+    validations:
+      required: false
+  - type: textarea
+    id: user_experience
+    attributes:
+      label: User Experience / CLI or TUI Flow
+      description: How would this feature appear in the keyboard-driven terminal interface?
+    validations:
+      required: false

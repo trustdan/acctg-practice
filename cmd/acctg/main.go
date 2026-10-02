@@ -28,7 +28,7 @@ import (
 	"github.com/trustdan/acctg-practice/internal/tutor"
 )
 
-const AppVersion = "0.16.0"
+const AppVersion = "0.23.0"
 
 func main() {
 	var (
@@ -36,9 +36,15 @@ func main() {
 		sizeFlag              = flag.Int("size", 0, "session size (5, 10, 15, 20 questions)")
 		intensityFlag         = flag.String("intensity", "standard", "practice intensity: standard, spaced, intensive, transfer")
 		seedFlag              = flag.Int64("seed", 0, "deterministic random seed (default: current time)")
+		providerFlag          = flag.String("provider", "", "alias for --tutor")
 		tutorFlag             = flag.String("tutor", "offline", "tutor provider: offline, chatgpt-plan, anthropic, google, openai, simulated, simulated-slow, simulated-error")
-		tutorTimeoutFlag      = flag.Duration("tutor-timeout", 3*time.Second, "tutor request timeout")
+		tutorModelFlag        = flag.String("tutor-model", "", "select active AI tutor model (e.g. gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-flash)")
+		tutorTimeoutFlag      = flag.Duration("tutor-timeout", 60*time.Second, "tutor request timeout")
 		tutorBudgetFlag       = flag.Int("tutor-budget", 20, "max tutor requests per session (0 = unlimited)")
+		listModelsFlag        = flag.Bool("list-models", false, "display discovered and default AI models for configured providers and exit")
+		fetchModelsFlag       = flag.Bool("fetch-models", false, "discover live models from configured provider APIs and save to local cache")
+		refreshModelsFlag     = flag.Bool("refresh-models", false, "alias for --fetch-models")
+		oauthClientIDFlag     = flag.String("oauth-client-id", "", "set custom OpenAI OAuth client ID for ChatGPT Plus plan")
 		dataDirFlag           = flag.String("data-dir", "", "override user data directory for storage")
 		dbPathFlag            = flag.String("db", "", "override SQLite database file path directly")
 		exportJSON            = flag.Bool("export-json", false, "export all practice sessions and attempts as JSON and exit")
@@ -71,14 +77,25 @@ func main() {
 		closeExamFlag         = flag.String("close-exam", "", "alias for --abandon-exam")
 		examHistoryFlag       = flag.Bool("exam-history", false, "display all past exam sessions and scores and exit")
 		examReportFlag        = flag.String("exam-report", "", "display full report for a completed or interrupted exam by ID and exit")
+		skipIntroFlag         = flag.Bool("skip-intro", false, "skip startup spaceship animation and enter practice directly")
+		noIntroFlag           = flag.Bool("no-intro", false, "alias for --skip-intro")
+		introFlag             = flag.Bool("intro", false, "launch startup spaceship animation showcase directly")
+		highScoresFlag        = flag.Bool("high-scores", false, "display top arcade flight scores from database and exit")
+		arcadeScoresFlag      = flag.Bool("arcade-scores", false, "alias for --high-scores")
+		testLLMFlag           = flag.Bool("test-llm", false, "test and diagnose connections across all configured AI tutor providers and exit")
+		testProvidersFlag     = flag.Bool("test-providers", false, "alias for --test-llm")
 		versionFlag           = flag.Bool("version", false, "display version and exit")
 	)
 
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("acctg version %s (offline keyboard drill with multi-event cases, financial statements, and exam mode)\n", AppVersion)
+		fmt.Printf("acctg version %s (offline keyboard drill with arcade combat upgrades, smart bombs, dual audit HP, and high score hall of fame)\n", AppVersion)
 		os.Exit(0)
+	}
+
+	if *providerFlag != "" && *tutorFlag == "offline" {
+		*tutorFlag = *providerFlag
 	}
 
 	totalQuestions := *questionsFlag
@@ -116,6 +133,169 @@ func main() {
 		fmt.Fprintf(os.Stderr, "warning: could not load tutor auth store: %v\n", err)
 	}
 
+	// Load model cache (0600 permissions in data directory)
+	cachePath := filepath.Join(dataDir, "models_cache.json")
+	modelCache, err := tutor.NewModelCache(cachePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not load model cache: %v\n", err)
+	}
+
+	// Handle --provider standalone switch
+	if *providerFlag != "" && authStore != nil {
+		_ = authStore.SetActiveProvider(*providerFlag)
+		if *tutorModelFlag == "" && !*examFlag && !*practiceJournalFlag && !*statementsFlag && !*listModelsFlag && !*fetchModelsFlag && !*refreshModelsFlag {
+			fmt.Printf("✓ Active tutor provider set to: %s\n", strings.ToUpper(*providerFlag))
+			os.Exit(0)
+		}
+	}
+
+	if *oauthClientIDFlag != "" {
+		fmt.Fprintln(os.Stderr, "--oauth-client-id is obsolete. Continue with ChatGPT in Tutor Settings [2]; registration is automatic.")
+	}
+
+	// Handle --test-llm / --test-providers
+	if *testLLMFlag || *testProvidersFlag {
+		reports := tutor.TestLLMProviders(authStore, *tutorTimeoutFlag)
+		fmt.Print(tutor.FormatHealthReports(reports))
+		os.Exit(0)
+	}
+
+	// Handle --tutor-model
+	if *tutorModelFlag != "" && authStore != nil {
+		active := authStore.GetConfig().ActiveProvider
+		targetProvider := active
+		if *tutorFlag != "offline" {
+			targetProvider = *tutorFlag
+		}
+		if targetProvider == tutor.ProviderOffline {
+			// Auto-detect provider from model ID prefix
+			mLower := strings.ToLower(*tutorModelFlag)
+			switch {
+			case strings.HasPrefix(mLower, "claude"):
+				targetProvider = tutor.ProviderAnthropic
+			case strings.HasPrefix(mLower, "gemini"):
+				targetProvider = tutor.ProviderGoogle
+			case strings.HasPrefix(mLower, "gpt-") || strings.HasPrefix(mLower, "o1") || strings.HasPrefix(mLower, "o3") || strings.HasPrefix(mLower, "chatgpt"):
+				if authStore.IsConfigured(tutor.ProviderChatGPTPlan) {
+					targetProvider = tutor.ProviderChatGPTPlan
+				} else {
+					targetProvider = tutor.ProviderOpenAI
+				}
+			}
+		}
+		if targetProvider != tutor.ProviderOffline {
+			if err := authStore.SetSelectedModel(targetProvider, *tutorModelFlag); err != nil {
+				fmt.Fprintf(os.Stderr, "error setting active model: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("✓ Active model for provider %s set to: %s\n", strings.ToUpper(targetProvider), *tutorModelFlag)
+			if *tutorFlag != "offline" {
+				_ = authStore.SetActiveProvider(targetProvider)
+			}
+		} else {
+			fmt.Println("Notice: Active provider is Offline mode. Model selection will apply when an AI provider is active.")
+		}
+		if *tutorFlag == "offline" && !*examFlag && !*practiceJournalFlag && !*statementsFlag && !*listModelsFlag && !*fetchModelsFlag && !*refreshModelsFlag {
+			os.Exit(0)
+		}
+	}
+
+	// Handle --fetch-models / --refresh-models
+	if *fetchModelsFlag || *refreshModelsFlag {
+		fmt.Println("==================================================================================")
+		fmt.Println("DISCOVERING LIVE MODELS ACROSS CONFIGURED AI PROVIDERS")
+		fmt.Println("==================================================================================")
+		providers := []string{tutor.ProviderAnthropic, tutor.ProviderGoogle, tutor.ProviderOpenAI, tutor.ProviderChatGPTPlan}
+		discoveredCount := 0
+		for _, p := range providers {
+			isConfigured := authStore != nil && authStore.IsConfigured(p)
+			if !isConfigured {
+				fmt.Printf("[%s] Skipped (credentials not configured)\n", strings.ToUpper(p))
+				continue
+			}
+			fmt.Printf("[%s] Fetching models from API...\n", strings.ToUpper(p))
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			models, err := modelCache.RefreshProvider(ctx, p, authStore, "", nil)
+			cancel()
+			if err != nil {
+				fmt.Printf("  ⚠️ Discovery failed: %v (using fallback catalog)\n", err)
+			} else {
+				fmt.Printf("  ✓ Successfully discovered and cached %d models.\n", len(models))
+				discoveredCount += len(models)
+			}
+		}
+		fmt.Printf("\nDiscovery complete (%d models). Cache saved to: %s\n", discoveredCount, cachePath)
+		fmt.Println("==================================================================================")
+		if !*listModelsFlag {
+			os.Exit(0)
+		}
+	}
+
+	// Handle --list-models
+	if *listModelsFlag {
+		activeProvider := tutor.ProviderOffline
+		if authStore != nil {
+			activeProvider = authStore.GetConfig().ActiveProvider
+		}
+		fmt.Println("==================================================================================")
+		fmt.Printf("TUTOR MODEL CATALOG & SELECTION STATUS (Active Provider: %s)\n", strings.ToUpper(activeProvider))
+		fmt.Println("==================================================================================")
+
+		providers := []struct {
+			id    string
+			label string
+		}{
+			{tutor.ProviderAnthropic, "Anthropic Claude (Messages API)"},
+			{tutor.ProviderGoogle, "Google Gemini (Gemini API)"},
+			{tutor.ProviderOpenAI, "OpenAI API (Chat Completions)"},
+			{tutor.ProviderChatGPTPlan, "ChatGPT Plus Plan (OpenAI OAuth)"},
+		}
+
+		for _, p := range providers {
+			isConfigured := authStore != nil && authStore.IsConfigured(p.id)
+			cfgBadge := "[Not Configured]"
+			if isConfigured {
+				cfgBadge = "[Ready]"
+			}
+			if p.id == activeProvider {
+				cfgBadge += " [ACTIVE PROVIDER]"
+			}
+
+			activeModel := ""
+			if authStore != nil {
+				activeModel = authStore.ResolveModel(p.id)
+			}
+
+			fmt.Printf("\nPROVIDER: %s %s\n", strings.ToUpper(p.id), cfgBadge)
+			fmt.Printf("Description: %s\n", p.label)
+			if p.id == tutor.ProviderChatGPTPlan && authStore != nil {
+				fmt.Printf("OAuth Client ID: %s\n", authStore.ResolveChatGPTClientID())
+			}
+			lastFetched := modelCache.GetLastFetched(p.id)
+			if !lastFetched.IsZero() {
+				fmt.Printf("Last Fetched from API: %s\n", lastFetched.Format(time.RFC3339))
+			} else {
+				fmt.Println("Last Fetched from API: Never (using standard defaults)")
+			}
+			fmt.Println("----------------------------------------------------------------------------------")
+			fmt.Printf("  %-32s %-40s %s\n", "MODEL ID", "DISPLAY NAME", "STATUS")
+			fmt.Println("  --------------------------------------------------------------------------------")
+
+			models := modelCache.GetModels(p.id)
+			for _, m := range models {
+				status := ""
+				if m.ID == activeModel {
+					status = "★ [ACTIVE MODEL]"
+				}
+				fmt.Printf("  %-32s %-40s %s\n", m.ID, m.DisplayName, status)
+			}
+		}
+		fmt.Println("\nTo change models: use --tutor-model=<id> or open TUI Tutor Settings ('t') and press 'm'.")
+		fmt.Println("To discover live models: use --fetch-models or press 'r' in TUI Tutor Settings.")
+		fmt.Println("==================================================================================")
+		os.Exit(0)
+	}
+
 	// Open durable SQLite storage
 	db, err := storage.Open(dbPath)
 	if err != nil {
@@ -123,6 +303,36 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	// Handle --high-scores / --arcade-scores
+	if *highScoresFlag || *arcadeScoresFlag {
+		scores, err := db.ListTopArcadeHighScores(10)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error retrieving arcade high scores: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("==================================================================================")
+		fmt.Println("🚀 ACCOUNTUTOR 9000 // ORBITAL AUDIT DEFENSE — HALL OF FAME")
+		fmt.Printf("Database: %s\n", dbPath)
+		fmt.Println("==================================================================================")
+		fmt.Printf("%-6s %-10s %-12s %-10s %-14s %-20s\n", "Rank", "Initials", "Score", "Blasted", "Flight Time", "Date Recorded")
+		fmt.Println("----------------------------------------------------------------------------------")
+		for i, s := range scores {
+			fmt.Printf("#%-5d %-10s %-12d %-10d %-14s %-20s\n",
+				i+1,
+				fmt.Sprintf("[%s]", s.Initials),
+				s.Score,
+				s.BlastedCount,
+				fmt.Sprintf("%ds", s.SurvivalSeconds),
+				s.CreatedAt.Format("2006-01-02 15:04"),
+			)
+		}
+		if len(scores) == 0 {
+			fmt.Println("No pilot flight scores recorded yet. Launch the arcade intro to set an all-time high score!")
+		}
+		fmt.Println("==================================================================================")
+		os.Exit(0)
+	}
 
 	// Handle --export-json
 	if *exportJSON {
@@ -770,6 +980,7 @@ func main() {
 	case "chatgpt-plan", "chatgpt_plan":
 		tutorProvider = tutor.BuildTutor(tutor.FactoryOptions{
 			Provider:  tutor.ProviderChatGPTPlan,
+			Model:     *tutorModelFlag,
 			Timeout:   *tutorTimeoutFlag,
 			Budget:    budget,
 			AuthStore: authStore,
@@ -777,6 +988,7 @@ func main() {
 	case "anthropic":
 		tutorProvider = tutor.BuildTutor(tutor.FactoryOptions{
 			Provider:  tutor.ProviderAnthropic,
+			Model:     *tutorModelFlag,
 			Timeout:   *tutorTimeoutFlag,
 			Budget:    budget,
 			AuthStore: authStore,
@@ -784,6 +996,7 @@ func main() {
 	case "google", "gemini":
 		tutorProvider = tutor.BuildTutor(tutor.FactoryOptions{
 			Provider:  tutor.ProviderGoogle,
+			Model:     *tutorModelFlag,
 			Timeout:   *tutorTimeoutFlag,
 			Budget:    budget,
 			AuthStore: authStore,
@@ -791,6 +1004,7 @@ func main() {
 	case "openai":
 		tutorProvider = tutor.BuildTutor(tutor.FactoryOptions{
 			Provider:  tutor.ProviderOpenAI,
+			Model:     *tutorModelFlag,
 			Timeout:   *tutorTimeoutFlag,
 			Budget:    budget,
 			AuthStore: authStore,
@@ -810,6 +1024,10 @@ func main() {
 		examTime = *timerFlag
 	}
 	isExam := *examFlag || *resumeExamFlag || examTime > 0
+	showIntro := !*skipIntroFlag && !*noIntroFlag && !isExam && !*practiceJournalFlag
+	if *introFlag {
+		showIntro = true
+	}
 
 	cfg := tui.Config{
 		DB:             db,
@@ -822,9 +1040,13 @@ func main() {
 		Tutor:          tutorProvider,
 		TutorTimeout:   *tutorTimeoutFlag,
 		AuthStore:      authStore,
+		ModelCache:     modelCache,
+		TutorModel:     *tutorModelFlag,
+		OAuthClientID:  *oauthClientIDFlag,
 		ExamMode:       isExam,
 		ExamTimeLimit:  examTime,
 		ResumeExam:     *resumeExamFlag,
+		Intro:          showIntro,
 	}
 
 	model, err := tui.NewModel(cfg)

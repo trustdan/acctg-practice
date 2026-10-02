@@ -46,29 +46,31 @@ type Provenance struct {
 //     strictly by the deterministic engine, NOT accepted blindly from model outputs.
 //  3. Immutability: Generated content cannot alter family rules or learner mastery evidence.
 type CandidateQuestion struct {
-	ID               string                  `json:"id"`
-	FamilyID         string                  `json:"family_id"`
-	RuleVersion      int                     `json:"rule_version"`
-	Status           CandidateStatus         `json:"status"`
-	ScenarioTemplate string                  `json:"scenario_template"`
-	Parameters       map[string][]int64      `json:"parameters"`
-	Concepts         []string                `json:"concepts"`
-	DerivedFixture   bank.FixtureJSON        `json:"derived_fixture"`
-	DerivedEquation  domain.EquationDelta    `json:"derived_equation"`
-	Explanation      engine.EventExplanation `json:"explanation"`
-	Provenance       Provenance              `json:"provenance"`
-	ValidationStatus ValidationStatus        `json:"validation_status"`
-	RejectionReason  string                  `json:"rejection_reason,omitempty"`
+	Teaching         map[domain.DrillStage]bank.TeachingText `json:"teaching,omitempty"`
+	ID               string                                  `json:"id"`
+	FamilyID         string                                  `json:"family_id"`
+	RuleVersion      int                                     `json:"rule_version"`
+	Status           CandidateStatus                         `json:"status"`
+	ScenarioTemplate string                                  `json:"scenario_template"`
+	Parameters       map[string][]int64                      `json:"parameters"`
+	Concepts         []string                                `json:"concepts"`
+	DerivedFixture   bank.FixtureJSON                        `json:"derived_fixture"`
+	DerivedEquation  domain.EquationDelta                    `json:"derived_equation"`
+	Explanation      engine.EventExplanation                 `json:"explanation"`
+	Provenance       Provenance                              `json:"provenance"`
+	ValidationStatus ValidationStatus                        `json:"validation_status"`
+	RejectionReason  string                                  `json:"rejection_reason,omitempty"`
 }
 
 // RawProposal captures the untrusted structured proposal parsed from JSON.
 type RawProposal struct {
-	ID               string                    `json:"id,omitempty"`
-	FamilyID         string                    `json:"family_id"`
-	ScenarioTemplate string                    `json:"scenario_template"`
-	Parameters       map[string][]int64        `json:"parameters"`
-	Concepts         []string                  `json:"concepts"`
-	ProposedPostings []bank.FixturePostingJSON `json:"proposed_postings,omitempty"`
+	Teaching         map[domain.DrillStage]bank.TeachingText `json:"teaching,omitempty"`
+	ID               string                                  `json:"id,omitempty"`
+	FamilyID         string                                  `json:"family_id"`
+	ScenarioTemplate string                                  `json:"scenario_template"`
+	Parameters       map[string][]int64                      `json:"parameters"`
+	Concepts         []string                                `json:"concepts"`
+	ProposedPostings []bank.FixturePostingJSON               `json:"proposed_postings,omitempty"`
 }
 
 // FormatPreview generates a clear human-readable preview of the candidate question,
@@ -136,6 +138,11 @@ func (c *CandidateQuestion) FormatPreview() string {
 
 	// 5. Provenance
 	sb.WriteString("PROVENANCE:\n")
+	for _, stage := range []domain.DrillStage{domain.StageIdentifyAccount, domain.StageAccountCategory, domain.StageDirection, domain.StageDebitCredit, domain.StageCounterAccount, domain.StageBalancedEntry, domain.StageEquationEffect} {
+		if text, ok := c.Teaching[stage]; ok {
+			sb.WriteString(fmt.Sprintf("Proposed teaching [%s] (human review required):\n  Hint: %s\n  Explanation: %s\n", stage, text.Hint, text.Explanation))
+		}
+	}
 	sb.WriteString(fmt.Sprintf("  Source:        %s\n", c.Provenance.Source))
 	if c.Provenance.Model != "" {
 		sb.WriteString(fmt.Sprintf("  Model:         %s\n", c.Provenance.Model))

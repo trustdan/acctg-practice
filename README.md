@@ -66,6 +66,18 @@ chmod +x acctg-linux-amd64 launch-tutor.sh
 
 On ARM64, substitute `acctg-linux-arm64`. The shell launcher looks beside itself and in `dist/` and `bin/`, and attempts to open a terminal when started from a desktop file manager. ZIP extraction on some systems loses executable permissions, so run `chmod` first.
 
+**Running a Git checkout:** compiled binaries and `dist/` are ignored by Git, so `git pull` updates only the source. In a source checkout, `launch-tutor.sh` builds the current code into `./acctg` on each launch before running it, using Go's build cache. This requires the Go version declared in `go.mod`. A failed build stops the launcher instead of running an old binary. Extracted release packages run their included binary without requiring Go.
+
+To refresh a checkout using an older launcher immediately:
+
+```sh
+CGO_ENABLED=0 go build -o acctg ./cmd/acctg
+./acctg --version
+./acctg --skip-intro
+```
+
+After pulling the launcher fix, run `chmod +x launch-tutor.sh` if needed, then `./launch-tutor.sh --version` to build and verify the current version.
+
 `accounttutor.desktop` is optional. Before installing it in `~/.local/share/applications/`, set `Exec` to the absolute path to your launcher and `Path` to its containing directory. Copying the unmodified desktop file into that menu directory will not locate a launcher stored elsewhere.
 
 ### Windows binary through Wine

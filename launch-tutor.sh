@@ -12,7 +12,20 @@ cd "$DIR"
 ARCH="$(uname -m)"
 BIN=""
 
-if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then
+# A git pull updates source, not ignored executables. Always build a source
+# checkout first so an older release binary cannot shadow the current code.
+if [ -f "./go.mod" ] && [ -f "./cmd/acctg/main.go" ]; then
+    if ! command -v go >/dev/null 2>&1; then
+        echo "This is a source checkout; Go is required to build the current code." >&2
+        echo "Install the Go version declared in go.mod, then run this launcher again." >&2
+        echo "Alternatively, extract the latest Linux release ZIP into a separate folder." >&2
+        exit 1
+    fi
+    echo "Building AccountTutor from the current source checkout..." >&2
+    HOST_ARCH="$(go env GOHOSTARCH)"
+    GOOS=linux GOARCH="$HOST_ARCH" CGO_ENABLED=0 go build -o acctg ./cmd/acctg
+    BIN="./acctg"
+elif [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then
     # 64-bit x86 Linux
     for candidate in "./acctg-linux-amd64" "./dist/acctg-linux-amd64" "./bin/acctg-linux-amd64" "./acctg" "./dist/acctg"; do
         if [ -f "$candidate" ]; then
@@ -30,9 +43,9 @@ elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
     done
 fi
 
-# Fallback: check any generic Linux binary
+# Fallback: a generic native binary, never a different architecture's release.
 if [ -z "$BIN" ]; then
-    for candidate in "./acctg" "./dist/acctg" "./acctg-linux-amd64" "./acctg-linux-arm64" "./dist/acctg-linux-amd64" "./dist/acctg-linux-arm64"; do
+    for candidate in "./acctg" "./dist/acctg"; do
         if [ -f "$candidate" ]; then
             BIN="$candidate"
             break
@@ -53,15 +66,6 @@ if [ -z "$BIN" ]; then
     done
 fi
 
-# Fallback: build from source if Go is installed
-if [ -z "$BIN" ] && command -v go >/dev/null 2>&1; then
-    echo "=================================================================="
-    echo "Pre-compiled binary not found. Compiling natively with Go..."
-    echo "=================================================================="
-    go build -o acctg ./cmd/acctg
-    BIN="./acctg"
-fi
-
 # If still not found, provide actionable guidance
 if [ -z "$BIN" ]; then
     echo "=================================================================="
@@ -75,18 +79,19 @@ if [ -z "$BIN" ]; then
     echo "   - x86_64: acctg-linux-amd64"
     echo "   - ARM64:  acctg-linux-arm64"
     echo ""
-    echo "2. Build natively from source (requires Go 1.24+):"
+    echo "2. Build natively from a full source checkout (Go version from go.mod):"
     echo "   go build -o acctg ./cmd/acctg"
     echo ""
     echo "3. Run the Windows binary using Wine (backup):"
     echo "   sudo apt install wine  # (Ubuntu/Debian)"
     echo "   wine ./acctg.exe"
     echo "=================================================================="
-    read -p "Press [Enter] to exit..." dummy
+    if [ -t 0 ]; then read -r -p "Press [Enter] to exit..." dummy; fi
     exit 1
 fi
 
 chmod +x "$BIN" 2>/dev/null || true
+LAUNCHER="$DIR/$(basename "${BASH_SOURCE[0]}")"
 
 # If not running in a terminal (e.g. clicked from a GUI file manager), spawn a terminal
 if [ ! -t 0 ] || [ ! -t 1 ]; then
@@ -94,16 +99,16 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
         if command -v "$term" >/dev/null 2>&1; then
             case "$term" in
                 gnome-terminal|xfce4-terminal|tilix|lxterminal)
-                    exec "$term" -- "$DIR/$0" "$@"
+                    exec "$term" -- bash "$LAUNCHER" "$@"
                     ;;
                 konsole)
-                    exec "$term" -e "$DIR/$0" "$@"
+                    exec "$term" -e bash "$LAUNCHER" "$@"
                     ;;
                 alacritty|kitty|foot|terminator)
-                    exec "$term" -e "$DIR/$0" "$@"
+                    exec "$term" -e bash "$LAUNCHER" "$@"
                     ;;
                 x-terminal-emulator|xterm|urxvt|rxvt)
-                    exec "$term" -e "$DIR/$0" "$@"
+                    exec "$term" -e bash "$LAUNCHER" "$@"
                     ;;
             esac
         fi

@@ -1,4 +1,12 @@
-﻿# Version 0.23.0 — Initial release refresh (October 2, 2026)
+# Version 0.24.0 — Saved explanations and arcade title transition (October 2, 2026)
+
+- Leaving a generated LLM explanation asks whether to save it. Yes saves a personal note with question/stage/provider context and resumes the original action; No continues without saving; Esc keeps reading. Scrolling remains uninterrupted, and failed writes retain the explanation for retry.
+- Uppercase V opens the saved-explanation library. SQLite migration 8 preserves notes independently of grading, mastery, and published question content.
+- An ASCII AccounTutor 9000 title slides in from the right after arcade exit/high-score entry, holds briefly, and automatically returns to the previous application screen. Direct leaderboard viewing and --skip-intro bypass this transition.
+- Windows, macOS Apple Silicon/Intel, and Linux x64/ARM64 packages refreshed for v0.24.0. Native macOS/Linux interactive checks remain outstanding.
+
+---
+# Version 0.23.0 — Initial release refresh (October 2, 2026)
 
 - Offline adaptive drills, journal entries, transaction grids/T-accounts, financial statement case reports, and resumable exams.
 - Connected LLM question generation with animated progress, cancellation, proposed teaching text, and explicit review before publication; local variations remain available offline.

@@ -2292,6 +2292,7 @@ func TestStartupAnimationKeyTransitionsToDrill(t *testing.T) {
 	m1, db1 := setupTestTUIWithIntro(t)
 	defer db1.Close()
 	sendSpecialKey(m1, tea.KeyEnter)
+	finishTitleForTest(t, m1)
 	if m1.State != tui.StateDrill {
 		t.Errorf("expected Enter to transition to StateDrill, got %v", m1.State)
 	}
@@ -2311,6 +2312,7 @@ func TestStartupAnimationKeyTransitionsToDrill(t *testing.T) {
 	m3, db3 := setupTestTUIWithIntro(t)
 	defer db3.Close()
 	sendSpecialKey(m3, tea.KeyEsc)
+	finishTitleForTest(t, m3)
 	if m3.State != tui.StateDrill {
 		t.Errorf("expected Esc to transition to StateDrill, got %v", m3.State)
 	}
@@ -2377,6 +2379,7 @@ func TestStartupAnimationReplayFromDrill(t *testing.T) {
 
 	// Press Enter to return to drill
 	sendSpecialKey(m, tea.KeyEnter)
+	finishTitleForTest(t, m)
 	if m.State != tui.StateDrill {
 		t.Fatalf("expected return to StateDrill after Enter, got %v", m.State)
 	}
@@ -2422,6 +2425,7 @@ func TestArcadeHallOfFameAndRelaunchShortcuts(t *testing.T) {
 		t.Fatalf("expected to resume flight after closing overlay, state=%v", m.State)
 	}
 	sendSpecialKey(m, tea.KeyEnter)
+	finishTitleForTest(t, m)
 	if m.State != tui.StateHelp {
 		t.Fatalf("expected Enter to return to the screen the game was launched from, got %v", m.State)
 	}
@@ -2868,6 +2872,7 @@ func TestStartupAnimationHighScorePersistenceAndInitialsEntry(t *testing.T) {
 
 	// 3. Confirming saves to SQLite database and exits to drills
 	sendSpecialKey(m, tea.KeyEnter)
+	finishTitleForTest(t, m)
 
 	topScore, err := db.GetTopArcadeHighScore()
 	if err != nil {

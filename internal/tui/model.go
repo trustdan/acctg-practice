@@ -40,6 +40,8 @@ const (
 	StateExamResumePrompt
 	StateIntro
 	StateQuitting
+	StateTitle
+	StateSavedExplanations
 )
 
 // Model represents the Bubble Tea application state.
@@ -67,18 +69,26 @@ type Model struct {
 	ShowHint             bool
 
 	// Tutor integration
-	Tutor              tutor.Tutor
-	TutorTimeout       time.Duration
-	TutorActive        bool
-	TutorCancel        context.CancelFunc
-	TutorKind          string // "hint" or "explain"
-	TutorResponse      *tutor.Response
-	TutorError         string
-	LoadingFrame       int
-	TutorRequestID     int
-	CandidateActive    bool
-	CandidateCancel    context.CancelFunc
-	CandidateRequestID int
+	Tutor                 tutor.Tutor
+	TutorTimeout          time.Duration
+	TutorActive           bool
+	TutorCancel           context.CancelFunc
+	TutorKind             string // "hint" or "explain"
+	TutorResponse         *tutor.Response
+	PendingExplanation    *storage.SavedExplanation
+	ExplanationSavePrompt bool
+	ExplanationSaving     bool
+	ExplanationSaveError  string
+	ExplanationLeaveKey   tea.KeyMsg
+	SavedExplanations     []storage.SavedExplanation
+	SavedExplanationIndex int
+	TitleFrame            int
+	TutorError            string
+	LoadingFrame          int
+	TutorRequestID        int
+	CandidateActive       bool
+	CandidateCancel       context.CancelFunc
+	CandidateRequestID    int
 
 	// Tutor settings state (Stage 11 & Stage 18)
 	AuthStore          *tutor.AuthStore
@@ -316,6 +326,9 @@ func NewModel(cfg Config) (*Model, error) {
 
 // Init implements tea.Model.
 func (m *Model) Init() tea.Cmd {
+	if m.State == StateTitle {
+		return titleTick()
+	}
 	if m.State == StateIntro {
 		return introTick()
 	}
@@ -366,6 +379,34 @@ func ExportedIntroTickMsg() tea.Msg {
 // Update implements tea.Model.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case titleTickMsg:
+		if m.State != StateTitle {
+			return m, nil
+		}
+		m.TitleFrame++
+		if m.TitleFrame >= titleFrames {
+			return m.finishIntro()
+		}
+		return m, titleTick()
+	case explanationSavedMsg:
+		if !m.ExplanationSaving {
+			return m, nil
+		}
+		m.ExplanationSaving = false
+		if msg.Err != nil {
+			m.ExplanationSaveError = msg.Err.Error()
+			return m, nil
+		}
+		return m.resumeAfterExplanation()
+	case tea.MouseMsg:
+		if m.ExplanationSavePrompt {
+			return m, nil
+		}
+		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft && m.unsavedExplanationVisible() {
+			m.ExplanationLeaveKey = tea.KeyMsg{Type: tea.KeyEsc}
+			m.ExplanationSavePrompt = true
+		}
+		return m, nil
 	case loadingTickMsg:
 		if m.TutorActive || m.CandidateActive {
 			m.LoadingFrame++
@@ -449,6 +490,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.CurrentHint = msg.Resp.Text
 		m.ShowHint = true
 		m.TutorError = msg.Resp.FallbackReason
+		m.PendingExplanation = nil
+		if msg.Kind == "explain" && msg.Resp.Text != "" && !msg.Resp.Fallback && msg.Resp.Provider != "OfflineTutor" && msg.Resp.Provider != tutor.ProviderOffline {
+			m.captureExplanation(msg.Resp)
+		}
 		return m, nil
 
 	case oauthCompleteMsg:
@@ -493,6 +538,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		key := msg.String()
+		if m.ExplanationSavePrompt {
+			return m.updateExplanationSave(key)
+		}
+		if m.unsavedExplanationVisible() && !explanationReadingKey(key) {
+			m.ExplanationLeaveKey = msg
+			m.ExplanationSavePrompt = true
+			m.ExplanationSaveError = ""
+			return m, nil
+		}
+		if m.State == StateTitle {
+			if key == "ctrl+c" || key == "q" {
+				m.closeSession()
+				m.State = StateQuitting
+				return m, tea.Quit
+			}
+			return m, nil
+		}
 		if m.State != StateIntro && m.State != StateQuitting && !m.pageTextEntryActive() {
 			if key == "u" || key == "d" || key == "pgup" || key == "pgdown" {
 				step := (m.Height - 3) / 2
@@ -530,6 +592,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Arcade shortcuts work from any screen that has no text entry or running timer.
+		if key == "V" && m.arcadeKeysAllowed() {
+			return m.openSavedExplanations()
+		}
 		if m.arcadeKeysAllowed() {
 			switch key {
 			case "A", "ctrl+a":
@@ -581,6 +646,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case StateIntro:
 			return m.updateIntro(key)
+		case StateSavedExplanations:
+			return m.updateSavedExplanations(key)
 
 		case StateQuitting:
 			return m, tea.Quit
@@ -1487,6 +1554,7 @@ func (m *Model) loadNextQuestion() error {
 	m.cancelTutor()
 	m.TutorError = ""
 	m.TutorResponse = nil
+	m.PendingExplanation = nil
 	m.ShowHint = false
 	m.CurrentHint = ""
 	m.RecapScroll = 0
@@ -2368,6 +2436,15 @@ func (m *Model) openLeaderboard() {
 }
 
 func (m *Model) exitIntro() (tea.Model, tea.Cmd) {
+	if m.Intro != nil && m.Intro.LeaderboardOnly {
+		return m.finishIntro()
+	}
+	m.State = StateTitle
+	m.TitleFrame = 0
+	return m, titleTick()
+}
+
+func (m *Model) finishIntro() (tea.Model, tea.Cmd) {
 	targetState := m.IntroReturn
 	if targetState == StateIntro || targetState == 0 {
 		targetState = StateDrill
@@ -2427,16 +2504,13 @@ func (m *Model) updateIntro(key string) (tea.Model, tea.Cmd) {
 			if done {
 				m.saveArcadeScore()
 				m.Intro.InitialsEntryActive = false
-				if m.Intro.GameOver {
-					return m, nil
-				}
 				return m.exitIntro()
 			}
 			return m, nil
 		case "esc":
 			m.saveArcadeScore()
 			m.Intro.InitialsEntryActive = false
-			return m, nil
+			return m.exitIntro()
 		default:
 			if len(key) == 1 {
 				ch := rune(key[0])

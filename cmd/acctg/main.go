@@ -28,7 +28,7 @@ import (
 	"github.com/trustdan/acctg-practice/internal/tutor"
 )
 
-const AppVersion = "0.23.0"
+const AppVersion = "0.24.0"
 
 func main() {
 	var (
@@ -1061,7 +1061,7 @@ func main() {
 	}
 
 	// Launch Bubble Tea program
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error running application: %v\n", err)
 		os.Exit(1)

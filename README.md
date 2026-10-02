@@ -2,7 +2,7 @@
 
 Financial accounting practice in your terminal: work through a business event, build a balanced entry, and see how it changes the accounting equation. AccountTutor runs offline, saves your progress locally, and offers optional AI help when you connect a provider.
 
-**Current version: 0.23.0.** Native releases support Windows x64, macOS Apple Silicon and Intel, and Linux x64 and ARM64. No Go installation, external SQLite library, or separate curriculum download is needed to run a release binary.
+**Current version: 0.24.0.** Native releases support Windows x64, macOS Apple Silicon and Intel, and Linux x64 and ARM64. No Go installation, external SQLite library, or separate curriculum download is needed to run a release binary.
 
 > AI creates. Rules validate. Machine drills. History adapts.
 
@@ -25,11 +25,11 @@ Download the matching ZIP from [Releases](https://github.com/trustdan/acctg-prac
 
 | Computer | Release ZIP | Executable | Optional launcher |
 |---|---|---|---|
-| Windows x64 | `acctg-v0.23.0-windows-amd64.zip` | `acctg.exe` | Run the executable in Windows Terminal |
-| Mac with Apple Silicon | `acctg-v0.23.0-macos-arm64.zip` | `acctg-mac-arm64` | `Launch-Tutor.command` |
-| Intel Mac | `acctg-v0.23.0-macos-amd64.zip` | `acctg-mac-amd64` | `Launch-Tutor.command` |
-| Linux x64 | `acctg-v0.23.0-linux-amd64.zip` | `acctg-linux-amd64` | `launch-tutor.sh` |
-| Linux ARM64 | `acctg-v0.23.0-linux-arm64.zip` | `acctg-linux-arm64` | `launch-tutor.sh` |
+| Windows x64 | `acctg-v0.24.0-windows-amd64.zip` | `acctg.exe` | Run the executable in Windows Terminal |
+| Mac with Apple Silicon | `acctg-v0.24.0-macos-arm64.zip` | `acctg-mac-arm64` | `Launch-Tutor.command` |
+| Intel Mac | `acctg-v0.24.0-macos-amd64.zip` | `acctg-mac-amd64` | `Launch-Tutor.command` |
+| Linux x64 | `acctg-v0.24.0-linux-amd64.zip` | `acctg-linux-amd64` | `launch-tutor.sh` |
+| Linux ARM64 | `acctg-v0.24.0-linux-arm64.zip` | `acctg-linux-arm64` | `launch-tutor.sh` |
 
 The macOS classmate bundle contains both Mac executables and the same launcher; it is a ZIP with two architectures, not a universal executable.
 
@@ -91,6 +91,8 @@ For API providers, enter a key in settings or supply `ANTHROPIC_API_KEY`, `GEMIN
 
 During practice, `?` requests a hint and `e` requests an explanation. Requests run asynchronously with a rotating loading indicator; `Esc` cancels. Provider failures display a notice and fall back to offline help. Tutor prose cannot change answer keys, grades, or mastery. The default request timeout is 60 seconds and the default session budget is 20 requests.
 
+When you leave an LLM explanation (Esc, another hotkey, a mouse click, or quit), the app asks: **Would you like to save this explanation in the database?** Press `y` to save and continue the original action, `n` to continue without saving, or Esc to keep reading. Scrolling does not trigger the prompt. Save failures keep the text available for retry. Press uppercase `V` to browse saved explanations and their original question/stage/provider; use `n`/`p` to browse and `u`/`d` to scroll. These are personal advisory notes, not approved question content or grading evidence. Offline hints and fallback explanations do not trigger this prompt.
+
 The available subscription permissions and models depend on the connected account. `--test-llm` reports local configuration diagnostics; it does not prove that live inference will succeed.
 
 ## Generate and review new questions
@@ -122,7 +124,7 @@ Startup includes an accounting-themed spaceship arcade with an autopilot demo an
 
 The HUD tracks Internal Audit shields and External Audit integrity. Collisions damage your shields; escaped hazards damage global integrity. Heavy hazards such as fraud and insider trading require multiple hits and can fragment into smaller targets. New all-time records prompt for three initials and persist in SQLite; arcade scores do not affect accounting mastery.
 
-Press Enter or Esc to move into practice. From practice, `A` opens the arcade and `L` opens high scores. Use `--skip-intro` to start directly in drills.
+Press Enter or Esc to move into practice. From practice, `A` opens the arcade and `L` opens high scores. When you leave the game, after any required high-score entry, a cyan ASCII **AccounTutor 9000** title slides in from the right for one second and holds for two seconds before automatically returning to the application. Narrow terminals use a compact title. Closing a leaderboard opened directly from practice returns immediately. Use `--skip-intro` to start directly in drills.
 
 ## Keyboard reference
 
@@ -138,6 +140,7 @@ Keys depend on the current screen; text fields accept ordinary typing. Uppercase
 | `?` / `e` | Hint / explanation |
 | `h` / F1 | Help and accounting reference |
 | `s` | Mastery dashboard |
+| `V` | Read saved explanations |
 | `t` | Tutor settings |
 | `p` / `n` | Review questions / request a new LLM question |
 | `J` | Journal entry practice |
@@ -195,7 +198,7 @@ Use `--questions` or `--size` for session length; intensities are `standard`, `s
 | macOS | `~/Library/Application Support/acctg-practice` |
 | Linux | `$XDG_CONFIG_HOME/acctg-practice`, or `~/.config/acctg-practice` |
 
-`acctg_practice.db` stores attempts, question snapshots, local published content, exams, and arcade scores. `tutor_auth.json` stores credentials and provider settings; `models_cache.json` stores discovered models. Credentials use local JSON file storage with restrictive permission requests, not an encrypted OS keychain. Protect that directory and exclude it from releases and commits.
+`acctg_practice.db` stores attempts, question snapshots, local published content, exams, arcade scores, and learner-saved explanations. `tutor_auth.json` stores credentials and provider settings; `models_cache.json` stores discovered models. Credentials use local JSON file storage with restrictive permission requests, not an encrypted OS keychain. Protect that directory and exclude it from releases and commits.
 
 Schema upgrades create database backups. For a manual file backup, close the application first and copy the database along with any remaining SQLite sidecar files. JSON export provides practice history, not a complete replacement for a database backup. Optional provider requests send the context needed for the selected action; offline drills require no network.
 
@@ -224,14 +227,14 @@ From PowerShell, run `./scripts/build_releases.ps1`. From a Bash environment wit
 
 Upload these files from `dist/` to the release:
 
-- `acctg-v0.23.0-windows-amd64.zip`
-- `acctg-v0.23.0-macos-arm64.zip`
-- `acctg-v0.23.0-macos-amd64.zip`
-- `acctg-v0.23.0-linux-amd64.zip`
-- `acctg-v0.23.0-linux-arm64.zip`
+- `acctg-v0.24.0-windows-amd64.zip`
+- `acctg-v0.24.0-macos-arm64.zip`
+- `acctg-v0.24.0-macos-amd64.zip`
+- `acctg-v0.24.0-linux-amd64.zip`
+- `acctg-v0.24.0-linux-arm64.zip`
 - `checksums.sha256`
 
-Optionally add `acctg-v0.23.0-macos-classmate-bundle.zip` for classmates who want one download for either Mac architecture. Bash builds additionally produce Linux `.tar.gz` archives with executable permissions.
+Optionally add `acctg-v0.24.0-macos-classmate-bundle.zip` for classmates who want one download for either Mac architecture. Bash builds additionally produce Linux `.tar.gz` archives with executable permissions.
 
 The ZIPs already contain the corresponding executable, launcher where applicable, README, and release notes. Linux ZIPs also include the optional desktop template. If distributing loose files instead, add `acctg-mac-arm64`, `acctg-mac-amd64`, `acctg-linux-amd64`, `acctg-linux-arm64`, `Launch-Tutor.command`, `README.md`, and `RELEASE-NOTES.md` alongside the Windows `.exe` and Linux `.sh`; the shell script cannot run without a matching binary. The duplicate `acctg-windows-amd64.exe` is an alternative filename for `acctg.exe` and need not be uploaded separately.
 

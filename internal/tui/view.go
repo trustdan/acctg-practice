@@ -16,6 +16,12 @@ import (
 
 // View implements tea.Model.
 func (m *Model) View() string {
+	if m.ExplanationSavePrompt {
+		return m.renderExplanationSave()
+	}
+	if m.State == StateTitle {
+		return m.renderTitle()
+	}
 	if m.State == StateQuitting {
 		return "\n  Goodbye! Practice session and mastery evidence safely saved to SQLite.\n\n"
 	}
@@ -44,6 +50,8 @@ func (m *Model) View() string {
 		content = m.renderSessionComplete(contentWidth)
 	case StateTutorConfig:
 		content = m.renderTutorConfig(contentWidth)
+	case StateSavedExplanations:
+		content = m.renderSavedExplanations(contentWidth)
 	case StateCandidatePreview:
 		content = m.renderCandidatePreview(contentWidth)
 	case StateJournalPractice:
@@ -172,7 +180,7 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 
 	leftSection := lipgloss.JoinHorizontal(lipgloss.Center, modePill, infoPill, intensityPill, streakPill)
 
-	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move  [1-4] Select  [u/d] Scroll  [?] Hint  [e] Explain  [t] Tutor  [p] Review New Questions  [n] New from LLM  [J] Entry  [h] Help  [s] Mastery  [A] Arcade  [L] Scores  [q] Quit")
+	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move  [1-4] Select  [u/d] Scroll  [?] Hint  [e] Explain  [V] Saved Explanations  [t] Tutor  [p] Review New Questions  [n] New from LLM  [J] Entry  [h] Help  [s] Mastery  [A] Arcade  [L] Scores  [q] Quit")
 
 	// Calculate space between left and right sections
 	leftWidth := lipgloss.Width(leftSection)
@@ -627,7 +635,8 @@ func (m *Model) renderHelp(contentWidth int) string {
 [Enter]         Submit answer / Continue from feedback
 [Space]         Continue to next stage / question
 [?]             Request targeted Socratic hint
-[e]             Request a conceptual explanation
+[e]             Request a conceptual explanation; save prompt appears when leaving
+[V]             Read saved explanations (personal notes, not answer keys)
 [t]             Configure / connect the AI tutor
 [p]             Review new questions before adding them to practice
 [n]             Request a new question from the connected AI tutor

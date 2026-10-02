@@ -218,6 +218,21 @@ CREATE INDEX IF NOT EXISTS idx_arcade_created ON arcade_high_scores(created_at);
 	},
 	{Version: 7, Description: "Persist proposed candidate teaching for semantic review", SQL: `ALTER TABLE candidate_questions ADD COLUMN teaching_json TEXT NOT NULL DEFAULT '{}';
 ALTER TABLE published_questions ADD COLUMN teaching_json TEXT NOT NULL DEFAULT '{}';`},
+	{Version: 8, Description: "Save learner-selected tutor explanations as advisory notes", SQL: `
+CREATE TABLE saved_explanations (
+    id TEXT PRIMARY KEY,
+    instance_id TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    question_version INTEGER NOT NULL,
+    stage TEXT NOT NULL,
+    scenario TEXT NOT NULL,
+    stage_prompt TEXT NOT NULL,
+    explanation TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    saved_at TEXT NOT NULL
+);
+CREATE INDEX idx_saved_explanations_saved ON saved_explanations(saved_at DESC);`},
 }
 
 // ApplyMigrations applies all pending migrations in order.

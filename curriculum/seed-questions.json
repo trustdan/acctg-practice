@@ -1,0 +1,760 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_service_basic",
+      "version": 1,
+      "family_id": "cash_service",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company completes services today and receives ${amount_dollars} cash today. No invoice was previously issued.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: cash service completed and paid today"
+      }
+    },
+    {
+      "id": "customer_advance_basic",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A customer pays ${amount_dollars} cash today for services the company will perform next month. None of the service has been performed.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "unearned_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: cash collected in advance of performance"
+      }
+    },
+    {
+      "id": "service_on_credit_basic",
+      "version": 1,
+      "family_id": "service_on_credit",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company completes ${amount_dollars} of services today and invoices the customer. The customer has not paid.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "accounts_receivable_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: service performed and billed on credit"
+      }
+    },
+    {
+      "id": "collect_receivable_basic",
+      "version": 1,
+      "family_id": "collect_receivable",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A customer pays ${amount_dollars} cash today to settle an invoice. The company already recorded the service revenue and receivable last month.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "collection_vs_earning",
+        "cash_classification",
+        "accounts_receivable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: cash collected on previously recognized invoice"
+      }
+    },
+    {
+      "id": "earn_advance_basic",
+      "version": 1,
+      "family_id": "earn_advance",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company completes ${amount_dollars} of services today. The customer paid last month, and the company recorded Unearned Revenue then. No cash changes hands today.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "earned_vs_unearned",
+        "unearned_revenue_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: advance fulfilled upon completion of services"
+      }
+    },
+    {
+      "id": "cash_rent_basic",
+      "version": 1,
+      "family_id": "cash_rent",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company pays ${amount_dollars} cash today for rent for the current month.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_expense",
+        "rent_expense_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "rent_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: cash paid for current month operating rent"
+      }
+    },
+    {
+      "id": "borrow_cash_basic",
+      "version": 1,
+      "family_id": "borrow_cash",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company borrows ${amount_dollars} cash today and signs a promissory note payable in two years. Ignore interest.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "notes_payable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: cash financing via promissory note"
+      }
+    },
+    {
+      "id": "issue_shares_basic",
+      "version": 1,
+      "family_id": "issue_shares",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company issues common shares today for ${amount_dollars} cash received from investors.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "common_stock_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "common_stock",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "approved core starter: contributed capital from common stock issuance"
+      }
+    },
+    {
+      "id": "prepaid_insurance_retail",
+      "version": 1,
+      "family_id": "prepaid_purchase",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A retail boutique pays ${amount_dollars} cash today for a 12-month commercial insurance policy beginning this month. No insurance coverage has expired yet today.",
+      "parameters": {
+        "amount_minor_units": [
+          120000,
+          240000,
+          360000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "prepaid_insurance_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "prepaid_insurance",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed contrast pair: retail prepaid insurance purchase (asset swap, not expense)"
+      }
+    },
+    {
+      "id": "prepaid_consumption_retail",
+      "version": 1,
+      "family_id": "prepaid_consumption",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "At month-end, the retail boutique records ${amount_dollars} of insurance that expired during the month from its prepaid policy. No cash is paid today.",
+      "parameters": {
+        "amount_minor_units": [
+          10000,
+          20000,
+          30000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "insurance_expense_classification",
+        "prepaid_insurance_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "insurance_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "prepaid_insurance",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed contrast pair: retail prepaid insurance expiration (expense recognition, zero cash)"
+      }
+    },
+    {
+      "id": "equipment_cash_rental",
+      "version": 1,
+      "family_id": "equipment_purchase_cash",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "An equipment rental firm pays ${amount_dollars} cash today to purchase industrial machinery for its rental fleet with an estimated 5-year useful life.",
+      "parameters": {
+        "amount_minor_units": [
+          450000,
+          800000,
+          1500000
+        ]
+      },
+      "concepts": [
+        "capex_vs_expense",
+        "equipment_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "equipment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed outflow contrast: capital expenditure asset acquisition vs operating expense"
+      }
+    },
+    {
+      "id": "repay_principal_logistics",
+      "version": 1,
+      "family_id": "repay_note_principal",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A freight logistics carrier pays ${amount_dollars} cash today to repay principal on its bank note payable. Ignore interest.",
+      "parameters": {
+        "amount_minor_units": [
+          100000,
+          200000,
+          500000
+        ]
+      },
+      "concepts": [
+        "principal_repayment_vs_expense",
+        "notes_payable_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "notes_payable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed outflow contrast: loan principal reduction vs operating expense"
+      }
+    },
+    {
+      "id": "dividend_cash_retail",
+      "version": 1,
+      "family_id": "dividend_cash",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A retail corporation pays ${amount_dollars} cash dividends today to its stockholders from accumulated earnings.",
+      "parameters": {
+        "amount_minor_units": [
+          50000,
+          100000,
+          250000
+        ]
+      },
+      "concepts": [
+        "dividend_vs_expense",
+        "dividends_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "dividends",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed outflow contrast: equity dividend distribution vs operating expense"
+      }
+    },
+    {
+      "id": "cash_service_webdev",
+      "version": 1,
+      "family_id": "cash_service",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A web development studio delivers a finished client website today and receives ${amount_dollars} cash upon delivery today. No prior invoices or advances existed.",
+      "parameters": {
+        "amount_minor_units": [
+          150000,
+          250000,
+          400000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed business setting: web development direct cash delivery"
+      }
+    },
+    {
+      "id": "service_credit_consulting",
+      "version": 1,
+      "family_id": "service_on_credit",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A cybersecurity consulting firm completes an audit today and sends an invoice for ${amount_dollars} to the client, payable in 30 days. No cash was received today.",
+      "parameters": {
+        "amount_minor_units": [
+          180000,
+          320000,
+          500000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "accounts_receivable_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed business setting: consulting service on credit"
+      }
+    },
+    {
+      "id": "collect_receivable_consulting",
+      "version": 1,
+      "family_id": "collect_receivable",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The consulting firm receives ${amount_dollars} cash today from a client settling an invoice for audit services that were completed and recognized as revenue last month.",
+      "parameters": {
+        "amount_minor_units": [
+          180000,
+          320000,
+          500000
+        ]
+      },
+      "concepts": [
+        "collection_vs_earning",
+        "cash_classification",
+        "accounts_receivable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed contrast pair: consulting receivable collection (asset swap, zero duplicate revenue)"
+      }
+    },
+    {
+      "id": "customer_advance_logistics",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A freight logistics carrier receives ${amount_dollars} cash today from a shipper for cargo transport scheduled to take place next month. None of the shipping service has occurred yet.",
+      "parameters": {
+        "amount_minor_units": [
+          120000,
+          240000,
+          360000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "unearned_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed business setting: logistics customer cash advance"
+      }
+    },
+    {
+      "id": "earn_advance_logistics",
+      "version": 1,
+      "family_id": "earn_advance",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The freight logistics carrier safely delivers cargo today, fulfilling a shipping contract for which the shipper paid ${amount_dollars} in advance last month (recorded then as Unearned Revenue). No cash changes hands today.",
+      "parameters": {
+        "amount_minor_units": [
+          120000,
+          240000,
+          360000
+        ]
+      },
+      "concepts": [
+        "earned_vs_unearned",
+        "unearned_revenue_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "reviewed contrast pair: logistics advance fulfillment (liability discharge, zero cash)"
+      }
+    },
+    {
+      "id": "legacy_unclear_advance_v0",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "retired",
+      "scenario_template": "A customer pays the company ${amount_dollars}.",
+      "parameters": {
+        "amount_minor_units": [
+          10000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "course_staff",
+        "approved_at": "2026-10-01T12:00:00Z",
+        "source": "retired template: timing ambiguous (fails to state when service occurs; excluded from practice sessions)"
+      }
+    }
+  ]
+}

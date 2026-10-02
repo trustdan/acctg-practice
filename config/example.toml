@@ -1,0 +1,26 @@
+# Proposed contract; no configuration parser is included.
+[practice]
+session_questions = 10
+amounts_minor_units = [5000, 10000, 20000]
+hint_retries = 1
+mixed_review_fraction = 0.20
+
+[mastery]
+half_life_days = 3.0
+minimum_selection_weight = 0.05
+
+[tutor]
+# Supported providers: "offline" (default), "chatgpt_plan", "anthropic", "google", or "openai"
+provider = "offline"
+network_enabled = false
+timeout_seconds = 20
+max_requests_per_session = 5
+# Optional model override (defaults chosen per provider):
+# model = "claude-3-5-sonnet-latest"   # for anthropic
+# model = "gemini-1.5-pro-latest"       # for google
+# model = "gpt-4o"                      # for openai
+#
+# Credentials:
+# - "chatgpt_plan": managed via TUI browser login (OAuth PKCE) and saved in local user data dir.
+# - "anthropic", "google", "openai": read from ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY env vars,
+#   or entered via TUI and stored securely in local user data dir. Never store secrets in tracked files or git.

@@ -1,0 +1,24 @@
+# Merge into an existing ignore file; do not replace its rules.
+.env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+*.db.bak.*
+*.sqlite
+*.sqlite3
+local-progress/
+local-backups/
+bin/
+dist/
+
+# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+

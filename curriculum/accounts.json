@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "course_scope": "provisional",
+  "accounts": [
+    {
+      "id": "cash",
+      "name": "Cash",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "accounts_receivable",
+      "name": "Accounts Receivable",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "prepaid_insurance",
+      "name": "Prepaid Insurance",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "equipment",
+      "name": "Equipment",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "accounts_payable",
+      "name": "Accounts Payable",
+      "category": "liability",
+      "normal_side": "credit"
+    },
+    {
+      "id": "unearned_revenue",
+      "name": "Unearned Revenue",
+      "category": "liability",
+      "normal_side": "credit"
+    },
+    {
+      "id": "notes_payable",
+      "name": "Notes Payable",
+      "category": "liability",
+      "normal_side": "credit"
+    },
+    {
+      "id": "dividends_payable",
+      "name": "Dividends Payable",
+      "category": "liability",
+      "normal_side": "credit"
+    },
+    {
+      "id": "common_stock",
+      "name": "Common Stock",
+      "category": "equity",
+      "normal_side": "credit"
+    },
+    {
+      "id": "retained_earnings",
+      "name": "Retained Earnings",
+      "category": "equity",
+      "normal_side": "credit"
+    },
+    {
+      "id": "service_revenue",
+      "name": "Service Revenue",
+      "category": "revenue",
+      "normal_side": "credit"
+    },
+    {
+      "id": "rent_expense",
+      "name": "Rent Expense",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "insurance_expense",
+      "name": "Insurance Expense",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "dividends",
+      "name": "Dividends",
+      "category": "dividends",
+      "normal_side": "debit"
+    }
+  ]
+}

@@ -60,6 +60,12 @@ func IsActiveForPractice(status string) bool {
 	return status == StatusActive || status == StatusApprovedActive || status == StatusSeedPendingReview
 }
 
+// RequiresReviewProvenance reports whether a status must carry reviewer and approval
+// provenance. Reviewed teaching overrides apply exactly to these statuses.
+func RequiresReviewProvenance(status string) bool {
+	return status == StatusActive || status == StatusApprovedActive
+}
+
 // AccountsFile represents the JSON structure of curriculum/accounts.json.
 type AccountsFile struct {
 	SchemaVersion int           `json:"schema_version"`

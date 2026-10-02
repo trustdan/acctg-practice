@@ -128,13 +128,37 @@ func socraticHintForErrorTag(tag string) string {
 	case engine.TagCashRecordedOnEarningAdvance:
 		return "Check cash timing: was cash received today, or was the cash deposit collected in an earlier transaction? Today we delivered the service, reducing our unearned obligation."
 	case engine.TagExpenseRecordedOnPrepaidPurchase:
-		return "Consider the benefit horizon: does this payment benefit only today, or does it cover upcoming future months? Paying in advance for future benefits acquires an asset (Prepaid Expense), not an immediate period expense."
+		return "Consider the benefit horizon: does this payment cover only today, or upcoming months? Paying in advance for future coverage acquires an asset (Prepaid Insurance), not an expense of the current period."
 	case engine.TagExpenseRecordedOnEquipmentPurchase:
 		return "Equipment provides productive economic benefit over multiple years. Purchasing long-lived operational equipment is a capital asset acquisition (asset swap), not an immediate period expense."
 	case engine.TagExpenseRecordedOnLoanRepayment:
 		return "Repaying loan principal extinguishes a liability (Notes Payable) that was previously borrowed. Repaying principal is not an expense—only interest represents the cost of borrowing."
 	case engine.TagExpenseRecordedOnDividend:
-		return "Dividends represent a direct distribution of retained earnings to owners, reducing Retained Earnings. A dividend distribution is not an operating expense and does not reduce Net Income."
+		return "Dividends distribute earnings to stockholders. They are recorded in the Dividends account, which reduces equity. A dividend is not an expense and does not reduce Net Income."
+	case engine.TagRevenueRecordedOnBorrowing:
+		return "Where did this cash come from? A lender expects it back. Does money the company must repay mean it earned something, or that it owes something?"
+	case engine.TagRevenueRecordedOnShareIssue:
+		return "Who provided this cash, and what did they receive in return? Did the company perform work for it, or did investors buy an ownership stake?"
+	case engine.TagPrepaidNotExpensedOnConsumption:
+		return "Part of the coverage the company paid for has now been used up. Should the full amount still be reported as a future benefit?"
+	case engine.TagCashRecordedOnDividendDeclaration:
+		return "Did any cash leave the company on the declaration date, or did the company only commit to pay later?"
+	case engine.TagDividendsDebitedOnPayment:
+		return "Was this dividend already declared and recorded earlier? If so, what does today's payment settle?"
+	case engine.TagCashRecordedWhenUncollected:
+		return "Did the customer hand over any money today? If not, what does the company hold instead of cash?"
+	case engine.TagCashRecordedOnPrepaidExpiration:
+		return "Did any cash leave the company today, or was the coverage paid for when the policy was bought?"
+	case engine.TagRevenueDeferredWhenEarned:
+		return "Has the company already done the work? If the work is finished, does the company still owe the customer anything?"
+	case engine.TagAdvanceConfusedWithReceivable:
+		return "Who owes whom? The customer has already paid. Does the customer owe the company money, or does the company owe the customer future work?"
+	case engine.TagPayableRecordedForCashPayment:
+		return "Did the company pay today or promise to pay later? If cash already left, is anything still owed?"
+	case engine.TagEquationEffectMissed:
+		return "Is this only an exchange of one asset for another, or did a liability or equity account change too? Place each account in the entry under Assets, Liabilities, or Equity."
+	case engine.TagWrongAccount:
+		return "Re-read the scenario: what changed hands today, and who owes whom afterward? Choose the account that describes that change."
 	case engine.TagReversedSides:
 		return "Check side placement: Debit is always the Left side, and Credit is always the Right side. Verify whether this account increases or decreases, and apply its normal side rule."
 	case engine.TagUnbalancedEntry:
@@ -153,15 +177,15 @@ func familyContrastExplanation(familyID string) string {
 	case "earn_advance":
 		return "Contrast: When fulfilling an advance, no new cash is received today. Instead, the liability Unearned Revenue is debited (decreased), and Service Revenue is credited (increased)."
 	case "prepaid_purchase":
-		return "Contrast: Paying for future insurance or rent is an asset swap (Debit Prepaid Expenses, Credit Cash). The expense is recognized month by month as the benefit is consumed."
+		return "Contrast: Paying now for future coverage exchanges one asset for another (Debit Prepaid Insurance, Credit Cash). Insurance Expense is recognized month by month as the coverage expires."
 	case "prepaid_consumption":
-		return "Contrast: As prepaid coverage expires, we record Rent/Insurance Expense (Debit) and decrease the asset Prepaid Expenses (Credit). No cash moves at consumption time."
+		return "Contrast: As prepaid coverage expires, record Insurance Expense (Debit) and reduce the asset Prepaid Insurance (Credit). No cash moves when coverage expires."
 	case "equipment_purchase_cash":
 		return "Contrast: Long-lived equipment is capitalized as an Asset, not expensed at purchase. It is expensed gradually over its useful life through depreciation."
 	case "repay_note_principal":
 		return "Contrast: Paying down loan principal reduces the liability Notes Payable (Debit) with Cash (Credit). It is a liability reduction, not an expense."
 	case "dividend_cash":
-		return "Contrast: Dividends are a return of capital/profits to shareholders, directly debiting Retained Earnings (Equity). Dividends are not an expense and do not appear on the Income Statement."
+		return "Contrast: Dividends distribute earnings to stockholders. Debit the Dividends account, which reduces equity and is closed to Retained Earnings at period end. Dividends are not an expense and do not appear on the Income Statement."
 	default:
 		return ""
 	}

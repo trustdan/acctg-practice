@@ -317,8 +317,8 @@ func TestExhaustedRetriesAdvancesWithRevealedAnswer(t *testing.T) {
 	if !fb2.AdvanceStage {
 		t.Fatalf("expected AdvanceStage to be true when retries are exhausted")
 	}
-	if !strings.Contains(fb2.Explanation, "opt_cash") {
-		t.Errorf("expected revealed answer to mention correct option ID, got: %s", fb2.Explanation)
+	if !strings.Contains(fb2.Explanation, "was: Cash.") {
+		t.Errorf("expected revealed answer to show the correct option text, got: %s", fb2.Explanation)
 	}
 
 	// Verify next stage is now active
@@ -563,5 +563,60 @@ func TestReferenceConsultationTracking(t *testing.T) {
 	}
 	if att2.Assistance != domain.AssistanceNone {
 		t.Fatalf("expected Assistance to be None, got %s", att2.Assistance)
+	}
+}
+
+func TestTeachingOverridesFollowReviewProvenance(t *testing.T) {
+	gen, qBank, _ := setupTestDrill(t)
+	base := *getQuestionByID(qBank, "cash_service_basic")
+	base.Teaching = map[domain.DrillStage]bank.TeachingText{
+		domain.StageCounterAccount: {Hint: "Reviewed hint ${amount_dollars}", Explanation: "Reviewed explanation."},
+	}
+	params := map[string]int64{"amount_minor_units": 5000}
+
+	cases := []struct {
+		status string
+		want   bool
+	}{
+		{bank.StatusActive, true},
+		{bank.StatusApprovedActive, true},
+		{bank.StatusSeedPendingReview, false},
+	}
+	for _, tc := range cases {
+		q := base
+		q.Status = tc.status
+		inst, err := gen.GenerateInstance(q, 1, params)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.status, err)
+		}
+		got := inst.StageAnswers[domain.StageCounterAccount]
+		applied := got.CausalHint == "Reviewed hint $50" && got.Explanation == "Reviewed explanation."
+		if applied != tc.want {
+			t.Errorf("%s: override applied=%v, want %v (hint %q)", tc.status, applied, tc.want, got.CausalHint)
+		}
+		if got.CorrectOptionID != "opt_service_rev" {
+			t.Errorf("%s: canonical answer changed to %q", tc.status, got.CorrectOptionID)
+		}
+	}
+}
+
+func TestRetryFailureShowsCorrectOptionText(t *testing.T) {
+	gen, qBank, _ := setupTestDrill(t)
+	q := getQuestionByID(qBank, "customer_advance_basic")
+	inst, err := gen.GenerateInstance(*q, 7, map[string]int64{"amount_minor_units": 5000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := drill.NewSession("sess-retry", inst)
+	now := time.Now()
+	if _, err := session.SubmitOption("opt_service_rev", now); err != nil {
+		t.Fatal(err)
+	}
+	fb, err := session.SubmitOption("opt_service_rev", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(fb.Explanation, "The correct answer was: Cash.") || strings.Contains(fb.Explanation, "opt_") {
+		t.Fatalf("retry feedback should show option text, got %q", fb.Explanation)
 	}
 }

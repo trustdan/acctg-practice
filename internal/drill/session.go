@@ -206,8 +206,15 @@ func (s *SessionState) SubmitOption(selectedOptionID string, answeredAt time.Tim
 
 	// Second error (retry exhausted): reveal explanation and advance
 	feedback.AdvanceStage = true
+	correctText := stage.CorrectOptionID
+	for _, opt := range stage.Options {
+		if opt.ID == stage.CorrectOptionID {
+			correctText = opt.Text
+			break
+		}
+	}
 	feedback.Explanation = fmt.Sprintf("Incorrect on retry. The correct answer was: %s. Explanation: %s",
-		stage.CorrectOptionID, stage.Explanation)
+		correctText, stage.Explanation)
 	s.CurrentAssistance = domain.AssistanceRevealed
 	s.advanceToNextStage()
 	return feedback, nil

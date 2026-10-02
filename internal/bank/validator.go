@@ -223,7 +223,7 @@ func LoadQuestionBank(r io.Reader, catalog *domain.AccountCatalog) (*QuestionBan
 		if strings.TrimSpace(q.Review.Source) == "" {
 			return nil, fmt.Errorf("question %q review.source cannot be empty", id)
 		}
-		if q.Status == StatusActive || q.Status == StatusApprovedActive {
+		if RequiresReviewProvenance(q.Status) {
 			if q.Review.Reviewer == nil || strings.TrimSpace(*q.Review.Reviewer) == "" {
 				return nil, fmt.Errorf("active question %q requires review.reviewer", id)
 			}

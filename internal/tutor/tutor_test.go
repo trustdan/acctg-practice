@@ -42,8 +42,8 @@ func TestOfflineTutorHintAndExplain(t *testing.T) {
 		t.Errorf("expected Fallback=false for OfflineTutor")
 	}
 	// Check that specific distractor hint was incorporated
-	if !strings.Contains(hintResp.Text, "Prepaid Expense") {
-		t.Errorf("expected hint to mention Prepaid Expense, got: %s", hintResp.Text)
+	if !strings.Contains(hintResp.Text, "Prepaid Insurance") {
+		t.Errorf("expected hint to mention Prepaid Insurance, got: %s", hintResp.Text)
 	}
 
 	// Explain
@@ -60,7 +60,7 @@ func TestOfflineTutorHintAndExplain(t *testing.T) {
 	if !strings.Contains(explainResp.Text, "Debit means Left and Credit means Right") {
 		t.Errorf("expected explanation to define debit/credit correctly, got: %s", explainResp.Text)
 	}
-	if !strings.Contains(explainResp.Text, "Prepaid Expenses") {
+	if !strings.Contains(explainResp.Text, "Prepaid Insurance") {
 		t.Errorf("expected contrast analysis for prepaid_purchase, got: %s", explainResp.Text)
 	}
 }
@@ -331,6 +331,20 @@ func TestPedagogicalInvariants(t *testing.T) {
 			if strings.Contains(text, term) {
 				t.Errorf("pedagogical violation in %s: found forbidden term %q", fam, term)
 			}
+		}
+	}
+}
+
+func TestOfflineDividendTeachingNamesCanonicalAccount(t *testing.T) {
+	tutor := NewOfflineTutor()
+	req := Request{FamilyID: "dividend_cash", ErrorTag: engine.TagExpenseRecordedOnDividend}
+	for name, call := range map[string]func(context.Context, Request) (Response, error){"hint": tutor.Hint, "explain": tutor.Explain} {
+		resp, err := call(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(resp.Text, "Dividends account") || strings.Contains(resp.Text, "debiting Retained Earnings") {
+			t.Errorf("%s must name the Dividends account, got: %s", name, resp.Text)
 		}
 	}
 }

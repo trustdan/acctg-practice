@@ -76,7 +76,7 @@ func (ServiceOnCreditRule) Explain(params map[string]int64) EventExplanation {
 func (ServiceOnCreditRule) DiagnoseError(candidate domain.Entry, params map[string]int64) ([]string, string) {
 	for _, p := range candidate.Postings {
 		if p.AccountID == "cash" {
-			return []string{"cash_recorded_when_uncollected"}, "No cash was received today; the customer was billed on credit, creating Accounts Receivable."
+			return []string{TagCashRecordedWhenUncollected}, "No cash was received today; the customer was billed on credit, creating Accounts Receivable."
 		}
 	}
 	return nil, ""
@@ -275,7 +275,7 @@ func (PrepaidConsumptionRule) Explain(params map[string]int64) EventExplanation 
 func (PrepaidConsumptionRule) DiagnoseError(candidate domain.Entry, params map[string]int64) ([]string, string) {
 	for _, p := range candidate.Postings {
 		if p.AccountID == "cash" {
-			return []string{"cash_recorded_on_prepaid_expiration"}, "No cash is paid when insurance expires; the asset Prepaid Insurance was already purchased earlier."
+			return []string{TagCashRecordedOnPrepaidExpiration}, "No cash is paid when insurance expires; the asset Prepaid Insurance was already purchased earlier."
 		}
 	}
 	return nil, ""

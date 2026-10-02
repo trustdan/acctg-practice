@@ -108,7 +108,7 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 		buildGenericStages(instance, money, seed, processed)
 	}
 
-	if q.Status == bank.StatusApprovedActive {
+	if bank.RequiresReviewProvenance(q.Status) {
 		for stage, text := range q.Teaching {
 			if answer, ok := instance.StageAnswers[stage]; ok {
 				answer.CausalHint = strings.ReplaceAll(text.Hint, "${amount_dollars}", money.FormatDollars())
@@ -143,9 +143,9 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 	// Stage 1: Identify Primary Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: "treated_advance_as_revenue"},
-		{ID: "opt_ar", Text: "Accounts Receivable", ErrorTag: "confused_advance_with_receivable"},
-		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: "confused_with_payable"},
+		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagRevenueRecognizedPrematurely},
+		{ID: "opt_ar", Text: "Accounts Receivable", ErrorTag: engine.TagAdvanceConfusedWithReceivable},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
 	}, seed, 101)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
@@ -211,9 +211,9 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 	// Stage 5: Counter-Account Identification (Key pedagogical decision!)
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_unearned_rev", Text: "Unearned Revenue (Liability)"},
-		{ID: "opt_service_rev", Text: "Service Revenue (Revenue / Equity)", ErrorTag: "revenue_recognized_prematurely"},
-		{ID: "opt_ar", Text: "Accounts Receivable (Asset)", ErrorTag: "confused_advance_with_receivable"},
-		{ID: "opt_common_stock", Text: "Common Stock (Equity)", ErrorTag: "confused_with_owner_investment"},
+		{ID: "opt_service_rev", Text: "Service Revenue (Revenue / Equity)", ErrorTag: engine.TagRevenueRecognizedPrematurely},
+		{ID: "opt_ar", Text: "Accounts Receivable (Asset)", ErrorTag: engine.TagAdvanceConfusedWithReceivable},
+		{ID: "opt_common_stock", Text: "Common Stock (Equity)", ErrorTag: engine.TagWrongAccount},
 	}, seed, 105)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
@@ -229,9 +229,9 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 	// Stage 6: Balanced Entry Assembly
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_cash_cr_unearned", Text: fmt.Sprintf("Debit Cash %s / Credit Unearned Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "revenue_recognized_prematurely"},
-		{ID: "opt_dr_unearned_cr_cash", Text: fmt.Sprintf("Debit Unearned Revenue %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
-		{ID: "opt_dr_ar_cr_rev", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "service_on_credit"},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueRecognizedPrematurely},
+		{ID: "opt_dr_unearned_cr_cash", Text: fmt.Sprintf("Debit Unearned Revenue %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_dr_ar_cr_rev", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagAdvanceConfusedWithReceivable},
 	}, seed, 106)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -251,8 +251,8 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 		CorrectOptionID: "opt_assets_up_liab_up",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Unearned Revenue); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "treated_advance_as_equity"},
-			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: "confused_with_asset_swap"},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueRecognizedPrematurely},
+			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 107),
 		CausalHint:        "Cash is an Asset. Unearned Revenue is a Liability. Has any Equity/Revenue changed?",
 		Explanation:       fmt.Sprintf("Assets increase by %s and Liabilities increase by %s. Both sides of the equation remain in balance.", amt.FormatDollars(), amt.FormatDollars()),
@@ -332,9 +332,9 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 5: Counter-Account
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_service_rev", Text: "Service Revenue"},
-		{ID: "opt_unearned_rev", Text: "Unearned Revenue", ErrorTag: "treated_service_as_unearned"},
-		{ID: "opt_notes_payable", Text: "Notes Payable", ErrorTag: "confused_with_borrowing"},
-		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: "confused_with_payable"},
+		{ID: "opt_unearned_rev", Text: "Unearned Revenue", ErrorTag: engine.TagRevenueDeferredWhenEarned},
+		{ID: "opt_notes_payable", Text: "Notes Payable", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
 	}, seed, 205)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
@@ -350,8 +350,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 6: Balanced Entry
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_rev_cr_cash", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
-		{ID: "opt_dr_cash_cr_unearned", Text: fmt.Sprintf("Debit Cash %s / Credit Unearned Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "treated_service_as_unearned"},
+		{ID: "opt_dr_rev_cr_cash", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_dr_cash_cr_unearned", Text: fmt.Sprintf("Debit Cash %s / Credit Unearned Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueDeferredWhenEarned},
 	}, seed, 206)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -371,8 +371,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		CorrectOptionID: "opt_assets_up_eq_up",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Service Revenue); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Unearned Revenue); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "treated_service_as_unearned"},
-			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: "confused_with_asset_swap"},
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Unearned Revenue); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueDeferredWhenEarned},
+			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 207),
 		CausalHint:        "Cash increases total assets. Does earning revenue increase owner's equity?",
 		Explanation:       fmt.Sprintf("Assets increase by %s and Equity increases by %s through earned revenue.", amt.FormatDollars(), amt.FormatDollars()),
@@ -384,7 +384,7 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 	// Stage 1: Identify Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_ar", Text: "Accounts Receivable"},
-		{ID: "opt_cash", Text: "Cash", ErrorTag: "cash_recorded_before_collection"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
 		{ID: "opt_ap", Text: "Accounts Payable"},
 		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
 	}, seed, 301)
@@ -452,7 +452,7 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 	// Stage 5: Counter-Account
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_service_rev", Text: "Service Revenue"},
-		{ID: "opt_cash", Text: "Cash", ErrorTag: "cash_recorded_before_collection"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
 		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
 		{ID: "opt_ap", Text: "Accounts Payable"},
 	}, seed, 305)
@@ -470,8 +470,8 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 	// Stage 6: Balanced Entry
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_ar_cr_rev", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "cash_recorded_before_collection"},
-		{ID: "opt_dr_rev_cr_ar", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedWhenUncollected},
+		{ID: "opt_dr_rev_cr_ar", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 306)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -491,8 +491,8 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 		CorrectOptionID: "opt_assets_up_eq_up",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Accounts Receivable); Equity increases by %s (+Service Revenue); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: "confused_with_asset_swap"},
-			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s; Equity unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "treated_revenue_as_liability"},
+			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s; Equity unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueDeferredWhenEarned},
 		}, seed, 307),
 		CausalHint:        "Accounts Receivable increases assets; Service Revenue increases equity.",
 		Explanation:       fmt.Sprintf("Assets increase by %s (+Accounts Receivable) and Equity increases by %s (+Service Revenue).", amt.FormatDollars(), amt.FormatDollars()),
@@ -504,7 +504,7 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 	// Stage 1: Identify Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: "duplicate_revenue_on_collection"},
+		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagDuplicateRevenueOnCollection},
 		{ID: "opt_ap", Text: "Accounts Payable"},
 	}, seed, 401)
 
@@ -570,7 +570,7 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 	// Stage 5: Counter-Account
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_ar", Text: "Accounts Receivable"},
-		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: "duplicate_revenue_on_collection"},
+		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagDuplicateRevenueOnCollection},
 		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
 		{ID: "opt_ap", Text: "Accounts Payable"},
 	}, seed, 405)
@@ -588,8 +588,8 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 	// Stage 6: Balanced Entry
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_cash_cr_ar", Text: fmt.Sprintf("Debit Cash %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "duplicate_revenue_on_collection"},
-		{ID: "opt_dr_ar_cr_cash", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagDuplicateRevenueOnCollection},
+		{ID: "opt_dr_ar_cr_cash", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 406)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -609,7 +609,7 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 		CorrectOptionID: "opt_asset_swap",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_asset_swap", Text: fmt.Sprintf("Asset exchange: Cash increases (+%s) and Accounts Receivable decreases (-%s); Total Assets and Equity unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "duplicate_revenue_on_collection"},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagDuplicateRevenueOnCollection},
 			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars())},
 		}, seed, 407),
 		CausalHint:        "One asset (Cash) went up, and another asset (Accounts Receivable) went down by the exact same amount.",
@@ -622,7 +622,7 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 1: Identify Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
-		{ID: "opt_cash", Text: "Cash", ErrorTag: "cash_recorded_on_earning_advance"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnEarningAdvance},
 		{ID: "opt_ar", Text: "Accounts Receivable"},
 	}, seed, 501)
 
@@ -689,7 +689,7 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 5: Counter-Account
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_service_rev", Text: "Service Revenue"},
-		{ID: "opt_cash", Text: "Cash", ErrorTag: "cash_recorded_on_earning_advance"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnEarningAdvance},
 		{ID: "opt_ar", Text: "Accounts Receivable"},
 	}, seed, 505)
 
@@ -706,8 +706,8 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 6: Balanced Entry
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_unearned_cr_rev", Text: fmt.Sprintf("Debit Unearned Revenue %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "cash_recorded_on_earning_advance"},
-		{ID: "opt_dr_rev_cr_unearned", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Unearned Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnEarningAdvance},
+		{ID: "opt_dr_rev_cr_unearned", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Unearned Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 506)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -727,7 +727,7 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		CorrectOptionID: "opt_liab_down_eq_up",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_liab_down_eq_up", Text: fmt.Sprintf("Liabilities decrease by %s (-Unearned Revenue); Equity increases by %s (+Service Revenue); Total Assets unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s; Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "cash_recorded_on_earning_advance"},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s; Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnEarningAdvance},
 			{ID: "opt_no_net_change", Text: "No effect on any balance; memo entry only."},
 		}, seed, 507),
 		CausalHint:        "Liabilities decreased because work was done; Equity increased because revenue was earned. Total assets did not change.",
@@ -806,7 +806,7 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 	// Stage 5: Counter-Account
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: "confused_with_payable"},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
 		{ID: "opt_service_rev", Text: "Service Revenue"},
 	}, seed, 605)
 
@@ -823,8 +823,8 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 	// Stage 6: Balanced Entry
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_rent_cr_cash", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_cash_cr_rent", Text: fmt.Sprintf("Debit Cash %s / Credit Rent Expense %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
-		{ID: "opt_dr_rent_cr_ap", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Accounts Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "confused_with_payable"},
+		{ID: "opt_dr_cash_cr_rent", Text: fmt.Sprintf("Debit Cash %s / Credit Rent Expense %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_dr_rent_cr_ap", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Accounts Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagPayableRecordedForCashPayment},
 	}, seed, 606)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -858,7 +858,7 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_notes_payable", Text: "Notes Payable"},
-		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: "treated_borrowing_as_revenue"},
+		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagRevenueRecordedOnBorrowing},
 	}, seed, 701)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
@@ -923,7 +923,7 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 	// Stage 5: Counter-Account
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_notes_payable", Text: "Notes Payable (Liability)"},
-		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: "treated_borrowing_as_revenue"},
+		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: engine.TagRevenueRecordedOnBorrowing},
 		{ID: "opt_common_stock", Text: "Common Stock (Equity)"},
 	}, seed, 705)
 
@@ -940,8 +940,8 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 	// Stage 6: Balanced Entry
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_cash_cr_notes", Text: fmt.Sprintf("Debit Cash %s / Credit Notes Payable %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "treated_borrowing_as_revenue"},
-		{ID: "opt_dr_notes_cr_cash", Text: fmt.Sprintf("Debit Notes Payable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueRecordedOnBorrowing},
+		{ID: "opt_dr_notes_cr_cash", Text: fmt.Sprintf("Debit Notes Payable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 706)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -961,7 +961,7 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 		CorrectOptionID: "opt_assets_up_liab_up",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Notes Payable); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "treated_borrowing_as_revenue"},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueRecordedOnBorrowing},
 			{ID: "opt_no_net_change", Text: "No net change in total assets."},
 		}, seed, 707),
 		CausalHint:        "Cash increased assets; debt increased liabilities. Has any equity changed?",
@@ -975,7 +975,7 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_common_stock", Text: "Common Stock"},
-		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: "treated_equity_as_revenue"},
+		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagRevenueRecordedOnShareIssue},
 	}, seed, 801)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
@@ -1040,7 +1040,7 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 5: Counter-Account
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_common_stock", Text: "Common Stock (Equity)"},
-		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: "treated_equity_as_revenue"},
+		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: engine.TagRevenueRecordedOnShareIssue},
 		{ID: "opt_notes_payable", Text: "Notes Payable (Liability)"},
 	}, seed, 805)
 
@@ -1057,8 +1057,8 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 6: Balanced Entry
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_cash_cr_stock", Text: fmt.Sprintf("Debit Cash %s / Credit Common Stock %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "treated_equity_as_revenue"},
-		{ID: "opt_dr_stock_cr_cash", Text: fmt.Sprintf("Debit Common Stock %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "reversed_sides"},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueRecordedOnShareIssue},
+		{ID: "opt_dr_stock_cr_cash", Text: fmt.Sprintf("Debit Common Stock %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 806)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -1091,7 +1091,7 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_prepaid_insurance", Text: "Prepaid Insurance"},
 		{ID: "opt_insurance_expense", Text: "Insurance Expense", ErrorTag: engine.TagExpenseRecordedOnPrepaidPurchase},
-		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: "confused_with_payable"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
 		{ID: "opt_cash", Text: "Cash"},
 	}, seed, 901)
 
@@ -1155,7 +1155,7 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_insurance_expense", Text: "Insurance Expense", ErrorTag: engine.TagExpenseRecordedOnPrepaidPurchase},
-		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: "confused_with_payable"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
 		{ID: "opt_service_revenue", Text: "Service Revenue"},
 	}, seed, 905)
 
@@ -1173,7 +1173,7 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 		{ID: "opt_dr_prepaid_cr_cash", Text: fmt.Sprintf("Debit Prepaid Insurance %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
 		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit Insurance Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnPrepaidPurchase},
 		{ID: "opt_dr_cash_cr_prepaid", Text: fmt.Sprintf("Debit Cash %s / Credit Prepaid Insurance %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
-		{ID: "opt_dr_prepaid_cr_ap", Text: fmt.Sprintf("Debit Prepaid Insurance %s / Credit Accounts Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "confused_with_payable"},
+		{ID: "opt_dr_prepaid_cr_ap", Text: fmt.Sprintf("Debit Prepaid Insurance %s / Credit Accounts Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagPayableRecordedForCashPayment},
 	}, seed, 906)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -1205,7 +1205,7 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_insurance_expense", Text: "Insurance Expense"},
 		{ID: "opt_prepaid_insurance", Text: "Prepaid Insurance"},
-		{ID: "opt_cash", Text: "Cash", ErrorTag: "cash_recorded_on_prepaid_expiration"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
 		{ID: "opt_rent_expense", Text: "Rent Expense"},
 	}, seed, 1001)
 
@@ -1268,7 +1268,7 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_prepaid_insurance", Text: "Prepaid Insurance"},
-		{ID: "opt_cash", Text: "Cash", ErrorTag: "cash_recorded_on_prepaid_expiration"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
 		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
 		{ID: "opt_service_revenue", Text: "Service Revenue"},
 	}, seed, 1005)
@@ -1285,7 +1285,7 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_expense_cr_prepaid", Text: fmt.Sprintf("Debit Insurance Expense %s / Credit Prepaid Insurance %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit Insurance Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "cash_recorded_on_prepaid_expiration"},
+		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit Insurance Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
 		{ID: "opt_dr_prepaid_cr_expense", Text: fmt.Sprintf("Debit Prepaid Insurance %s / Credit Insurance Expense %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 1006)
 
@@ -1305,8 +1305,8 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 		CorrectOptionID: "opt_assets_down_eq_down",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Prepaid Insurance); Equity decreases by %s (-Insurance Expense); Cash is unaffected.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_down_cash", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Insurance Expense).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: "cash_recorded_on_prepaid_expiration"},
-			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: "confused_with_asset_swap"},
+			{ID: "opt_assets_down_cash", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Insurance Expense).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
+			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 1007),
 		CausalHint:        "Assets decrease because Prepaid Insurance expired. Equity decreases because an expense occurred. Cash was unaffected today.",
 		Explanation:       fmt.Sprintf("Assets decrease by %s (-Prepaid Insurance) and Equity decreases by %s (-Insurance Expense). Zero cash moved today.", amt.FormatDollars(), amt.FormatDollars()),
@@ -1317,7 +1317,7 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_equipment", Text: "Equipment"},
-		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagExpenseRecordedOnEquipmentPurchase},
+		{ID: "opt_expense_misconception", Text: "An expense for the cost of the machinery", ErrorTag: engine.TagExpenseRecordedOnEquipmentPurchase},
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
 	}, seed, 1101)
@@ -1381,7 +1381,7 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagExpenseRecordedOnEquipmentPurchase},
+		{ID: "opt_notes_payable", Text: "Notes Payable", ErrorTag: engine.TagWrongAccount},
 		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
 		{ID: "opt_common_stock", Text: "Common Stock"},
 	}, seed, 1105)
@@ -1398,7 +1398,7 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_equip_cr_cash", Text: fmt.Sprintf("Debit Equipment %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnEquipmentPurchase},
+		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit an expense for the machinery %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnEquipmentPurchase},
 		{ID: "opt_dr_cash_cr_equip", Text: fmt.Sprintf("Debit Cash %s / Credit Equipment %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 1106)
 
@@ -1430,7 +1430,7 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_notes_payable", Text: "Notes Payable"},
-		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
+		{ID: "opt_expense_misconception", Text: "An expense for the loan payment", ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_service_revenue", Text: "Service Revenue"},
 	}, seed, 1201)
@@ -1494,7 +1494,6 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
 		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
 		{ID: "opt_service_revenue", Text: "Service Revenue"},
 	}, seed, 1205)
@@ -1511,7 +1510,7 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_notes_cr_cash", Text: fmt.Sprintf("Debit Notes Payable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
+		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit an expense for the loan payment %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
 		{ID: "opt_dr_cash_cr_notes", Text: fmt.Sprintf("Debit Cash %s / Credit Notes Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 1206)
 
@@ -1543,7 +1542,7 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dividends", Text: "Dividends"},
-		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagExpenseRecordedOnDividend},
+		{ID: "opt_expense_misconception", Text: "An expense for the payment to stockholders", ErrorTag: engine.TagExpenseRecordedOnDividend},
 		{ID: "opt_service_revenue", Text: "Service Revenue"},
 		{ID: "opt_cash", Text: "Cash"},
 	}, seed, 1301)
@@ -1607,7 +1606,7 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagExpenseRecordedOnDividend},
+		{ID: "opt_dividends_payable", Text: "Dividends Payable", ErrorTag: engine.TagWrongAccount},
 		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
 	}, seed, 1305)
 
@@ -1623,7 +1622,7 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 
 	stage6Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dr_div_cr_cash", Text: fmt.Sprintf("Debit Dividends %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
-		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnDividend},
+		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit an expense for the dividend %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnDividend},
 		{ID: "opt_dr_cash_cr_div", Text: fmt.Sprintf("Debit Cash %s / Credit Dividends %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 	}, seed, 1306)
 
@@ -1644,7 +1643,7 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Dividends); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars())},
 			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_no_net_change", Text: "No change in equity; dividends are an asset.", ErrorTag: "confused_with_asset_swap"},
+			{ID: "opt_no_net_change", Text: "No change in equity; dividends are an asset.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 1307),
 		CausalHint:        "Dividends reduce assets (-Cash) and reduce equity (-Dividends). Dividends are NOT an expense on the income statement.",
 		Explanation:       fmt.Sprintf("Assets decrease by %s (-Cash) and Equity decreases by %s (-Dividends). Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars()),

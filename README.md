@@ -1,6 +1,22 @@
 # AccountTutor 9000
 
+```text
+   +--------------------------------------------------------+
+   |             A C C O U N T T U T O R   9 0 0 0          |
+   |                                                        |
+   |       DEBIT             |             CREDIT           |
+   |       ----------        |        ----------            |
+   |           $             |             $                |
+   |                                                        |
+   |         [ DR ] ======== BALANCED ======== [ CR ]        |
+   |                                                        |
+   |          LEVEL UP YOUR LEDGER. KEEP IT BALANCED.        |
+   +--------------------------------------------------------+
+```
+
 Financial accounting practice in your terminal: work through a business event, build a balanced entry, and see how it changes the accounting equation. AccountTutor runs offline, saves your progress locally, and offers optional AI help when you connect a provider.
+
+![AccountTutor 9000 animated terminal demo](https://github.com/trustdan/acctg-practice/blob/main/acctg-practice.gif?raw=true)
 
 **Current version: 0.24.0.** Native releases support Windows x64, macOS Apple Silicon and Intel, and Linux x64 and ARM64. No Go installation, external SQLite library, or separate curriculum download is needed to run a release binary.
 

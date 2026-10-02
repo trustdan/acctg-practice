@@ -554,3 +554,60 @@ All 28 planned stages (Stage 00 through Stage 28) are complete and release-harde
 - Checks: Git Bash syntax check passed and isolated Bash regression suite passed all six cases (source rebuild over stale release/local binaries and correct native target/argument forwarding; build failure; missing Go; x64/ARM release lookup; wrong-architecture rejection; desktop absolute-path/space handling). Git Bash required sandbox escalation because sandbox signal pipes were previously blocked; automatic review approved execution. Tests use mocks, no live Go downloads/provider requests/learner data, and clean their temporary fixtures. git diff --check passed.
 - Outstanding: native Linux real-compiler/runtime check must happen on the user's Linux machine. Updated launcher must be committed/pushed and pulled to reach that checkout; immediate workaround is CGO_ENABLED=0 go build -o acctg ./cmd/acctg, then ./acctg directly. Go version must satisfy go.mod (currently 1.27.1).
 - Next: commit/push launcher fix; on Linux pull it, chmod +x launch-tutor.sh if needed, and run ./launch-tutor.sh --version, then ./launch-tutor.sh. Include updated launcher when next refreshing release archives.
+
+## README demo and ASCII banner - 2026-10-02
+
+- Added a framed accounting-themed ASCII banner at the top of README.md and embedded the user-supplied animated GIF with descriptive alt text beneath the introduction.
+- Files: README.md; docs/HANDOFF.md. Existing documentation preserved; no application code or release archives changed.
+- Checks: confirmed the local GIF exists, reviewed the README markup and banner alignment, and ran git diff --check successfully. No code tests needed for this documentation-only edit.
+- Next: preview README on GitHub; existing release and native-platform verification tasks remain unchanged.
+
+## Content expansion planning - 2026-10-02
+
+- Inventoried shipped content: 18 active and one retired scenario, 13 active families, 54 scenario/amount combinations, seven stages per scenario, 92 code-defined hint/explanation pairs including fallback, nine offline error-tag hints, and eight family contrasts. No seed teaching overrides. Local user content not inspected.
+- Added docs/CONTENT-EXPANSION-PLAN.md with 90/180-scenario targets, per-family allocations, teaching audit, delivery corrections, 30-scenario pilot, staged reviews, and history preservation. No content added or approved.
+- Checks: inspected seed JSON, schema, generator, offline tutor, pedagogy and bank contracts; calculated counts from local files; git diff --check passed. Documentation-only change; no Go tests run.
+- Next: audit the 18 scenarios and prepare 12 pilot additions for human semantic review. Existing release/platform tasks remain outstanding.
+
+## Content expansion batch size - 2026-10-02
+
+- Updated docs/CONTENT-EXPANSION-PLAN.md to build and review complete scenario/teaching packages in batches of 5-10, defaulting to five. Split the 12-addition pilot into two batches of six; 50/70/90 remain cumulative checkpoints. The same batch limit applies through 180.
+- Added a per-batch quality gate covering semantics, teaching, meaningful contrasts, duplication, actual checks, and explicit human approval. Complete the current review before drafting the next batch; unresolved drafts remain outside active content. No questions added or approved.
+- Files: docs/CONTENT-EXPANSION-PLAN.md; docs/HANDOFF.md. Existing work preserved; course materials remain unavailable.
+- Checks: reviewed plan consistency and ran git diff --check successfully. Documentation-only change; no Go tests run.
+- Next: audit existing content in groups of 5-10, then prepare the first six pilot additions for human semantic review.
+
+## Content audit group 1 - 2026-10-02
+
+- Started CONTENT-EXPANSION-PLAN step 1. Audited the five revenue-side families (cash_service, customer_advance, service_on_credit, collect_receivable, earn_advance; 9 of 18 active scenarios) and recorded the matrix and findings in the new docs/CONTENT-AUDIT.md. No content, status, provenance, or code changed.
+- Key findings: S4/S6 hints reveal answers in all five families; S5 prompts for cash_service/service_on_credit say "earns this inflow" (contradicts the credit-sale scenario); 11 non-canonical distractor tags with no routing; a failed retry shows the raw option ID (session.go:209); first-error hints ignore the chosen distractor; teaching overrides gated on approved_active; identical course_staff provenance on all records is unverified. Dividend/prepaid terminology issues noted for group 2.
+- Files: docs/CONTENT-AUDIT.md (new); docs/HANDOFF.md.
+- Checks: read-only inspection of seed JSON, accounts, generator, session, offline tutor, exam errors, engine tags; tag list verified by grep. Documentation-only; no Go tests run.
+- Next: reviewer answers the four decisions in CONTENT-AUDIT.md; audit group 2 (eight remaining scenarios); then the step 2 delivery fixes and the first six-scenario pilot batch.
+
+## Content audit decisions and teaching-override gate - 2026-10-02
+
+- User decisions recorded in docs/CONTENT-AUDIT.md: scenarios must not name the account being asked (revise both earn_advance templates as new versions); Revenue is its own category (drop "Revenue / Equity" labels); existing course_staff provenance is unverified and stays untouched, with real reviews recorded on new versions; the override gate was left to the implementer.
+- Override gate: added bank.RequiresReviewProvenance (active, approved_active), shared by the validator's provenance check and the generator's teaching-override application. Shipped behavior unchanged, because no seed has teaching. seed_pending_review never receives override wording.
+- Files: internal/bank/schema.go; internal/bank/validator.go; internal/drill/generator.go; internal/drill/drill_test.go (new table test: override applied for active/approved_active, not seed_pending_review; canonical answer unchanged); docs/CONTENT-AUDIT.md; docs/HANDOFF.md.
+- Checks: gofmt -l clean; go test ./... passed (all packages); go vet ./... passed.
+- Next: audit group 2 (eight remaining scenarios, dividend wording first); then fix the raw option ID on failed retry (X1) and draft the group-1 teaching revisions and the first six-scenario pilot batch for terminal review.
+
+## Content audit group 2, retry-answer fix, tutor terminology - 2026-10-02
+
+- Audited the remaining eight scenarios/families and added an all-18 severity summary and fix order to docs/CONTENT-AUDIT.md. Group 2 highlights: dividend_cash_retail does not state declaration timing, so Dr Dividends Payable is also defensible (W4); Rent Expense is the "expensed it" distractor for equipment, loan principal, and dividends (D7); S1 prompts name the answer for rent, consumption, and repay; five engine tags are never attached to a drill option; non-canonical tags duplicate engine tags. Two new reviewer decisions are pending (D7 approach, W4 revision).
+- X1 fixed: a failed retry now shows the correct option's text instead of its internal ID (internal/drill/session.go). Updated the old test that asserted the ID and added a regression test.
+- T5-T7 fixed in internal/tutor/offline.go: the dividend hint and contrast now name the Dividends account (which reduces equity and is closed to Retained Earnings), not "directly debiting Retained Earnings"; prepaid hint and contrasts now say Prepaid Insurance / Insurance Expense instead of "Prepaid Expense(s)" and "Rent/Insurance Expense". Removed "return of capital". The new wording is the user-facing text, open to review. Tests updated, plus a dividend-terminology test.
+- Files: docs/CONTENT-AUDIT.md; internal/drill/session.go; internal/drill/drill_test.go; internal/tutor/offline.go; internal/tutor/tutor_test.go; docs/HANDOFF.md.
+- Checks: gofmt -l clean; go test ./... passed after updating TestExhaustedRetriesAdvancesWithRevealedAnswer; go vet ./... passed. No interactive terminal check yet.
+- Next: user decisions 5 (D7) and 6 (W4); tag normalization (D1/D8/D9 + T8 hints); then the per-family teaching rewrite reviewed in the terminal, then the first six-scenario pilot batch.
+
+## Tag normalization, expense distractors, wording batch 1 draft - 2026-10-02
+
+- User delegated decisions 5 and 6. D7: chose option (b) because the syllabus is unavailable and interest scope is unconfirmed, so the catalog is unchanged. W4: revise the dividend scenario.
+- Tag normalization: added six engine tag constants (two replace literals the engine already emitted in rules.go); mapped every drill distractor tag to an engine constant (mapping table in docs/CONTENT-AUDIT.md); added offline hints for 12 tags and exam explanations for 6. New internal/exam/tag_routing_test.go fails if any tagged option in an active seed lacks a specific hint or explanation. Historical attempts keep their recorded tags.
+- D7: replaced the Rent Expense distractors in equipment, loan principal, and dividends with misconception wording (option ID opt_expense_misconception; S6 "Debit an expense for ..."); replaced the nonsensical S5 expense options with Notes Payable / Dividends Payable (wrong_account), or dropped them (repay).
+- Drafted scenario wording batch 1 (five v2 templates: cash_service_basic, earn_advance_basic, earn_advance_logistics, cash_rent_basic, dividend_cash_retail) in docs/CONTENT-AUDIT.md. NOT applied; awaiting user approval of exact text.
+- Files: internal/engine/{event.go,rules.go}; internal/drill/generator.go; internal/tutor/offline.go; internal/exam/{errors.go,tag_routing_test.go}; docs/CONTENT-AUDIT.md; docs/HANDOFF.md.
+- Checks: gofmt -l clean; go test ./... passed; go test -count=1 for engine and exam passed; go vet ./... passed. No interactive terminal check yet.
+- Next: user approves or edits wording batch 1, then publish as v2 with real provenance; then the per-family teaching rewrite (hints, explanations, prompts, category labels), reviewed in the terminal; then the first six-scenario pilot batch.

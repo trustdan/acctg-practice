@@ -58,6 +58,30 @@ func DistractorExplanation(tag string) (misconception string, remediation string
 		return "Dividends Debited Twice on Payment",
 			"Debited dividends account when paying a previously declared dividend. Equity was already reduced upon declaration; paying the dividend satisfies the liability (Dr Dividends Payable, Cr Cash)."
 
+	case engine.TagCashRecordedWhenUncollected:
+		return "Cash Recorded Before Collection",
+			"Recorded cash for services billed on account. No cash arrives when the customer is invoiced; the company records Accounts Receivable and collects cash later."
+
+	case engine.TagCashRecordedOnPrepaidExpiration:
+		return "Cash Recorded on Prepaid Expiration",
+			"Recorded a cash payment when prepaid coverage expired. Cash left when the policy was bought; expiration moves cost from Prepaid Insurance to Insurance Expense with no cash effect."
+
+	case engine.TagRevenueDeferredWhenEarned:
+		return "Earned Revenue Recorded as Unearned",
+			"Treated revenue for completed work as an obligation. Once the service is performed, the company owes the customer nothing further and records Service Revenue."
+
+	case engine.TagAdvanceConfusedWithReceivable:
+		return "Advance Confused with Receivable",
+			"Treated a customer prepayment as a customer debt. When a customer pays before the work, the company owes future service (Unearned Revenue); Accounts Receivable arises only when the customer owes the company."
+
+	case engine.TagPayableRecordedForCashPayment:
+		return "Payable Recorded for a Cash Payment",
+			"Recorded an amount owed when the company paid cash immediately. Accounts Payable arises only when payment is deferred; an immediate payment credits Cash."
+
+	case engine.TagEquationEffectMissed:
+		return "Equation Effect Misread",
+			"Described the event as an exchange that leaves totals or equity unchanged when a liability or equity account also changed. Place each account in the entry under Assets, Liabilities, or Equity and total both sides."
+
 	case engine.TagReversedSides:
 		return "Debit / Credit Inversion",
 			"Reversed the debit and credit sides of the entry. In standard accounting, Debit is always on the Left and Credit is always on the Right. Assets/expenses increase with Debits; liabilities/equity/revenue increase with Credits."

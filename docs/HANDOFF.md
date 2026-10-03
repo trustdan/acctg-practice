@@ -611,3 +611,10 @@ All 28 planned stages (Stage 00 through Stage 28) are complete and release-harde
 - Files: internal/engine/{event.go,rules.go}; internal/drill/generator.go; internal/tutor/offline.go; internal/exam/{errors.go,tag_routing_test.go}; docs/CONTENT-AUDIT.md; docs/HANDOFF.md.
 - Checks: gofmt -l clean; go test ./... passed; go test -count=1 for engine and exam passed; go vet ./... passed. No interactive terminal check yet.
 - Next: user approves or edits wording batch 1, then publish as v2 with real provenance; then the per-family teaching rewrite (hints, explanations, prompts, category labels), reviewed in the terminal; then the first six-scenario pilot batch.
+
+## Scenario wording batch 1 published - 2026-10-03
+
+- User approved the five v2 scenario templates as drafted. Published in curriculum/seed-questions.json: cash_service_basic (W1), earn_advance_basic and earn_advance_logistics (W2), cash_rent_basic (W5), dividend_cash_retail (W4) now `version: 2`, reviewer `trustdan`, approved_at `2026-10-03T19:02:01Z`, source annotated with the audit finding. Fixtures, families, parameters, and concepts unchanged. The bank allows one version per ID, so v1 provenance lives in git history; stored instances keep their snapshotted v1 prompts.
+- Files: curriculum/seed-questions.json; docs/CONTENT-AUDIT.md; docs/HANDOFF.md.
+- Checks: gofmt -l clean; go vet ./... passed; go test -count=1 ./... passed (all packages); go run ./cmd/acctg --reconcile-all --db :memory: verified 18/18 active templates. No interactive terminal check yet.
+- Next: per-family teaching rewrite (hints, explanations, prompts that name answers, category labels), reviewed in the terminal in groups; then the first six-scenario pilot batch. Tag-normalization work was committed in 180c975; this batch is uncommitted.

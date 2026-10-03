@@ -3,11 +3,11 @@
   "questions": [
     {
       "id": "cash_service_basic",
-      "version": 1,
+      "version": 2,
       "family_id": "cash_service",
       "rule_version": 1,
       "status": "active",
-      "scenario_template": "The company completes services today and receives ${amount_dollars} cash today. No invoice was previously issued.",
+      "scenario_template": "The company completes services today and receives ${amount_dollars} cash today. No invoice was issued and no advance payment was received earlier.",
       "parameters": {
         "amount_minor_units": [
           5000,
@@ -36,9 +36,9 @@
         ]
       },
       "review": {
-        "reviewer": "course_staff",
-        "approved_at": "2026-10-01T12:00:00Z",
-        "source": "approved core starter: cash service completed and paid today"
+        "reviewer": "trustdan",
+        "approved_at": "2026-10-03T19:02:01Z",
+        "source": "approved core starter: cash service completed and paid today; v2 wording (CONTENT-AUDIT W1) approved by user"
       }
     },
     {
@@ -163,11 +163,11 @@
     },
     {
       "id": "earn_advance_basic",
-      "version": 1,
+      "version": 2,
       "family_id": "earn_advance",
       "rule_version": 1,
       "status": "active",
-      "scenario_template": "The company completes ${amount_dollars} of services today. The customer paid last month, and the company recorded Unearned Revenue then. No cash changes hands today.",
+      "scenario_template": "The company completes ${amount_dollars} of services today. The customer paid for this work last month, and the company recorded its obligation to perform the work at that time. No cash changes hands today.",
       "parameters": {
         "amount_minor_units": [
           5000,
@@ -196,18 +196,18 @@
         ]
       },
       "review": {
-        "reviewer": "course_staff",
-        "approved_at": "2026-10-01T12:00:00Z",
-        "source": "approved core starter: advance fulfilled upon completion of services"
+        "reviewer": "trustdan",
+        "approved_at": "2026-10-03T19:02:01Z",
+        "source": "approved core starter: advance fulfilled upon completion of services; v2 wording (CONTENT-AUDIT W2) approved by user"
       }
     },
     {
       "id": "cash_rent_basic",
-      "version": 1,
+      "version": 2,
       "family_id": "cash_rent",
       "rule_version": 1,
       "status": "active",
-      "scenario_template": "The company pays ${amount_dollars} cash today for rent for the current month.",
+      "scenario_template": "The company pays ${amount_dollars} cash today for rent for the current month. No rent was previously recorded as owed or paid in advance.",
       "parameters": {
         "amount_minor_units": [
           5000,
@@ -236,9 +236,9 @@
         ]
       },
       "review": {
-        "reviewer": "course_staff",
-        "approved_at": "2026-10-01T12:00:00Z",
-        "source": "approved core starter: cash paid for current month operating rent"
+        "reviewer": "trustdan",
+        "approved_at": "2026-10-03T19:02:01Z",
+        "source": "approved core starter: cash paid for current month operating rent; v2 wording (CONTENT-AUDIT W5) approved by user"
       }
     },
     {
@@ -483,11 +483,11 @@
     },
     {
       "id": "dividend_cash_retail",
-      "version": 1,
+      "version": 2,
       "family_id": "dividend_cash",
       "rule_version": 1,
       "status": "active",
-      "scenario_template": "A retail corporation pays ${amount_dollars} cash dividends today to its stockholders from accumulated earnings.",
+      "scenario_template": "A retail corporation declares and pays ${amount_dollars} of cash dividends to its stockholders today. No dividend was declared earlier.",
       "parameters": {
         "amount_minor_units": [
           50000,
@@ -516,9 +516,9 @@
         ]
       },
       "review": {
-        "reviewer": "course_staff",
-        "approved_at": "2026-10-01T12:00:00Z",
-        "source": "reviewed outflow contrast: equity dividend distribution vs operating expense"
+        "reviewer": "trustdan",
+        "approved_at": "2026-10-03T19:02:01Z",
+        "source": "reviewed outflow contrast: equity dividend distribution vs operating expense; v2 wording (CONTENT-AUDIT W4) approved by user"
       }
     },
     {
@@ -683,11 +683,11 @@
     },
     {
       "id": "earn_advance_logistics",
-      "version": 1,
+      "version": 2,
       "family_id": "earn_advance",
       "rule_version": 1,
       "status": "active",
-      "scenario_template": "The freight logistics carrier safely delivers cargo today, fulfilling a shipping contract for which the shipper paid ${amount_dollars} in advance last month (recorded then as Unearned Revenue). No cash changes hands today.",
+      "scenario_template": "The freight logistics carrier safely delivers cargo today, completing a shipping contract for which the shipper paid ${amount_dollars} last month. The carrier recorded its obligation to deliver the cargo at that time. No cash changes hands today.",
       "parameters": {
         "amount_minor_units": [
           120000,
@@ -716,9 +716,9 @@
         ]
       },
       "review": {
-        "reviewer": "course_staff",
-        "approved_at": "2026-10-01T12:00:00Z",
-        "source": "reviewed contrast pair: logistics advance fulfillment (liability discharge, zero cash)"
+        "reviewer": "trustdan",
+        "approved_at": "2026-10-03T19:02:01Z",
+        "source": "reviewed contrast pair: logistics advance fulfillment (liability discharge, zero cash); v2 wording (CONTENT-AUDIT W2) approved by user"
       }
     },
     {

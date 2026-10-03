@@ -192,9 +192,9 @@ New engine tags: `cash_recorded_when_uncollected` and `cash_recorded_on_prepaid_
 
 Historical attempts keep the tag they were recorded with. Old tag strings still render through the exam's generic fallback.
 
-## Scenario wording batch 1 — pending user approval
+## Scenario wording batch 1 — approved and published 2026-10-03
 
-Five revised scenario templates. Canonical entries, families, amounts, and concepts are unchanged. On approval each ships as `version: 2` of the same ID, with the user as reviewer and the actual approval date. Version 1 instances keep their snapshotted prompts.
+Five revised scenario templates, approved by the user without edits on 2026-10-03 and published in curriculum/seed-questions.json as `version: 2` of the same IDs (reviewer `trustdan`, approved_at `2026-10-03T19:02:01Z`). This resolves W1, W2, W4, and W5. Canonical entries, families, amounts, and concepts are unchanged. Version 1 instances and attempts keep their snapshotted prompts; the v1 `course_staff` review records remain in git history (the bank holds one version per ID).
 
 | ID | Finding | Proposed v2 wording |
 |---|---|---|

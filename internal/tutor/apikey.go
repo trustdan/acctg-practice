@@ -159,7 +159,7 @@ func (a *AnthropicTutor) call(ctx context.Context, req Request, isHint bool) (Re
 			sb.WriteString(c.Text)
 		}
 	}
-	text := strings.TrimSpace(sb.String())
+	text := strings.TrimSpace(CleanLaTeXMath(sb.String()))
 	if text == "" {
 		return Response{}, errors.New("empty text response from anthropic")
 	}
@@ -316,7 +316,7 @@ func (g *GeminiTutor) call(ctx context.Context, req Request, isHint bool) (Respo
 		return Response{}, errors.New("empty response received from gemini")
 	}
 
-	text := strings.TrimSpace(geminiResp.Candidates[0].Content.Parts[0].Text)
+	text := strings.TrimSpace(CleanLaTeXMath(geminiResp.Candidates[0].Content.Parts[0].Text))
 	tokens := geminiResp.UsageMetadata.CandidatesTokenCount
 	if tokens <= 0 {
 		tokens = (len(text) + 3) / 4
@@ -460,7 +460,7 @@ func (o *OpenAIAPITutor) call(ctx context.Context, req Request, isHint bool) (Re
 		return Response{}, errors.New("empty choices received from openai api")
 	}
 
-	text := strings.TrimSpace(chatResp.Choices[0].Message.Content)
+	text := strings.TrimSpace(CleanLaTeXMath(chatResp.Choices[0].Message.Content))
 	tokens := chatResp.Usage.CompletionTokens
 	if tokens <= 0 {
 		tokens = (len(text) + 3) / 4

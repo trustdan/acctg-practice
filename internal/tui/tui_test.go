@@ -291,11 +291,229 @@ func TestHelpScreenModal(t *testing.T) {
 	if !strings.Contains(helpView, "VIM-NATIVE NAVIGATION") {
 		t.Errorf("expected vim navigation guide in help view, got:\n%s", helpView)
 	}
+	if !strings.Contains(helpView, "Ctrl/Cmd +/-") || !strings.Contains(helpView, "Zoom in or out") {
+		t.Errorf("expected zoom in or out in help view, got:\n%s", helpView)
+	}
 
 	// Press 'esc' to dismiss help overlay and return to StateDrill
 	sendSpecialKey(m, tea.KeyEsc)
 	if m.State != tui.StateDrill {
 		t.Fatalf("expected StateDrill after Esc, got %d", m.State)
+	}
+}
+
+func TestStatusBarNavigationCheatSheetIncludesZoom(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	view := m.View()
+	if !strings.Contains(view, "[Ctrl/Cmd +/-] Zoom") {
+		t.Errorf("expected status bar navigation cheat sheet to contain '[Ctrl/Cmd +/-] Zoom', got:\n%s", view)
+	}
+}
+
+func TestHelpAndCheatSheetAdvertiseQuestionCycling(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	// Check status bar
+	view := m.View()
+	if !strings.Contains(view, "[←/→]") || !strings.Contains(view, "Questions") {
+		t.Errorf("expected status bar to contain '[←/→]' and 'Questions', got:\n%s", view)
+	}
+
+	// Check help screen
+	sendKey(m, "h")
+	helpView := m.View()
+	if !strings.Contains(helpView, "[←] or [→]") || !strings.Contains(helpView, "previous questions") {
+		t.Errorf("expected help screen to describe left/right question cycling, got:\n%s", helpView)
+	}
+}
+
+func TestQuestionCyclingForwardAndBackward(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+	m.Width, m.Height = 120, 24
+
+	// Starts at question 1 (index 0)
+	if m.CurrentQuestionIndex != 0 {
+		t.Fatalf("expected CurrentQuestionIndex 0, got %d", m.CurrentQuestionIndex)
+	}
+
+	// Pressing left/right with only 1 question should stay on question 1
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.CurrentQuestionIndex != 0 {
+		t.Errorf("expected CurrentQuestionIndex to stay 0 on Left, got %d", m.CurrentQuestionIndex)
+	}
+	sendSpecialKey(m, tea.KeyRight)
+	if m.CurrentQuestionIndex != 0 {
+		t.Errorf("expected CurrentQuestionIndex to stay 0 on Right, got %d", m.CurrentQuestionIndex)
+	}
+
+	// Complete Question 1
+	q1Prompt := m.CurrentInstance.PromptText
+	for !m.Session.IsCompleted {
+		st, err := m.Session.CurrentStage()
+		if err != nil {
+			t.Fatalf("stage error: %v", err)
+		}
+		for i, opt := range st.Options {
+			if opt.ID == st.CorrectOptionID {
+				m.SelectedOptionIndex = i
+				break
+			}
+		}
+		sendSpecialKey(m, tea.KeyEnter)
+		sendSpecialKey(m, tea.KeyEnter)
+	}
+
+	if m.State != tui.StateRecap {
+		t.Fatalf("expected StateRecap for Question 1, got %d", m.State)
+	}
+
+	// Advance to Question 2 via Enter in Recap
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.CurrentQuestionIndex != 1 {
+		t.Fatalf("expected CurrentQuestionIndex 1 after advancing, got %d", m.CurrentQuestionIndex)
+	}
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected StateDrill for Question 2, got %d", m.State)
+	}
+	q2Prompt := m.CurrentInstance.PromptText
+
+	// Press Left arrow to go back to Question 1
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.CurrentQuestionIndex != 0 {
+		t.Fatalf("expected CurrentQuestionIndex 0 after Left, got %d", m.CurrentQuestionIndex)
+	}
+	if m.State != tui.StateRecap {
+		t.Fatalf("expected Question 1 to be in StateRecap, got %d", m.State)
+	}
+	if m.CurrentInstance.PromptText != q1Prompt {
+		t.Errorf("expected Question 1 prompt, got %q", m.CurrentInstance.PromptText)
+	}
+
+	// Press Right arrow to return to Question 2
+	sendSpecialKey(m, tea.KeyRight)
+	if m.CurrentQuestionIndex != 1 {
+		t.Fatalf("expected CurrentQuestionIndex 1 after Right, got %d", m.CurrentQuestionIndex)
+	}
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected Question 2 to be in StateDrill, got %d", m.State)
+	}
+	if m.CurrentInstance.PromptText != q2Prompt {
+		t.Errorf("expected Question 2 prompt, got %q", m.CurrentInstance.PromptText)
+	}
+
+	// Cycle back to Question 1 and press Enter in Recap: should advance to Question 2 without creating a new question
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.CurrentQuestionIndex != 0 {
+		t.Fatalf("expected CurrentQuestionIndex 0, got %d", m.CurrentQuestionIndex)
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.CurrentQuestionIndex != 1 {
+		t.Fatalf("expected Enter in Q1 recap to navigate to existing Q2, got %d", m.CurrentQuestionIndex)
+	}
+	if m.CurrentInstance.PromptText != q2Prompt {
+		t.Errorf("expected to return to Q2 prompt, got %q", m.CurrentInstance.PromptText)
+	}
+
+	// Complete Question 2
+	for !m.Session.IsCompleted {
+		st, err := m.Session.CurrentStage()
+		if err != nil {
+			t.Fatalf("stage error: %v", err)
+		}
+		for i, opt := range st.Options {
+			if opt.ID == st.CorrectOptionID {
+				m.SelectedOptionIndex = i
+				break
+			}
+		}
+		sendSpecialKey(m, tea.KeyEnter)
+		sendSpecialKey(m, tea.KeyEnter)
+	}
+
+	// Advance to Question 3
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.CurrentQuestionIndex != 2 {
+		t.Fatalf("expected CurrentQuestionIndex 2, got %d", m.CurrentQuestionIndex)
+	}
+
+	// Test circular wrap-around cycling:
+	// From Q3, Left goes to Q2
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.CurrentQuestionIndex != 1 {
+		t.Fatalf("expected Q2, got %d", m.CurrentQuestionIndex)
+	}
+	// From Q2, Left goes to Q1
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.CurrentQuestionIndex != 0 {
+		t.Fatalf("expected Q1, got %d", m.CurrentQuestionIndex)
+	}
+	// From Q1, Left cycles/wraps to Q3!
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.CurrentQuestionIndex != 2 {
+		t.Fatalf("expected wrap around to Q3, got %d", m.CurrentQuestionIndex)
+	}
+	// From Q3, Right cycles/wraps to Q1!
+	sendSpecialKey(m, tea.KeyRight)
+	if m.CurrentQuestionIndex != 0 {
+		t.Fatalf("expected wrap around to Q1, got %d", m.CurrentQuestionIndex)
+	}
+}
+
+func TestQuestionCyclingInSessionComplete(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+	m.Width, m.Height = 120, 24
+	m.TotalQuestions = 2 // Short session of 2 questions
+
+	// Answer question 1
+	for !m.Session.IsCompleted {
+		st, _ := m.Session.CurrentStage()
+		for i, opt := range st.Options {
+			if opt.ID == st.CorrectOptionID {
+				m.SelectedOptionIndex = i
+				break
+			}
+		}
+		sendSpecialKey(m, tea.KeyEnter)
+		sendSpecialKey(m, tea.KeyEnter)
+	}
+	sendSpecialKey(m, tea.KeyEnter) // Advance to Q2
+
+	// Answer question 2
+	for !m.Session.IsCompleted {
+		st, _ := m.Session.CurrentStage()
+		for i, opt := range st.Options {
+			if opt.ID == st.CorrectOptionID {
+				m.SelectedOptionIndex = i
+				break
+			}
+		}
+		sendSpecialKey(m, tea.KeyEnter)
+		sendSpecialKey(m, tea.KeyEnter)
+	}
+	sendSpecialKey(m, tea.KeyEnter) // Complete session
+
+	if m.State != tui.StateSessionComplete {
+		t.Fatalf("expected StateSessionComplete, got %d", m.State)
+	}
+
+	// Press Left to review previous questions
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.State != tui.StateRecap {
+		t.Fatalf("expected StateRecap when reviewing from completion, got %d", m.State)
+	}
+	if m.CurrentQuestionIndex != 1 {
+		t.Fatalf("expected Q2 (index 1), got %d", m.CurrentQuestionIndex)
+	}
+
+	// Press Left again to go to Q1
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.CurrentQuestionIndex != 0 {
+		t.Fatalf("expected Q1 (index 0), got %d", m.CurrentQuestionIndex)
 	}
 }
 

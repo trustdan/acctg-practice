@@ -180,7 +180,7 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 
 	leftSection := lipgloss.JoinHorizontal(lipgloss.Center, modePill, infoPill, intensityPill, streakPill)
 
-	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move  [1-4] Select  [u/d] Scroll  [?] Hint  [e] Explain  [V] Saved Explanations  [t] Tutor  [p] Review New Questions  [n] New from LLM  [J] Entry  [h] Help  [s] Mastery  [A] Arcade  [L] Scores  [q] Quit")
+	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move [1-4] Select [←/→] Questions [u/d] Scroll [Ctrl/Cmd +/-] Zoom [?] Hint [e] Explain [V] Saved Explanations [t] Tutor [p] Review New Questions [n] New from LLM [J] Entry [h] Help [s] Mastery [A] Arcade [L] Scores [q] Quit")
 
 	// Calculate space between left and right sections
 	leftWidth := lipgloss.Width(leftSection)
@@ -191,7 +191,11 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 	}
 
 	spacer := m.Styles.StatusInfo.Render(strings.Repeat(" ", gap))
-	return m.Styles.StatusLine.Width(contentWidth).Render(lipgloss.JoinHorizontal(lipgloss.Center, leftSection, spacer, keyHints))
+	statusStyle := m.Styles.StatusLine
+	if m.Height > 0 && m.Height <= 14 {
+		statusStyle = statusStyle.MarginTop(0)
+	}
+	return statusStyle.Width(contentWidth).Render(lipgloss.JoinHorizontal(lipgloss.Center, leftSection, spacer, keyHints))
 }
 
 func (m *Model) renderDrill(contentWidth int) string {
@@ -274,15 +278,16 @@ func (m *Model) renderDrill(contentWidth int) string {
 			}
 		}
 
+		tutorText := m.renderTutorContent(m.CurrentHint, contentWidth-4)
 		if m.TutorKind == "explain" {
 			box := m.Styles.ExplanationBox.
 				Width(contentWidth).
-				Render(fmt.Sprintf("📖 Conceptual Explanation [%s]:\n\n%s\n\n[Press Esc to dismiss]", provLabel, m.CurrentHint))
+				Render(fmt.Sprintf("📖 Conceptual Explanation [%s]:\n\n%s\n\n[Press Esc to dismiss]", provLabel, tutorText))
 			sections = append(sections, box)
 		} else {
 			box := m.Styles.HintBox.
 				Width(contentWidth).
-				Render(fmt.Sprintf("💡 Socratic Hint: %s\n\n[%s | Press Esc to dismiss]", m.CurrentHint, provLabel))
+				Render(fmt.Sprintf("💡 Socratic Hint: %s\n\n[%s | Press Esc to dismiss]", tutorText, provLabel))
 			sections = append(sections, box)
 		}
 	}
@@ -362,9 +367,10 @@ func (m *Model) renderFeedback(contentWidth int) string {
 		if m.TutorResponse != nil {
 			provLabel = m.TutorResponse.Provider
 		}
+		tutorText := m.renderTutorContent(m.CurrentHint, contentWidth-4)
 		box := m.Styles.ExplanationBox.
 			Width(contentWidth).
-			Render(fmt.Sprintf("📖 Deep Conceptual Explanation [%s]\n\n%s\n\n[Press Esc to dismiss]", provLabel, m.CurrentHint))
+			Render(fmt.Sprintf("📖 Deep Conceptual Explanation [%s]\n\n%s\n\n[Press Esc to dismiss]", provLabel, tutorText))
 		sections = append(sections, box)
 	}
 
@@ -633,6 +639,7 @@ func (m *Model) renderHelp(contentWidth int) string {
 
 	keyLegend := `[j] or [↓]      Navigate cursor down
 [k] or [↑]      Navigate cursor up
+[←] or [→]      Go back and cycle through previous questions
 [g]             Jump to first option (Vim gg)
 [G]             Jump to last option (Vim G)
 [1] – [4]       Select an answer (a/b/c also select the first three)
@@ -645,6 +652,7 @@ func (m *Model) renderHelp(contentWidth int) string {
 [p]             Review new questions before adding them to practice
 [n]             Request a new question from the connected AI tutor
 [u] / [d]       Scroll up / down half a screen (also Page Up / Page Down)
+[Ctrl/Cmd +/-]  Zoom in or out (terminal font size)
 [i]             Cycle practice intensity (standard → spaced → intensive → transfer)
 [ / ]           Adjust session size (5, 10, 15, 20 questions)
 [h] or [F1]     Toggle this Reference & Help screen (records assistance)

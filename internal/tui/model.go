@@ -44,6 +44,24 @@ const (
 	StateSavedExplanations
 )
 
+// DrillQuestionState preserves the interactive state of a question in a practice session.
+type DrillQuestionState struct {
+	Index               int
+	Instance            *domain.QuestionInstance
+	Session             *drill.SessionState
+	State               UIState
+	SelectedOptionIndex int
+	LastFeedback        *drill.SubmitFeedback
+	CurrentHint         string
+	RenderedHint        string
+	RenderedHintRaw     string
+	RenderedHintWidth   int
+	ShowHint            bool
+	TutorKind           string
+	TutorResponse       *tutor.Response
+	RecapScroll         int
+}
+
 // Model represents the Bubble Tea application state.
 type Model struct {
 	State         UIState
@@ -66,7 +84,11 @@ type Model struct {
 	SelectedOptionIndex  int
 	LastFeedback         *drill.SubmitFeedback
 	CurrentHint          string
+	renderedHint         string
+	renderedHintRaw      string
+	renderedHintWidth    int
 	ShowHint             bool
+	QuestionHistory      []*DrillQuestionState
 
 	// Tutor integration
 	Tutor                 tutor.Tutor
@@ -872,6 +894,13 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	// Question cycling
+	case "left":
+		return m.cycleQuestion(-1)
+
+	case "right":
+		return m.cycleQuestion(1)
+
 	// Vim / Arrow navigation
 	case "up", "k":
 		if m.SelectedOptionIndex > 0 {
@@ -1022,6 +1051,12 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case "left":
+		return m.cycleQuestion(-1)
+
+	case "right":
+		return m.cycleQuestion(1)
+
 	case "enter", " ", "a", "b", "c", "1", "2", "3", "4":
 		m.cancelTutor()
 		if m.LastFeedback != nil && !m.LastFeedback.AdvanceStage {
@@ -1109,9 +1144,21 @@ func (m *Model) updateRecap(key string) (tea.Model, tea.Cmd) {
 		m.RecapScroll = 9999
 		return m, nil
 
+	case "left":
+		return m.cycleQuestion(-1)
+
+	case "right":
+		return m.cycleQuestion(1)
+
 	case "enter", " ":
-		m.QuestionsCompleted++
 		m.RecapScroll = 0
+		m.saveCurrentQuestionState()
+		if m.CurrentQuestionIndex < len(m.QuestionHistory)-1 {
+			m.restoreQuestionState(m.CurrentQuestionIndex + 1)
+			return m, nil
+		}
+
+		m.QuestionsCompleted++
 		if m.CurrentQuestionIndex+1 >= m.TotalQuestions {
 			m.closeSession()
 			m.State = StateSessionComplete
@@ -1225,11 +1272,18 @@ func (m *Model) updateSessionComplete(key string) (tea.Model, tea.Cmd) {
 		m.State = StateHelp
 		return m, nil
 
+	case "left":
+		if len(m.QuestionHistory) > 0 {
+			m.restoreQuestionState(len(m.QuestionHistory) - 1)
+			return m, nil
+		}
+
 	case "r", "enter":
 		// Restart session
 		m.SessionID = fmt.Sprintf("sess-%d", time.Now().Unix())
 		m.CurrentQuestionIndex = 0
 		m.QuestionsCompleted = 0
+		m.QuestionHistory = nil
 		m.SessionAttempts = 0
 		m.FirstTrySuccesses = 0
 		m.CurrentStreak = 0
@@ -1639,7 +1693,85 @@ func (m *Model) loadNextQuestion() error {
 	m.ShowHint = false
 	m.LastFeedback = nil
 
+	qs := &DrillQuestionState{
+		Index:               m.CurrentQuestionIndex,
+		Instance:            inst,
+		Session:             m.Session,
+		State:               StateDrill,
+		SelectedOptionIndex: 0,
+	}
+	if m.CurrentQuestionIndex < len(m.QuestionHistory) {
+		m.QuestionHistory[m.CurrentQuestionIndex] = qs
+	} else {
+		m.QuestionHistory = append(m.QuestionHistory, qs)
+	}
+
 	return nil
+}
+
+func (m *Model) saveCurrentQuestionState() {
+	if m.QuestionHistory == nil || m.CurrentQuestionIndex < 0 || m.CurrentQuestionIndex >= len(m.QuestionHistory) {
+		return
+	}
+	if m.State != StateDrill && m.State != StateFeedback && m.State != StateRecap {
+		return
+	}
+	qs := m.QuestionHistory[m.CurrentQuestionIndex]
+	qs.Instance = m.CurrentInstance
+	qs.Session = m.Session
+	qs.State = m.State
+	qs.SelectedOptionIndex = m.SelectedOptionIndex
+	qs.LastFeedback = m.LastFeedback
+	qs.CurrentHint = m.CurrentHint
+	qs.RenderedHint = m.renderedHint
+	qs.RenderedHintRaw = m.renderedHintRaw
+	qs.RenderedHintWidth = m.renderedHintWidth
+	qs.ShowHint = m.ShowHint
+	qs.TutorKind = m.TutorKind
+	qs.TutorResponse = m.TutorResponse
+	qs.RecapScroll = m.RecapScroll
+}
+
+func (m *Model) restoreQuestionState(index int) {
+	if m.QuestionHistory == nil || index < 0 || index >= len(m.QuestionHistory) {
+		return
+	}
+	m.cancelTutor()
+	m.saveCurrentQuestionState()
+	m.CurrentQuestionIndex = index
+	qs := m.QuestionHistory[index]
+	m.CurrentInstance = qs.Instance
+	m.Session = qs.Session
+	if qs.Session != nil && qs.Session.IsCompleted {
+		m.State = StateRecap
+	} else {
+		m.State = qs.State
+	}
+	m.SelectedOptionIndex = qs.SelectedOptionIndex
+	m.LastFeedback = qs.LastFeedback
+	m.CurrentHint = qs.CurrentHint
+	m.renderedHint = qs.RenderedHint
+	m.renderedHintRaw = qs.RenderedHintRaw
+	m.renderedHintWidth = qs.RenderedHintWidth
+	m.ShowHint = qs.ShowHint
+	m.TutorKind = qs.TutorKind
+	m.TutorResponse = qs.TutorResponse
+	m.RecapScroll = qs.RecapScroll
+}
+
+func (m *Model) cycleQuestion(dir int) (tea.Model, tea.Cmd) {
+	if len(m.QuestionHistory) <= 1 {
+		return m, nil
+	}
+	m.saveCurrentQuestionState()
+	newIdx := m.CurrentQuestionIndex + dir
+	if newIdx < 0 {
+		newIdx = len(m.QuestionHistory) - 1
+	} else if newIdx >= len(m.QuestionHistory) {
+		newIdx = 0
+	}
+	m.restoreQuestionState(newIdx)
+	return m, nil
 }
 
 func (m *Model) loadCandidates() {

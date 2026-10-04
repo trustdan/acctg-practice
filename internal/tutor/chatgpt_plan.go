@@ -662,7 +662,7 @@ func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Reque
 	if !completed {
 		return Response{}, errors.New("ChatGPT stream ended before response.completed")
 	}
-	resultText := strings.TrimSpace(accumulated.String())
+	resultText := strings.TrimSpace(CleanLaTeXMath(accumulated.String()))
 	if resultText == "" {
 		return Response{}, errors.New("empty response received from chatgpt responses api")
 	}

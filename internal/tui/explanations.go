@@ -132,7 +132,7 @@ func (m *Model) renderSavedExplanations(width int) string {
 	} else {
 		e := m.SavedExplanations[m.SavedExplanationIndex]
 		parts = append(parts, fmt.Sprintf("%d / %d | %s | %s\nSaved %s", m.SavedExplanationIndex+1, len(m.SavedExplanations), e.Provider, e.Stage, e.SavedAt.Local().Format("2006-01-02 15:04")),
-			m.Styles.ScenarioBox.Width(width).Render(e.Scenario+"\n\n"+e.StagePrompt), m.Styles.ExplanationBox.Width(width).Render(e.Explanation))
+			m.Styles.ScenarioBox.Width(width).Render(e.Scenario+"\n\n"+e.StagePrompt), m.Styles.ExplanationBox.Width(width).Render(RenderMarkdown(e.Explanation, width-4)))
 	}
 	return strings.Join(append(parts, "[n/p or Left/Right] Browse  [u/d] Scroll  [Esc/V] Return"), "\n\n")
 }

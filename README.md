@@ -160,11 +160,13 @@ Keys depend on the current screen; text fields accept ordinary typing. Uppercase
 
 | Key | Practice action |
 |---|---|
-| `j` / `k`, arrows | Move selection |
+| `j` / `k`, up/down arrows | Move selection |
+| `←` / `→` | Go back and cycle through previous questions |
 | `1`-`4` | Select answer; `a`/`b`/`c` remain aliases for the first three |
 | Enter | Submit selection or continue |
 | Space | Continue after feedback |
 | `u` / `d`, Page Up / Page Down | Scroll tall pages, including tutor responses and help |
+| Ctrl/Cmd `+`/`-` | Zoom in or out (terminal font size) |
 | `?` / `e` | Hint / explanation |
 | `h` / F1 | Help and accounting reference |
 | `s` | Mastery dashboard |

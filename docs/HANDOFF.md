@@ -1,5 +1,64 @@
 # Implementation handoff
 
+## Multi-Platform Release Distribution Packaging (v0.24.0) — 2026-10-04
+
+- Executed `scripts/build_releases.ps1` to rebuild native binaries, distribution `.zip` archives, and recalculate SHA-256 checksums:
+  - Quality gates: `gofmt -s -d .` passed (0 diffs), `go vet ./...` passed (clean), and `go test ./...` passed (100% across all 11 packages).
+  - Standalone release binaries cross-compiled (`CGO_ENABLED=0`, `-ldflags="-s -w"`):
+    - Windows AMD64: `dist/acctg-windows-amd64.exe` & `dist/acctg.exe` (21.81 MB)
+    - macOS Apple Silicon ARM64: `dist/acctg-mac-arm64` (20.63 MB)
+    - macOS Intel AMD64: `dist/acctg-mac-amd64` (21.72 MB)
+    - Linux AMD64: `dist/acctg-linux-amd64` (21.55 MB)
+    - Linux ARM64: `dist/acctg-linux-arm64` (20.38 MB)
+  - Generated distribution `.zip` release archives:
+    - `dist/acctg-v0.24.0-windows-amd64.zip` (7.96 MB)
+    - `dist/acctg-v0.24.0-macos-arm64.zip` (7.47 MB)
+    - `dist/acctg-v0.24.0-macos-amd64.zip` (7.91 MB)
+    - `dist/acctg-v0.24.0-macos-classmate-bundle.zip` (15.37 MB)
+    - `dist/acctg-v0.24.0-linux-amd64.zip` (7.90 MB)
+    - `dist/acctg-v0.24.0-linux-arm64.zip` (7.28 MB)
+  - Regenerated `dist/checksums.sha256` covering all binaries, archives, and platform launchers.
+  - Refreshed root executable `acctg.exe` from `dist/acctg.exe`.
+- Files: dist/*, acctg.exe, docs/HANDOFF.md.
+- Checks: `scripts/build_releases.ps1` passed all 5 gates. Reconcile verified: `acctg.exe --reconcile-all --db :memory:` reported 90/90 active questions 100% verified.
+- Next: Distribute the updated platform ZIP packages or smoke test them across environments.
+
+## Question History Navigation & Cycling with Left/Right Arrow Keys — 2026-10-04
+
+- Implemented ability to go back and cycle through previous questions in practice sessions:
+  - Session history state: Created `DrillQuestionState` in `internal/tui/model.go` preserving question instance snapshots, session progression, stage answer options, feedback, hints, and recap scroll offsets across question transitions. Added `QuestionHistory []*DrillQuestionState` to `Model`.
+  - Navigation controls: Mapped standard `left` and `right` arrow keys in `updateDrill`, `updateFeedback`, `updateRecap`, and `updateSessionComplete` via `cycleQuestion`, enabling bidirectional circular cycling across generated questions.
+  - History-aware advancement: Updated `updateRecap` so pressing `Enter` or `Space` on an already-completed question in history navigates forward to the next existing question rather than generating duplicates or mutating completed evidence/mastery.
+  - Non-destructive review: Completed questions restore cleanly in `StateRecap` with their balanced journal entry, classroom 4-column grid, and ledger ties, without altering mastery or attempts.
+  - Cheatsheet & help updates: Added `[←] or [→]      Go back and cycle through previous questions` to Section 3 of `renderHelp`, added `[←/→] Questions` to `renderStatusBar` in `internal/tui/view.go`, and updated the `README.md` keyboard reference table.
+  - Testing: Added unit tests `TestQuestionCyclingForwardAndBackward`, `TestQuestionCyclingInSessionComplete`, and `TestHelpAndCheatSheetAdvertiseQuestionCycling` in `internal/tui/tui_test.go`.
+- Files: internal/tui/model.go, internal/tui/view.go, internal/tui/tui_test.go, README.md, docs/HANDOFF.md.
+- Checks: gofmt -l ., go vet ./..., go test ./..., go build ./cmd/acctg all passed.
+- Next: Launch acctg.exe, answer multiple questions, and test cycling with Left and Right arrow keys.
+
+## Navigation Cheat Sheet & Help Screen Zoom Shortcuts — 2026-10-04
+
+- Added `Ctrl/Cmd +/-` zoom in/out shortcut documentation to the navigation cheat sheet in the status bar and the help screen:
+  - Bottom navigation status bar: Added `[Ctrl/Cmd +/-] Zoom` to `renderStatusBar` in `internal/tui/view.go`, balanced item spacing to cleanly fit standard terminal widths without vertical line overflow or clipping tall explanation viewports.
+  - Help screen: Added `[Ctrl/Cmd +/-]  Zoom in or out (terminal font size)` to section 3 (`keyLegend`) of `renderHelp` in `internal/tui/view.go`.
+  - Documentation: Updated the Keyboard reference table in `README.md`.
+  - Testing: Added unit test assertions in `internal/tui/tui_test.go` (`TestHelpScreenModal` and `TestStatusBarNavigationCheatSheetIncludesZoom`) verifying the shortcut and description presence in both views.
+- Files: internal/tui/view.go, internal/tui/tui_test.go, README.md, docs/HANDOFF.md.
+- Checks: gofmt -l ., go vet ./..., go test ./..., go build ./cmd/acctg all passed.
+- Next: Smoke test in a terminal with Ctrl/Cmd +/- zoom adjustments.
+
+## Terminal Markdown and LaTeX Math Rendering for AI Explanations — 2026-10-04
+
+- Implemented upstream and downstream solutions to render LLM explanations cleanly in the terminal:
+  - Upstream prompt constraints: Added pedagogical formatting invariant 9 to SystemPrompt and updated FormatUserPrompt in internal/tutor/prompts.go to forbid LaTeX math blocks (\[, \], $$, \text{}) and request clean markdown for terminal display.
+  - LaTeX math sanitizer: Created CleanLaTeXMath in internal/tutor/latex.go to unwrap \text{}, \textbf{}, \textit{}, \frac{}{}, math operators (×, ·, ≈, ≠, ≤, ≥, ±, →), escaped characters (\$ -> $, \% -> %, \& -> &), and strip delimiters (\[, \], \(, \), $$). Applied CleanLaTeXMath to provider responses in internal/tutor/chatgpt_plan.go and internal/tutor/apikey.go.
+  - Glamour terminal rendering: Added github.com/charmbracelet/glamour to go.mod. Implemented RenderMarkdown in internal/tui/markdown.go using dark styling with zero document margins, nil Document.Color, and cleared heading prefixes (H1-H6) so headings render as clean bold/cyan titles without raw '##' or '###' hashes. Added cached renderTutorContent on Model to avoid re-rendering across keypresses/scrolls.
+  - UI integration: Updated renderQuestion and renderFeedback in internal/tui/view.go and renderSavedExplanations in internal/tui/explanations.go to format hints and explanations with styled markdown and clean equations.
+- Files: go.mod, go.sum, internal/tutor/prompts.go, internal/tutor/latex.go, internal/tutor/latex_test.go, internal/tutor/chatgpt_plan.go, internal/tutor/apikey.go, internal/tui/markdown.go, internal/tui/markdown_test.go, internal/tui/model.go, internal/tui/view.go, internal/tui/explanations.go, docs/HANDOFF.md.
+- Checks: gofmt -l ., go vet ./..., go test ./... all passed.
+- Next: Launch acctg.exe, request an explanation with [e], and visually inspect the rendered terminal formatting.
+
+
 ## README and native initial-release packages ? 2026-10-02
 
 - Updated the README with the question-review holding-area explanation, first-use walkthrough, LLM generation CLI examples, approval boundaries, privacy/storage, platform installation, and exact release upload/loose-file lists. Source-reference links use repository URLs so packaged documentation remains useful. Added current 0.23.0 release notes while preserving historical notes.

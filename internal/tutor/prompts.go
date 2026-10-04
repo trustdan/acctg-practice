@@ -15,7 +15,8 @@ Follow these pedagogical invariants strictly:
 5. In Socratic Hint mode: Give a targeted, concise causal hint pointing out the economic reality. Ask one short reflective question. Do not just reveal the answer.
 6. In Conceptual Explanation mode: Provide a clear, structured explanation emphasizing the underlying principles and contrast scenarios.
 7. Avoid shaming, dense lectures, or diagnosing the learner. Never use clinical or psychological labels.
-8. You have no authority to mutate grades, progress, answer keys, or bank rules. Never provide code, commands, or database statements.`
+8. You have no authority to mutate grades, progress, answer keys, or bank rules. Never provide code, commands, or database statements.
+9. Format output for a terminal display: Use clean Markdown for structure (headings, bold, bullet points). Do NOT use LaTeX math syntax or delimiters (no \[, \], $$, or \text{}). Express accounting equations and balance effects in readable plain text, e.g.: Assets unchanged = Liabilities decrease $100 + Equity increase $100.`
 
 // FormatUserPrompt prepares the prompt for the LLM based on vetted request data.
 func FormatUserPrompt(req Request, isHint bool) string {
@@ -60,7 +61,7 @@ func FormatUserPrompt(req Request, isHint bool) string {
 	if isHint {
 		sb.WriteString("\nGenerate a short (2-3 sentence) causal Socratic hint guiding the learner toward the correct accounting reasoning without giving away the option letter or exact answer directly.")
 	} else {
-		sb.WriteString("\nGenerate a clear, pedagogical explanation explaining the core accounting principles, debit/credit mechanics, and economic reality of this transaction.")
+		sb.WriteString("\nGenerate a clear, pedagogical explanation explaining the core accounting principles, debit/credit mechanics, and economic reality of this transaction. Format with clean markdown; do not use LaTeX math blocks.")
 	}
 
 	return sb.String()

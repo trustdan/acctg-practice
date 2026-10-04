@@ -126,8 +126,8 @@ func TestCustomerAdvanceDrillFullRun(t *testing.T) {
 	if fb5Wrong.Hint == "" {
 		t.Fatalf("expected targeted Socratic hint, got empty string")
 	}
-	if !strings.Contains(fb5Wrong.Hint, "liability") && !strings.Contains(fb5Wrong.Hint, "obligation") {
-		t.Errorf("expected hint to mention liability or obligation, got: %s", fb5Wrong.Hint)
+	if !strings.Contains(fb5Wrong.Hint, "owe the customer") || !strings.Contains(fb5Wrong.Hint, "?") {
+		t.Errorf("expected hint to ask about the unfinished obligation, got: %s", fb5Wrong.Hint)
 	}
 
 	// Now learner retries with Unearned Revenue
@@ -304,7 +304,7 @@ func TestExhaustedRetriesAdvancesWithRevealedAnswer(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Error 1: allows retry
-	fb1, _ := sess.SubmitOption("opt_ap", now)
+	fb1, _ := sess.SubmitOption("opt_notes_payable", now)
 	if fb1.IsCorrect || fb1.AdvanceStage {
 		t.Fatalf("expected first error to pause for retry")
 	}

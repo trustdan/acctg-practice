@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "equipment_cash_additional_machine",
+      "version": 1,
+      "family_id": "equipment_purchase_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today to buy and take delivery and ownership of an additional machine for several future years of business use. It already owns another machine whose cost was recorded earlier; that older machine stays owned and in use. Today's stated amount is only the new machine's full price, not the combined cost of both machines. No trade-in, repair, disposal, earlier payable, or loan transaction occurs. Record only the new purchase, with no depreciation or other costs.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "capex_vs_expense",
+        "equipment_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "equipment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:07:14Z",
+        "source": "Expansion batch 12; continuing delegated review; complete rendered teaching/options/stored hints, all amounts/scaffolds/contrasts and preserved costs/final coverage regressions; representative full/faded offline terminal review; see docs/EXPANSION-BATCH12-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does owning an older machine prevent the new delivered machine from adding a future resource?",
+          "explanation": "Equipment records the additional machine. The older recorded machine stays in the asset balance; the new purchase is not a cost of repairing it."
+        },
+        "direction": {
+          "hint": "Is a second useful machine added or does it replace an entry already recorded?",
+          "explanation": "Equipment increases by the new machine's price. Its balance already includes the older machine, whose cost is not recorded again."
+        },
+        "counter_account": {
+          "hint": "How was only the additional machine paid for today?",
+          "explanation": "Cash decreases by the new machine's full price. There is no new borrowing, unpaid balance, or payment for the older machine."
+        },
+        "balanced_entry": {
+          "hint": "What additional owned resource arrives and what payment occurs today?",
+          "explanation": "Debit Equipment ${amount_dollars} and Credit Cash ${amount_dollars}. Leave the older machine's recorded cost intact; do not repost the combined cost or expense the new multi-year resource."
+        },
+        "equation_effect": {
+          "hint": "Does adding a machine for cash change total resources or their composition?",
+          "explanation": "Equipment increases and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged; the older machine remains recorded."
+        }
+      }
+    },
+    {
+      "id": "repay_principal_bank_landlord",
+      "version": 1,
+      "family_id": "repay_note_principal",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation pays ${amount_dollars} cash today to a bank solely to repay part of the principal on a previously recorded promissory note. The bank also rents workspace to the corporation, but this month's rent was separately paid and recorded earlier; none of today's payment is rent. Some principal remains owed. No new borrowing occurs and today's payment contains no interest or fees; ignore interest. Record only the principal repayment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "principal_repayment_vs_expense",
+        "notes_payable_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "notes_payable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:07:14Z",
+        "source": "Expansion batch 12; continuing delegated review; complete rendered teaching/options/stored hints, all amounts/scaffolds/contrasts and preserved costs/final coverage regressions; representative full/faded offline terminal review; see docs/EXPANSION-BATCH12-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Which recorded obligation does today's principal payment reduce, despite the bank's other role?",
+          "explanation": "Notes Payable records the earlier loan. Today's payment reduces principal rather than recording rent already paid separately."
+        },
+        "direction": {
+          "hint": "After repaying part of the loan, is the principal owed higher or lower?",
+          "explanation": "Notes Payable decreases by the principal paid. The unpaid remainder stays owed; the bank's landlord role does not change the loan reduction."
+        },
+        "counter_account": {
+          "hint": "What resource leaves to settle this part of the loan?",
+          "explanation": "Cash decreases by today's principal payment. Earlier rent is not paid or expensed again."
+        },
+        "balanced_entry": {
+          "hint": "What recorded loan balance decreases when cash pays principal only?",
+          "explanation": "Debit Notes Payable ${amount_dollars} and Credit Cash ${amount_dollars}. Do not record Rent Expense or new borrowing; the separately recorded rent stays unchanged."
+        },
+        "equation_effect": {
+          "hint": "Does paying principal create another occupancy cost or reduce a recorded debt?",
+          "explanation": "Assets and liabilities decrease by ${amount_dollars}. Equity and previously recorded Rent Expense are unchanged."
+        }
+      }
+    },
+    {
+      "id": "dividend_cash_service_provider",
+      "version": 1,
+      "family_id": "dividend_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation's board declares and pays ${amount_dollars} cash today to stockholders solely in proportion to share ownership. One stockholder also supplied consulting services last month; those services and their separate payment were fully recorded then. None of today's distribution pays for services or settles a loan. No dividend was declared or recorded as owed earlier, and no shares are repurchased. Record only today's ownership distribution.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "dividend_vs_expense",
+        "dividends_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "dividends",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:07:14Z",
+        "source": "Expansion batch 12; continuing delegated review; complete rendered teaching/options/stored hints, all amounts/scaffolds/contrasts and preserved costs/final coverage regressions; representative full/faded offline terminal review; see docs/EXPANSION-BATCH12-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does today's payment reward share ownership or buy the already settled consulting work?",
+          "explanation": "Dividends records the ownership distribution. A stockholder's separate service-provider role does not make this payment an operating expense."
+        },
+        "counter_account": {
+          "hint": "What resource leaves for the newly declared and paid ownership distribution?",
+          "explanation": "Cash decreases by today's distribution. The earlier consulting payment is not repeated, and there is no earlier dividend payable to settle."
+        },
+        "balanced_entry": {
+          "hint": "What ownership distribution and cash payment occur independently of last month's services?",
+          "explanation": "Debit Dividends ${amount_dollars} and Credit Cash ${amount_dollars}. Do not record a service expense, loan repayment, or the already settled consulting payment."
+        },
+        "equation_effect": {
+          "hint": "Does distributing cash for ownership buy another service or reduce the owners' stake?",
+          "explanation": "Assets and equity decrease by ${amount_dollars}. Liabilities are unchanged. Dividends reduces equity directly and does not reduce net income as an expense."
+        }
+      }
+    },
+    {
+      "id": "prepaid_purchase_broker_own_policy",
+      "version": 1,
+      "family_id": "prepaid_purchase",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "An insurance brokerage company pays ${amount_dollars} cash today to an insurer for a policy protecting the brokerage's own office next month. It buys this protection for itself, not on behalf of a client, and receives no client payment or commission in this transaction. None of the coverage has begun or been used. The insurer is paid in full and no amount was previously recorded as owed. Record only the brokerage's purchase of its own future coverage.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "prepaid_insurance_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "prepaid_insurance",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:07:14Z",
+        "source": "Expansion batch 12; continuing delegated review; complete rendered teaching/options/stored hints, all amounts/scaffolds/contrasts and preserved costs/final coverage regressions; representative full/faded offline terminal review; see docs/EXPANSION-BATCH12-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Is the brokerage buying protection for itself or earning a fee from a client?",
+          "explanation": "Prepaid Insurance records the company's own unused protection. Selling insurance services in other transactions does not make this purchase revenue or client money."
+        },
+        "counter_account": {
+          "hint": "Does money arrive from a client or leave to buy the company's own coverage?",
+          "explanation": "Cash decreases by the premium paid to the insurer. No client receipt, commission, or unpaid obligation occurs here."
+        },
+        "balanced_entry": {
+          "hint": "What future benefit does the company itself acquire when it pays the insurer?",
+          "explanation": "Debit Prepaid Insurance ${amount_dollars} and Credit Cash ${amount_dollars}. Do not record commission revenue or current Insurance Expense; the company's own protection is unused."
+        },
+        "equation_effect": {
+          "hint": "Does buying its own unused protection change total resources merely because the company is a brokerage?",
+          "explanation": "Prepaid Insurance increases and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. Its line of business does not change this purchase."
+        }
+      }
+    },
+    {
+      "id": "prepaid_consumption_final_remaining",
+      "version": 1,
+      "family_id": "prepaid_consumption",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At month-end, a company records ${amount_dollars} of insurance protection used during the final month of a multi-month policy. The policy was paid for and recorded as a prepaid asset earlier, and all earlier months' consumption was already recorded. The stated amount equals the entire remaining prepaid balance immediately before today's entry, not the original full premium. No future coverage remains, no cash is paid today, and this final portion has not previously been expensed. Record only the last remaining portion.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "insurance_expense_classification",
+        "prepaid_insurance_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "insurance_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "prepaid_insurance",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:07:14Z",
+        "source": "Expansion batch 12; continuing delegated review; complete rendered teaching/options/stored hints, all amounts/scaffolds/contrasts and preserved costs/final coverage regressions; representative full/faded offline terminal review; see docs/EXPANSION-BATCH12-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What cost was used in the final month after earlier months were already recorded?",
+          "explanation": "Insurance Expense records only the final month's protection. Earlier consumption is not recorded again."
+        },
+        "counter_account": {
+          "hint": "Which remaining recorded benefit ends when the policy's final coverage expires?",
+          "explanation": "Prepaid Insurance decreases by the remaining balance to zero. The original premium and earlier consumed portions are not credited again; no cash moves."
+        },
+        "balanced_entry": {
+          "hint": "How much recorded protection remains to be consumed in this final entry?",
+          "explanation": "Debit Insurance Expense ${amount_dollars} and Credit Prepaid Insurance ${amount_dollars}. Use only the remaining balance, not the historical full premium, and do not repeat payment."
+        },
+        "equation_effect": {
+          "hint": "Does final expiry use the remaining benefit or require paying the original premium again?",
+          "explanation": "Assets decrease through Prepaid Insurance and equity decreases through Insurance Expense by ${amount_dollars}. Cash and liabilities are unchanged; this policy's prepaid balance reaches zero."
+        }
+      }
+    }
+  ]
+}

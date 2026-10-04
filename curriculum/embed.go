@@ -13,3 +13,8 @@ var AccountsJSON []byte
 //
 //go:embed seed-questions.json
 var SeedQuestionsJSON []byte
+
+// PedagogyJSON is the versioned, reviewed setting/contrast/distractor policy.
+//
+//go:embed pedagogy.json
+var PedagogyJSON []byte

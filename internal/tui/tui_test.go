@@ -478,9 +478,20 @@ func TestCompleteQuestionRecapShowsTAccounts(t *testing.T) {
 	if !strings.Contains(recapView, "Transaction Recap") {
 		t.Errorf("expected recap view to contain Transaction Recap, got:\n%s", recapView)
 	}
-	// Verify T-account visualizer rendering
-	if !strings.Contains(recapView, "Debit (+)") || !strings.Contains(recapView, "Credit (-)") {
-		t.Errorf("expected T-account debit/credit columns in recap, got:\n%s", recapView)
+	// Verify columns against the selected accounts' normal sides. A recap
+	// containing only liabilities/revenue correctly uses Debit (-), Credit (+).
+	for _, posting := range m.CurrentInstance.Entry.Postings {
+		account, ok := m.Catalog.Get(posting.AccountID)
+		if !ok {
+			t.Fatalf("unknown recap account %s", posting.AccountID)
+		}
+		debit, credit := "Debit (+)", "Credit (-)"
+		if account.NormalSide == domain.SideCredit {
+			debit, credit = "Debit (-)", "Credit (+)"
+		}
+		if !strings.Contains(recapView, account.Name) || !strings.Contains(recapView, debit) || !strings.Contains(recapView, credit) {
+			t.Errorf("expected %s T-account and its normal-side columns in recap, got:\n%s", account.Name, recapView)
+		}
 	}
 	if !strings.Contains(recapView, "BALANCED (Dr = Cr)") {
 		t.Errorf("expected recap view to verify BALANCED entry, got:\n%s", recapView)
@@ -1108,6 +1119,9 @@ func TestTutorSimulatedFallbackOnFailure(t *testing.T) {
 		t.Fatalf("expected TutorResponse.Fallback=true")
 	}
 
+	// This assertion checks provider metadata, not which portion of a long
+	// scenario happens to fit in the default 24-row viewport.
+	m.Update(tea.WindowSizeMsg{Width: 80, Height: 80})
 	view := m.View()
 	if !strings.Contains(view, "Fallback") {
 		t.Errorf("expected view to reflect fallback, got:\n%s", view)

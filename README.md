@@ -102,8 +102,8 @@ The launchers include a Wine fallback if `acctg.exe` is present and Wine is alre
 
 ## Practice and assessment
 
-- **Progressive drills:** identify accounts, classify them, choose increase/decrease and debit/credit, then reconcile the entry with the accounting equation. Errors receive a causal hint, one retry, and an explanation.
-- **Adaptive scaffolding:** practice moves from seven steps to four and then two as independent evidence supports it. Mistakes restore guidance; repeated rapid variants alone do not establish delayed retrieval.
+- **Progressive drills:** identify accounts, classify them, choose increase/decrease and debit/credit, then reconcile the entry with the accounting equation. Errors receive a causal hint, one retry, and an explanation. Reviewed pairs can then provide a guided comparison within the session.
+- **Adaptive scaffolding:** practice moves from seven steps to four and then two as independent evidence supports it. Mistakes restore guidance. Reduced guidance requires independent success in two reviewed reasoning settings and a delayed success that changes settings. Guided comparisons do not count as independent evidence.
 - **Journal entry practice:** enter multiple debit/credit lines, including split postings. Grading compares account totals independently of line order. Recaps include the transaction analysis grid, T-accounts, and equation effects derived from the same postings.
 - **Financial statements:** inspect the Pioneer Consulting accounting-cycle case, trial balances, income statement, retained earnings, balance sheet, cash flows, and reconciliation proofs.
 - **Exams:** take timed or untimed assessments with assistance and feedback withheld until completion. Saved exams support resumption, history, and reports with error patterns and question reviews.
@@ -232,7 +232,9 @@ Schema upgrades create database backups. For a manual file backup, close the app
 
 ## Accounting scope
 
-The embedded seed bank covers cash services, credit services, customer advances and their fulfillment, receivable collection, cash expenses, prepaid purchases/consumption, equipment purchases, borrowing, principal repayment, stock issuance, and dividends. Reviewed local questions extend these supported families.
+The embedded seed bank contains **90 active reviewed scenarios across 13 families**, plus one retired record. It covers cash services, credit services, customer advances and their fulfillment, receivable collection, cash expenses, prepaid purchases/consumption, equipment purchases, borrowing, principal repayment, stock issuance, and dividends. Reviewed local questions extend these supported families. Guided contrasts follow eligible mistakes; amount choices distinguish today's transaction from original totals, prior entries and per-recipient amounts.
+
+The current 90-scenario quality pass covers journal and exam replay, focused offline help, delayed transfer evidence and stronger distractors. See [the quality review](docs/QUALITY-REVIEW90.md) for coverage and remaining validation gates. Expansion beyond 90 has not started.
 
 Money uses integer minor units. Debit means left and credit means right; increase/decrease follows account metadata. Revenue records earning, and cash receipt alone does not establish revenue. Journal entries, T-accounts, and statement effects share deterministic rules.
 

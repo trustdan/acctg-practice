@@ -233,6 +233,10 @@ CREATE TABLE saved_explanations (
     saved_at TEXT NOT NULL
 );
 CREATE INDEX idx_saved_explanations_saved ON saved_explanations(saved_at DESC);`},
+	{Version: 9, Description: "Snapshot reviewed transfer policy and contrast evidence", SQL: `
+ALTER TABLE question_instances ADD COLUMN pedagogy_json TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE attempts ADD COLUMN setting_group TEXT NOT NULL DEFAULT '';
+ALTER TABLE attempts ADD COLUMN pedagogy_version INTEGER NOT NULL DEFAULT 0;`},
 }
 
 // ApplyMigrations applies all pending migrations in order.

@@ -1,3 +1,15 @@
+# Unreleased - Quality closeout at 90 (October 3, 2026)
+
+- Expanded reviewed seed coverage to 90 active scenarios across 13 existing families, with one retired record.
+- Fixed journal navigation/amount consistency and exam resume from immutable original snapshots. Focused bank-backed offline explanations use reviewed teaching without a repeated generic lecture.
+- Added 13 guided comparison pairs and reviewed setting metadata. Reduced guidance requires independent success across settings and delayed transfer; guided comparisons remain assisted. Migration 9 preserves historical metadata conservatively.
+- Teaching policy 2 retains these groups/pairs, adds ten amount-scope profiles and replaces generic payable fillers across four revenue families. Existing saved choices, hints and grades remain replayable.
+- Updated README, overview, roadmap, bank, pedagogy and mastery documentation. [Quality review](QUALITY-REVIEW90.md) records automated verification and the remaining course-source, native-platform and live-provider gates.
+
+These changes are in the working tree; the release version remains 0.24.0. No new release packages or publication were produced in this pass.
+
+---
+
 # Version 0.24.0 — Saved explanations and arcade title transition (October 2, 2026)
 
 - Leaving a generated LLM explanation asks whether to save it. Yes saves a personal note with question/stage/provider context and resumes the original action; No continues without saving; Esc keeps reading. Scrolling remains uninterrupted, and failed writes retain the explanation for retry.

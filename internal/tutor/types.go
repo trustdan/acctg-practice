@@ -43,6 +43,7 @@ type Request struct {
 	Options             []domain.AnswerOption
 	SelectedOption      *domain.AnswerOption
 	CausalHint          string
+	MistakeHint         string // Reviewed option-specific hint from the immutable instance snapshot.
 	Explanation         string
 	ErrorTag            string
 	ConceptID           string

@@ -1,6 +1,6 @@
 # Formal staged implementation plan
 
-All stages below are pending. Gates are exit criteria, not claims of completion. The first-week priority is Stages 00–07; cut later scope before sacrificing usable offline practice. The one-week target is a prioritization constraint, not a guaranteed estimate.
+This document preserves the staged design and historical implementation reports. Gates require recorded verification; historical Complete/PASSED labels do not close missing course-source, native-platform or live-provider checks. The first-week priority is Stages 00–07; cut later scope before sacrificing usable offline practice. The one-week target is a prioritization constraint, not a guaranteed estimate.
 
 ## Stage 00 — Repository orientation
 
@@ -198,9 +198,9 @@ Establish structured collaboration guidelines and finalize quarter maintenance:
 
 Gate: PASSED. Contribution and issue filing templates in place; PR template enforces test and accounting invariant checklists; clean build from fresh clone verified; zero unresolved lint or vet issues; release packaging complete.
 
-## Stage 21 — Classroom Transaction Analysis Grid (Verified Slide Format) (Complete)
+## Stage 21 - Transaction Analysis Grid (implemented; source verification open)
 
-Incorporate verified classroom visual conventions from instructor slides:
+The implemented four-column layout has automated formatting checks. No instructor slides are currently available to substantiate a course-specific match. Historical intended layout:
 - Inspect and match the 4-column classroom transaction analysis grid:
   - Column 1: `Dr.` / `Cr.` side indicator.
   - Column 2: Account Name with Equation Effect indicator: `Cash (+A)`, `Loan (+L)`, `Common Stock (+E)`, `Rent Expense (-E)`, `Accounts Payable (-L)`.
@@ -212,7 +212,7 @@ Incorporate verified classroom visual conventions from instructor slides:
 - Update `internal/tui/view.go`: upgrade `renderRecap` and `renderJournalPractice` to use the 4-column classroom grid.
 - Update `GenericVisualNotice` to reflect verified classroom grid format.
 
-Gate: PASSED. Transaction recaps and journal practice render 4-column bordered grids matching instructor slides; equation indicators accurately reflect account category and direction; debits and credits align to dedicated columns; unit tests verify formatting and equation tags.
+Gate: formatting implementation verified; instructor-slide match remains unverified. Transaction recaps and journal practice render 4-column bordered grids; equation indicators accurately reflect account category and direction; debits and credits align to dedicated columns; unit tests verify formatting and equation tags.
 
 ## Stage 22 — Unencumbered Arcade Intro Flight & Combat Override (Complete)
 
@@ -327,7 +327,7 @@ Gate: PASSED. Migration 6 applies cleanly on fresh and upgraded databases; high 
 - Stage 18: Provider authentication repair and dynamic multi-provider model discovery (Complete).
 - Stage 19: Comprehensive documentation, hyperlinked Table of Contents, and prominent Mac/Wine guide (Complete).
 - Stage 20: Contributor workflow, PR/issue instructions, and release hardening (Complete).
-- Stage 21: Classroom Transaction Analysis Grid (Verified Slide Format) (Complete).
+- Stage 21: Transaction Analysis Grid (implemented; course-source verification open).
 - Stage 22: Unencumbered Arcade Intro Flight & Combat Override (Complete).
 - Stage 23: Complete Linux Distribution & Desktop Integration (Complete).
 - Stage 24: LLM Linkages Verification & OAuth Diagnostics (Complete).
@@ -335,3 +335,9 @@ Gate: PASSED. Migration 6 applies cleanly on fresh and upgraded databases; high 
 - Stage 26: Dynamic Flight Acceleration & Dual Audit Hit Points (Internal Audit Shields & External Audit Integrity) (Complete).
 - Stage 27: Heavy Accounting Hazards — Multi-Hit Fraud & Insider Trading Asteroids with Fragmentation Debris (Complete).
 - Stage 28: Persistent Arcade High Scores & Old-School 3-Initials Hall of Fame (SQLite Schema Migration & TUI Entry) (Complete).
+
+## Current quality gate at 90 - October 3, 2026
+
+Bank breadth is 90 active scenarios, one retired record, 13 existing families. Integration and teaching delivery, immutable exam replay, focused offline explanations, guided matched contrasts, distinct-setting delayed retrieval, priority misconception choices, amount-scope choices and generic payable cleanup are covered by the checks recorded in [QUALITY-REVIEW90.md](docs/QUALITY-REVIEW90.md). Current pedagogy policy is 2; evidence projection is 2; schema migration is 9.
+
+This closes the focused prerequisites before additional content breadth. The next content work, when requested, is a reviewed five-scenario batch within existing supported scope, following [CONTENT-EXPANSION-PLAN.md](docs/CONTENT-EXPANSION-PLAN.md). The 180 target, actual syllabus/slides, native macOS/Linux smoke checks, live-provider verification and empirical learning effectiveness remain open. Preserve existing history, template versions and delegated review provenance.

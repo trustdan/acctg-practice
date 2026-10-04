@@ -54,15 +54,15 @@ func TestOfflineTutorHintAndExplain(t *testing.T) {
 	if explainResp.Text == "" {
 		t.Errorf("expected non-empty explanation text")
 	}
-	if !strings.Contains(explainResp.Text, "Assets = Liabilities + Equity") {
-		t.Errorf("expected explanation to mention fundamental equation, got: %s", explainResp.Text)
+	if explainResp.Text != req.Explanation {
+		t.Fatalf("reviewed teaching should stay focused: %s", explainResp.Text)
 	}
-	if !strings.Contains(explainResp.Text, "Debit means Left and Credit means Right") {
-		t.Errorf("expected explanation to define debit/credit correctly, got: %s", explainResp.Text)
+	req.Explanation = ""
+	fallback, err := tutor.Explain(ctx, req)
+	if err != nil || !strings.Contains(fallback.Text, "Debit means Left and Credit means Right") || !strings.Contains(fallback.Text, "Assets = Liabilities + Equity") {
+		t.Fatalf("missing fallback reference: %+v %v", fallback, err)
 	}
-	if !strings.Contains(explainResp.Text, "Prepaid Insurance") {
-		t.Errorf("expected contrast analysis for prepaid_purchase, got: %s", explainResp.Text)
-	}
+
 }
 
 func TestOfflineTutorHonorsContextCancellation(t *testing.T) {
@@ -83,6 +83,15 @@ func TestOfflineTutorHonorsContextCancellation(t *testing.T) {
 	_, err = tutor.Explain(ctx, req)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context.Canceled, got: %v", err)
+	}
+}
+
+func TestOfflineTutorPrioritizesSavedMistakeHint(t *testing.T) {
+	offline := NewOfflineTutor()
+	req := Request{Stage: domain.StageCounterAccount, ErrorTag: engine.TagRevenueRecognizedPrematurely, CausalHint: "Generic stage hint?", MistakeHint: "Original reviewed option hint?"}
+	response, err := offline.Hint(context.Background(), req)
+	if err != nil || response.Text != req.MistakeHint {
+		t.Fatalf("saved hint must take precedence over current tag wording: %+v %v", response, err)
 	}
 }
 

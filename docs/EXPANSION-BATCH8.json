@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_service_unpaid_booking",
+      "version": 1,
+      "family_id": "cash_service",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A tutoring company completes a lesson today and receives ${amount_dollars} cash for it today. The customer reserved the appointment last week, but that booking involved no payment, invoice, work, or accounting entry. Today's lesson is fully completed and no work remains for this payment. Record only the completed lesson and today's receipt.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:39:13Z",
+        "source": "Expansion batch 8; continuing delegated review; complete rendered teaching/options/hints, supported timing, all amounts/scaffolds, contrasts, morning/evening ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH8-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Did last week's unpaid appointment booking supply any money before today?",
+          "explanation": "Cash records today's receipt. The earlier booking created neither an advance receipt nor a recorded customer balance."
+        },
+        "counter_account": {
+          "hint": "Was this lesson earned last week when booked or today when delivered?",
+          "explanation": "Service Revenue records the lesson completed today. An appointment reservation alone did not earn the lesson price. Accounts Receivable would imply a previously recorded unpaid claim; Unearned Revenue would imply work still owed."
+        },
+        "balanced_entry": {
+          "hint": "The appointment was only booked earlier; the lesson is now complete and paid for. What receipt and earning occur today?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Do not release an advance or collect an old receivable: neither existed. The earlier booking does not postpone or duplicate today's earning."
+        },
+        "equation_effect": {
+          "hint": "Did the unpaid booking create resources or earning that today's receipt merely replaces?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and equity increases by ${amount_dollars} through Service Revenue. Liabilities are unchanged. Both receipt and earning occur today; the unpaid booking created neither balance."
+        }
+      }
+    },
+    {
+      "id": "service_on_credit_due_today",
+      "version": 1,
+      "family_id": "service_on_credit",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair company completes a repair for a new customer today and invoices the customer for ${amount_dollars}, due immediately today. The customer has not paid, and the company retains an enforceable claim for the full price. No deposit was received, no work remains, and this repair has not previously been recorded. Record the completed repair while its invoice is still unpaid.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "accounts_receivable_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:39:13Z",
+        "source": "Expansion batch 8; continuing delegated review; complete rendered teaching/options/hints, supported timing, all amounts/scaffolds, contrasts, morning/evening ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH8-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does an invoice being due today mean money has actually arrived?",
+          "explanation": "Accounts Receivable records the unpaid claim for the completed repair. An immediate due date does not create Cash before the customer pays. No deposit or unearned obligation exists."
+        },
+        "direction": {
+          "hint": "While payment remains outstanding, has the company gained a claim for this new completed repair?",
+          "explanation": "Accounts Receivable increases by the newly invoiced price. Being due immediately does not reduce an unpaid claim or turn it into cash."
+        },
+        "counter_account": {
+          "hint": "Has the repair been delivered even though the immediately due payment is still missing?",
+          "explanation": "Service Revenue records the repair completed today. Earning follows delivery here, not whether the customer met the invoice's due date. No further repair work is owed."
+        },
+        "balanced_entry": {
+          "hint": "The repair is finished, but the due-today invoice remains unpaid. What claim and earning arose?",
+          "explanation": "Debit Accounts Receivable ${amount_dollars} and Credit Service Revenue ${amount_dollars}. A Cash debit would invent a payment. Waiting for payment would omit an earned claim; a customer-advance credit would imply unfinished work."
+        },
+        "equation_effect": {
+          "hint": "Can an unpaid claim be a resource even when its payment deadline is today?",
+          "explanation": "Assets increase by ${amount_dollars} (Accounts Receivable) and equity increases by ${amount_dollars} through Service Revenue. Cash and liabilities are unchanged. Payment timing does not erase the earned claim."
+        }
+      }
+    },
+    {
+      "id": "collect_receivable_overdue",
+      "version": 1,
+      "family_id": "collect_receivable",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair company receives ${amount_dollars} cash today to settle an overdue invoice in full. The repair was completed last month, and the company recorded the full earning and unpaid customer balance then. The amount received equals the recorded invoice balance. There is no interest, late fee, discount, or write-off. No new repair or other work is performed today. Record only collection of the overdue invoice.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "collection_vs_earning",
+        "cash_classification",
+        "accounts_receivable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:39:13Z",
+        "source": "Expansion batch 8; continuing delegated review; complete rendered teaching/options/hints, supported timing, all amounts/scaffolds, contrasts, morning/evening ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH8-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived today for work already completed and recorded last month?",
+          "explanation": "Cash records today's overdue payment. Receiving it late does not move the already recorded earning into today."
+        },
+        "counter_account": {
+          "hint": "Which previously recorded claim ends when the customer finally pays the full invoice?",
+          "explanation": "Accounts Receivable decreases to settle the old invoice. Service Revenue was already recorded last month; lateness alone creates no new revenue or advance obligation."
+        },
+        "balanced_entry": {
+          "hint": "The old invoice is paid in full with no fee or adjustment. What resource arrives and what existing claim ends?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Accounts Receivable ${amount_dollars}. Revenue is not recorded again. No expense, interest, or write-off is part of this full collection."
+        },
+        "equation_effect": {
+          "hint": "Does paying after the deadline create another earning or exchange the old claim for cash?",
+          "explanation": "Cash increases by ${amount_dollars} and Accounts Receivable decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. The delay introduces no fee or loss in this scenario."
+        }
+      }
+    },
+    {
+      "id": "customer_advance_same_day",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At 9 a.m. today, a tutoring company receives ${amount_dollars} cash in advance for a lesson scheduled for 6 p.m. today. No instruction or separate booking service has been provided by 9 a.m.; the company still owes the entire lesson. This is the full lesson price and no payment, invoice, or related obligation was recorded earlier. Record only the morning receipt before the lesson begins.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "unearned_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:39:13Z",
+        "source": "Expansion batch 8; continuing delegated review; complete rendered teaching/options/hints, supported timing, all amounts/scaffolds, contrasts, morning/evening ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH8-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource has arrived by 9 a.m., before any lesson is delivered?",
+          "explanation": "Cash records the morning receipt. The lesson occurring later on the same day does not mean it has already been delivered."
+        },
+        "counter_account": {
+          "hint": "At the morning recording time, has the company supplied the lesson or does it still owe it?",
+          "explanation": "Unearned Revenue records the full lesson still owed at 9 a.m. Service Revenue would recognize instruction before delivery. A short wait until evening does not remove the obligation."
+        },
+        "balanced_entry": {
+          "hint": "Record only the morning receipt, with the lesson still ahead. What resource and obligation arise then?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Unearned Revenue ${amount_dollars}. The lesson's same-day schedule does not earn it at 9 a.m. Completion that evening will be a separate event with no second cash receipt."
+        },
+        "equation_effect": {
+          "hint": "Does promising delivery later today remove the work still owed at 9 a.m.?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and liabilities increase by ${amount_dollars} (Unearned Revenue). Equity is unchanged at the morning receipt. Same-day performance remains future performance until the lesson is delivered."
+        }
+      }
+    },
+    {
+      "id": "earn_advance_same_day",
+      "version": 1,
+      "family_id": "earn_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At 7 p.m. today, a tutoring company finishes the entire lesson for which a customer paid ${amount_dollars} cash at 9 a.m. today. The company already recorded the morning receipt and its obligation to provide this lesson. The full lesson price was included in that recorded advance and has not previously been recognized as earned. No work remains and no cash changes hands at 7 p.m. Record only completion of the lesson this evening.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "earned_vs_unearned",
+        "unearned_revenue_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:39:13Z",
+        "source": "Expansion batch 8; continuing delegated review; complete rendered teaching/options/hints, supported timing, all amounts/scaffolds, contrasts, morning/evening ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH8-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Which recorded morning balance held the obligation that this evening's lesson now satisfies?",
+          "explanation": "Unearned Revenue records the obligation created by the morning advance. The morning receipt is already recorded and must not be repeated this evening."
+        },
+        "direction": {
+          "hint": "Once the entire prepaid lesson is delivered, is any instruction still owed for that payment?",
+          "explanation": "Unearned Revenue decreases by the full lesson price and this lesson's obligation reaches zero. Completing the lesson releases a recorded liability even when payment and delivery share a calendar date."
+        },
+        "counter_account": {
+          "hint": "What has been earned by finishing the lesson, without receiving another payment?",
+          "explanation": "Service Revenue records the lesson delivered this evening. Cash was recorded in the morning; Accounts Receivable would invent an unpaid claim for a lesson already paid in full."
+        },
+        "balanced_entry": {
+          "hint": "The morning cash is already recorded and the prepaid lesson is now complete. What obligation ends and what earning replaces it?",
+          "explanation": "Debit Unearned Revenue ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Do not record Cash again. No entry would leave the completed lesson unearned; an unpaid-claim debit would charge again for work already paid for."
+        },
+        "equation_effect": {
+          "hint": "Does completing the recorded prepaid lesson move any additional cash this evening?",
+          "explanation": "Liabilities decrease by ${amount_dollars} (Unearned Revenue) and equity increases by ${amount_dollars} through Service Revenue. Assets are unchanged at 7 p.m. The earlier cash receipt and this later earning remain separate events."
+        }
+      }
+    }
+  ]
+}

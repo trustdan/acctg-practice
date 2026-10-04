@@ -1,0 +1,357 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "prepaid_purchase_clinic",
+      "version": 1,
+      "family_id": "prepaid_purchase",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A clinic pays ${amount_dollars} cash today for a one-month insurance policy covering next month. None of this policy's coverage has begun or been used today. No amount for this policy was previously recorded as owed, and the payment buys coverage rather than medical equipment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "prepaid_insurance_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "prepaid_insurance",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:33:38Z",
+        "source": "Pilot batch 2; continuing user-delegated review; Codex reviewed timing, complete stage teaching, plausible mistakes, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded offline terminal examples; see docs/PILOT-BATCH2-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Has the clinic used any of the protection it paid for, or is all of it still available for next month?",
+          "explanation": "Prepaid Insurance records the clinic's unused future coverage. Insurance Expense would mean protection was already consumed. Cash records the payment, not the coverage that remains available."
+        },
+        "counter_account": {
+          "hint": "Did the clinic pay for the policy today, or only agree to pay an insurer later?",
+          "explanation": "Cash decreased because the clinic paid today, so Cash is credited. A payable would report an amount still owed even though this policy has been paid for."
+        },
+        "balanced_entry": {
+          "hint": "All the purchased protection remains for next month and the clinic paid today. What benefit was acquired, and what resource left?",
+          "explanation": "Debit Prepaid Insurance ${amount_dollars} and Credit Cash ${amount_dollars}. Insurance Expense would recognize coverage not yet used. A payable would ignore today's cash payment."
+        },
+        "equation_effect": {
+          "hint": "Did the payment leave the clinic with protection still available, or use that protection up today?",
+          "explanation": "Prepaid Insurance increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged; cash was exchanged for unused coverage."
+        }
+      }
+    },
+    {
+      "id": "prepaid_consumption_clinic",
+      "version": 1,
+      "family_id": "prepaid_consumption",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At the end of this month, a clinic records the ${amount_dollars} cost of a one-month insurance policy whose entire coverage has now expired. It paid for and recorded the policy last month before coverage began. No cash is paid today, and no coverage from this policy remains for future months.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "insurance_expense_classification",
+        "prepaid_insurance_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "insurance_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "prepaid_insurance",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:33:38Z",
+        "source": "Pilot batch 2; continuing user-delegated review; Codex reviewed timing, complete stage teaching, plausible mistakes, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded offline terminal examples; see docs/PILOT-BATCH2-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What happened to the protection the clinic had paid for before this month began?",
+          "explanation": "Insurance Expense records the protection used this month. Prepaid Insurance records protection still available, but none from this policy remains. Cash was paid last month, not today."
+        },
+        "counter_account": {
+          "hint": "Which earlier balance held the protection that has now been entirely used up?",
+          "explanation": "Prepaid Insurance is credited to remove the used-up coverage. Crediting Cash would record a second payment, and recording no entry would leave expired protection reported as a resource."
+        },
+        "balanced_entry": {
+          "hint": "The clinic used the entire policy this month after paying last month. What cost arose, and what previously recorded resource is gone?",
+          "explanation": "Debit Insurance Expense ${amount_dollars} and Credit Prepaid Insurance ${amount_dollars}. The full policy is consumed; no cash changes today. Leaving the prepaid balance unchanged would overstate future coverage."
+        },
+        "equation_effect": {
+          "hint": "Can expired protection still be a future resource even though no cash moved today?",
+          "explanation": "Assets decrease by ${amount_dollars} (Prepaid Insurance) and equity decreases by ${amount_dollars} through Insurance Expense. Cash and liabilities are unchanged; using a prepaid resource still incurs a cost."
+        }
+      }
+    },
+    {
+      "id": "cash_rent_clinic",
+      "version": 1,
+      "family_id": "cash_rent",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A clinic pays ${amount_dollars} cash today for using its treatment rooms during the current month. This payment covers no future months, and none of this month's room cost was previously recorded as owed or paid in advance. The clinic does not buy any building or equipment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_expense",
+        "rent_expense_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "rent_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:33:38Z",
+        "source": "Pilot batch 2; continuing user-delegated review; Codex reviewed timing, complete stage teaching, plausible mistakes, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded offline terminal examples; see docs/PILOT-BATCH2-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does this payment buy future occupancy or pay for the rooms used during the current month?",
+          "explanation": "Rent Expense records this month's use of the rooms. Prepaid Rent would mean future occupancy, but none is purchased. Accounts Payable would mean an unpaid amount, but the clinic paid today."
+        },
+        "counter_account": {
+          "hint": "Did the clinic hand over money now, or leave this month's room cost unpaid?",
+          "explanation": "Cash is credited because the clinic paid today. Accounts Payable would imply a remaining unpaid amount, but no amount for this payment remains owed."
+        },
+        "balanced_entry": {
+          "hint": "Only this month's room use is paid for today. What current cost arose, and what resource left?",
+          "explanation": "Debit Rent Expense ${amount_dollars} and Credit Cash ${amount_dollars}. A prepaid debit would defer a current-month cost into the future. A payable credit would ignore the money already paid."
+        },
+        "equation_effect": {
+          "hint": "Unlike unused insurance, does this room payment leave a benefit for later months?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases by ${amount_dollars} through Rent Expense. Liabilities are unchanged. This payment covers current use, not a new future resource."
+        }
+      }
+    },
+    {
+      "id": "issue_shares_studio",
+      "version": 1,
+      "family_id": "issue_shares",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A design studio incorporated as a corporation receives ${amount_dollars} cash today from investors in exchange for newly issued common shares. The investors do not lend the money or pay for any client work. The studio plans to use the funds for employee pay next month, but spends none today.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "common_stock_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "common_stock",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:33:38Z",
+        "source": "Pilot batch 2; continuing user-delegated review; Codex reviewed timing, complete stage teaching, plausible mistakes, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded offline terminal examples; see docs/PILOT-BATCH2-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What did the investors hand over today, before any employee payment occurs?",
+          "explanation": "Cash records the investors' payment to the studio. The ownership contribution is recorded separately; a plan to pay employees later is not a payment or expense today."
+        },
+        "direction": {
+          "hint": "Does receiving investor money today add cash or remove cash, even if the studio plans to spend it later?",
+          "explanation": "Cash increases because the investors paid today. The intended future payroll does not decrease cash now; no spending occurred today."
+        },
+        "counter_account": {
+          "hint": "Did the investors buy shares, expect a loan repayment, or pay for completed client work?",
+          "explanation": "Common Stock records capital contributed for newly issued shares. Notes Payable would describe a loan, and Service Revenue would describe completed work. Neither fits this ownership investment."
+        },
+        "balanced_entry": {
+          "hint": "The studio received money for new shares and spent none today. What resource arrived, and what ownership contribution was made?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Common Stock ${amount_dollars}. Crediting revenue would call investment earning; crediting a note would turn owners into lenders. Future payroll is a separate event."
+        },
+        "equation_effect": {
+          "hint": "Does the future payroll plan change whether today's investors acquired ownership or became lenders?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and equity increases by ${amount_dollars} (Common Stock). Liabilities are unchanged. The increase in equity is contributed capital, not revenue."
+        }
+      }
+    },
+    {
+      "id": "repay_principal_studio",
+      "version": 1,
+      "family_id": "repay_note_principal",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporate design studio pays ${amount_dollars} cash today to its bank to settle part of the principal on a previously recorded loan. The payment is principal only; ignore interest. It is not a payment for employee work or a distribution to stockholders, and the bank provides no new loan today.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "principal_repayment_vs_expense",
+        "notes_payable_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "notes_payable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:33:38Z",
+        "source": "Pilot batch 2; continuing user-delegated review; Codex reviewed timing, complete stage teaching, plausible mistakes, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded offline terminal examples; see docs/PILOT-BATCH2-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What previously recorded amount owed to the bank is today's principal payment settling?",
+          "explanation": "Notes Payable records the principal the studio owes the bank. The payment reduces that debt; an expense would treat principal as a new cost, and Dividends would describe a distribution to owners rather than a lender."
+        },
+        "counter_account": {
+          "hint": "What resource did the studio hand over to settle part of the loan today?",
+          "explanation": "Cash decreases because the studio paid the bank today, so it is credited. Accounts Payable would refer to another obligation, not the money actually handed over."
+        },
+        "balanced_entry": {
+          "hint": "This payment settles old loan principal and includes no interest. What obligation shrinks, and what resource leaves?",
+          "explanation": "Debit Notes Payable ${amount_dollars} and Credit Cash ${amount_dollars}. An expense would reduce income for a principal repayment; Dividends would incorrectly classify the lender as an owner receiving a distribution."
+        },
+        "equation_effect": {
+          "hint": "Is the bank being paid a new operating cost, or receiving money it previously lent?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and liabilities decrease by ${amount_dollars} (Notes Payable). Equity is unchanged because only old principal is repaid, with no interest or other expense."
+        }
+      }
+    },
+    {
+      "id": "dividend_cash_studio",
+      "version": 1,
+      "family_id": "dividend_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporate design studio's board declares and pays a ${amount_dollars} cash distribution to its stockholders today because they own shares. No distribution was declared earlier, and none was previously recorded as owed. The owners are not being paid for work, and this payment does not settle a bank loan.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "dividend_vs_expense",
+        "dividends_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "dividends",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:33:38Z",
+        "source": "Pilot batch 2; continuing user-delegated review; Codex reviewed timing, complete stage teaching, plausible mistakes, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded offline terminal examples; see docs/PILOT-BATCH2-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Are the recipients being paid because they provided work, lent money, or own shares?",
+          "explanation": "Dividends records the studio's newly declared distribution to owners. An expense would imply payment for a business cost; Notes Payable would imply repayment to a lender. Neither happened."
+        },
+        "counter_account": {
+          "hint": "Was the distribution only announced for later payment, or did money leave the studio today?",
+          "explanation": "Cash is credited because the studio paid today. Dividends Payable would be used if the newly declared distribution remained unpaid, but declaration and payment both happened today."
+        },
+        "balanced_entry": {
+          "hint": "The studio declared and paid this distribution today without an earlier payable. What owner distribution arose, and what resource left?",
+          "explanation": "Debit Dividends ${amount_dollars} and Credit Cash ${amount_dollars}. This is not an expense or a loan repayment. Debiting Dividends Payable would settle an earlier declaration that the scenario rules out."
+        },
+        "equation_effect": {
+          "hint": "Does paying owners because they hold shares reduce operating income or their ownership claim directly?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases by ${amount_dollars} through Dividends. Liabilities and net income are unchanged; this distribution is not a business expense."
+        }
+      }
+    }
+  ]
+}

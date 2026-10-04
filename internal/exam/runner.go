@@ -44,6 +44,13 @@ type ExamRunner struct {
 
 // NewExamRunner instantiates a deterministic exam session from approved bank questions.
 func NewExamRunner(cfg ExamConfig) (*ExamRunner, error) {
+	var active []bank.QuestionJSON
+	for _, q := range cfg.Questions {
+		if bank.IsActiveForPractice(q.Status) {
+			active = append(active, q)
+		}
+	}
+	cfg.Questions = active
 	if len(cfg.Questions) == 0 {
 		return nil, fmt.Errorf("cannot create exam with empty question bank")
 	}

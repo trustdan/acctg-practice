@@ -5,15 +5,19 @@ import (
 	"time"
 
 	"github.com/trustdan/acctg-practice/internal/bank"
+	"github.com/trustdan/acctg-practice/internal/domain"
 )
 
 // Scheduler selects next practice questions based on mastery need, decay, and anti-repeat policies.
 type Scheduler struct {
-	clock           Clock
-	rng             *rand.Rand
-	recentQuestions []string // IDs of recently presented questions
-	maxRecentMemory int
-	intensity       SessionIntensity
+	recentSettings           []string
+	pendingContrast          []domain.QuestionRef
+	LastSelectionWasContrast bool
+	clock                    Clock
+	rng                      *rand.Rand
+	recentQuestions          []string // IDs of recently presented questions
+	maxRecentMemory          int
+	intensity                SessionIntensity
 }
 
 func NewScheduler(clock Clock, rng *rand.Rand) *Scheduler {
@@ -53,6 +57,7 @@ func (s *Scheduler) SelectNextQuestion(
 	availableQuestions []bank.QuestionJSON,
 	projections map[string]*ConceptStats,
 ) *bank.QuestionJSON {
+	s.LastSelectionWasContrast = false
 	if len(availableQuestions) == 0 {
 		return nil
 	}
@@ -68,6 +73,19 @@ func (s *Scheduler) SelectNextQuestion(
 		return nil
 	}
 
+	// At most one queued comparison; stale, changed or retired targets are skipped.
+	pending := s.pendingContrast
+	s.pendingContrast = nil
+	for _, ref := range pending {
+		for i := range eligible {
+			q := &eligible[i]
+			if q.ID == ref.QuestionID && q.Version == ref.QuestionVersion {
+				s.LastSelectionWasContrast = true
+				s.recordReviewedExposure(*q)
+				return q
+			}
+		}
+	}
 	weights := make([]float64, len(eligible))
 	now := s.clock.Now()
 	var totalWeight float64
@@ -96,7 +114,7 @@ func (s *Scheduler) SelectNextQuestion(
 	}
 
 	chosen := &eligible[selectedIdx]
-	s.RecordExposure(chosen.ID)
+	s.recordReviewedExposure(*chosen)
 	return chosen
 }
 
@@ -171,8 +189,34 @@ func (s *Scheduler) calculateQuestionWeight(
 		}
 	}
 
+	if policy, _, err := bank.ReviewedPedagogy(q); err == nil && policy.SettingGroup != "" {
+		for _, group := range s.recentSettings {
+			if group == policy.SettingGroup {
+				weight *= 0.50
+				break
+			}
+		}
+	}
 	if weight < MinPracticePriority {
 		weight = MinPracticePriority
 	}
 	return weight
+}
+
+// QueueContrast stores reviewed alternatives for one subsequent comparison. It cannot chain remediation.
+func (s *Scheduler) QueueContrast(inst *domain.QuestionInstance) {
+	if inst == nil || inst.Pedagogy.Remediation || len(s.pendingContrast) > 0 {
+		return
+	}
+	s.pendingContrast = append([]domain.QuestionRef(nil), inst.Pedagogy.Contrasts...)
+}
+
+func (s *Scheduler) recordReviewedExposure(q bank.QuestionJSON) {
+	s.RecordExposure(q.ID)
+	if policy, _, err := bank.ReviewedPedagogy(q); err == nil && policy.SettingGroup != "" {
+		s.recentSettings = append(s.recentSettings, policy.SettingGroup)
+		if len(s.recentSettings) > s.maxRecentMemory {
+			s.recentSettings = s.recentSettings[1:]
+		}
+	}
 }

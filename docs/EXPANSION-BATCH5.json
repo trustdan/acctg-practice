@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_service_separate_job",
+      "version": 1,
+      "family_id": "cash_service",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A consulting company completes a new, separate job for a returning client today and receives ${amount_dollars} cash for that new job today. This new job had no earlier payment, invoice, or accounting entry, and no work remains for it. The client also owes an older invoice whose work and earning were recorded last month, but none of today's payment applies to that older invoice. Record only the new job and its payment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:08:04Z",
+        "source": "Expansion batch 5; continuing user-delegated review; complete teaching, timing, supported rules, options/hints, contrasts, all amounts/scaffolds, preservation of prior/remainder balances, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH5-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived today for the separate job that was just completed?",
+          "explanation": "Cash records today's payment for the new job. The older invoice remains unpaid. An existing customer balance does not make every later receipt a collection of that old balance."
+        },
+        "counter_account": {
+          "hint": "Did today's payment settle the old invoice or pay for newly completed work?",
+          "explanation": "Service Revenue records the new job earned today. Accounts Receivable would reduce the older unpaid invoice, but the payment is explicitly for the separate new job. Unearned Revenue would imply that this new work remains to be done."
+        },
+        "balanced_entry": {
+          "hint": "Only the new job was completed and paid for today. What resource arrived and what new earning occurred?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Do not credit Accounts Receivable: the older invoice is not being paid. No liability remains for the new completed job."
+        },
+        "equation_effect": {
+          "hint": "Did the new job create new earning or merely convert the old invoice into cash?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and equity increases by ${amount_dollars} through Service Revenue. Liabilities and the older receivable are unchanged. The receipt belongs to newly earned work, not an old claim."
+        }
+      }
+    },
+    {
+      "id": "service_on_credit_new_client",
+      "version": 1,
+      "family_id": "service_on_credit",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A consulting company completes a job for a new client today and invoices ${amount_dollars}, due next month. A different client paid for their own completed job last month, but that earlier payment does not cover this new client's job. No cash or deposit has been received for the new job, no work remains for it, and it has not previously been recorded. Record only today's new completed job.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "accounts_receivable_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:08:04Z",
+        "source": "Expansion batch 5; continuing user-delegated review; complete teaching, timing, supported rules, options/hints, contrasts, all amounts/scaffolds, preservation of prior/remainder balances, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH5-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does the other client's earlier payment cover this new invoice or does the new client still owe for today's separate job?",
+          "explanation": "Accounts Receivable records the unpaid claim for the new job. The earlier payment settled a different client's job. Cash would record money not received for this job, and Unearned Revenue would describe work still owed rather than completed."
+        },
+        "counter_account": {
+          "hint": "Has the new job been earned even though its payment will arrive next month?",
+          "explanation": "Service Revenue records the new job completed today. The other client's payment is unrelated; it neither defers this earning nor supplies cash for the new invoice."
+        },
+        "balanced_entry": {
+          "hint": "The separate new job is finished and remains unpaid. What claim and earning arose today?",
+          "explanation": "Debit Accounts Receivable ${amount_dollars} and Credit Service Revenue ${amount_dollars}. No cash is recorded for the new job. An earlier payment for different work is not an advance available to release here."
+        },
+        "equation_effect": {
+          "hint": "Does another client's earlier payment remove the value of today's new unpaid claim?",
+          "explanation": "Assets increase by ${amount_dollars} (Accounts Receivable) and equity increases by ${amount_dollars} through Service Revenue. Cash and liabilities are unchanged. The new job is earned today despite collection being due next month."
+        }
+      }
+    },
+    {
+      "id": "collect_receivable_installment",
+      "version": 1,
+      "family_id": "collect_receivable",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A consulting company receives ${amount_dollars} cash today as a partial payment of a larger invoice. It completed all the invoiced work last month and recorded both the full earning and the unpaid amount then. The stated amount is only today's installment, not the full invoice total. The rest remains owed, with no discount or write-off. No new work is performed today.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "collection_vs_earning",
+        "cash_classification",
+        "accounts_receivable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:08:04Z",
+        "source": "Expansion batch 5; continuing user-delegated review; complete teaching, timing, supported rules, options/hints, contrasts, all amounts/scaffolds, preservation of prior/remainder balances, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH5-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived today even though part of the old invoice remains unpaid?",
+          "explanation": "Cash records the installment received today. The work was already earned and recorded last month, so receiving only part of the payment does not create new revenue."
+        },
+        "counter_account": {
+          "hint": "What previously recorded claim becomes smaller by the installment just received?",
+          "explanation": "Accounts Receivable decreases only by the cash received. The unpaid remainder stays a claim against the client. Service Revenue was already recorded in full and must not be counted again."
+        },
+        "balanced_entry": {
+          "hint": "Record only today's installment on the already-recorded invoice. What resource arrived and what part of the claim was settled?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Accounts Receivable ${amount_dollars}. Use the installment amount rather than the larger invoice total. Revenue remains unchanged, and the unpaid balance stays receivable."
+        },
+        "equation_effect": {
+          "hint": "Does collecting part of the old claim add to total resources or replace that part with cash?",
+          "explanation": "Cash increases by ${amount_dollars} and Accounts Receivable decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. The remaining claim is preserved; no discount, write-off, or new earning is recorded."
+        }
+      }
+    },
+    {
+      "id": "customer_advance_additional_receipt",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A training company receives ${amount_dollars} cash today as the final payment for a course beginning next month. The customer made a smaller first payment last month, and the company recorded that receipt and its obligation to provide instruction then. None of the instruction has been provided. After today the course is paid for in full. The stated amount is only the additional cash received today, not the total course price. No receivable was recorded for the final payment and today's receipt has not previously been recorded.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "unearned_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:08:04Z",
+        "source": "Expansion batch 5; continuing user-delegated review; complete teaching, timing, supported rules, options/hints, contrasts, all amounts/scaffolds, preservation of prior/remainder balances, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH5-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Did additional money arrive today or is this simply a repeat of last month's receipt?",
+          "explanation": "Cash records the additional payment actually received today. Last month's receipt remains recorded and must not be recorded a second time. The stated amount is only this new receipt."
+        },
+        "counter_account": {
+          "hint": "Has any instruction been delivered for this additional payment, or is the course still entirely ahead?",
+          "explanation": "Unearned Revenue increases for the additional advance. An existing obligation does not prevent another advance from increasing it. Service Revenue would count instruction not delivered; no recorded receivable is being settled."
+        },
+        "balanced_entry": {
+          "hint": "Only the final payment arrives today and the instruction is still ahead. What resource and additional obligation arise?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Unearned Revenue ${amount_dollars}. Record only the new receipt, not the full course price or last month's payment. The earlier liability remains in place and increases by today's advance."
+        },
+        "equation_effect": {
+          "hint": "Does a previously recorded advance make today's additional payment earned before any instruction occurs?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and liabilities increase by ${amount_dollars} (Unearned Revenue). Equity is unchanged. The earlier advance stays recorded; today adds only the final payment to cash and the prepaid obligation."
+        }
+      }
+    },
+    {
+      "id": "earn_advance_completed_session",
+      "version": 1,
+      "family_id": "earn_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A training company completes one separately priced session today from a course paid for in full last month. Last month it recorded the payment and its obligation to provide all the sessions. The completed session has a stated price of ${amount_dollars}; that amount was included in the recorded advance and has not previously been earned or recognized. Other prepaid sessions are still owed. No cash changes hands today. Record only this completed session.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "earned_vs_unearned",
+        "unearned_revenue_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:08:04Z",
+        "source": "Expansion batch 5; continuing user-delegated review; complete teaching, timing, supported rules, options/hints, contrasts, all amounts/scaffolds, preservation of prior/remainder balances, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH5-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Which earlier balance recorded the obligation for the session that was paid for before today?",
+          "explanation": "Unearned Revenue held the prepaid obligation. Completing this session releases only its stated portion. Other prepaid sessions remain obligations; Cash was recorded when the full course payment arrived last month."
+        },
+        "direction": {
+          "hint": "Does finishing one prepaid session reduce the work still owed even though other sessions remain?",
+          "explanation": "Unearned Revenue decreases by the completed session's price. The remaining obligation does not need to reach zero before a completed portion can be earned."
+        },
+        "counter_account": {
+          "hint": "Has the completed session been earned even though later prepaid sessions still remain?",
+          "explanation": "Service Revenue records the session delivered today. Cash would repeat last month's receipt, and Accounts Receivable would imply this already-paid session still needs collection. Remaining sessions do not postpone earning from this completed session."
+        },
+        "balanced_entry": {
+          "hint": "Only this completed session is earned today. What portion of the prepaid obligation ends and what earning replaces it?",
+          "explanation": "Debit Unearned Revenue ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Use the completed session's price rather than the full course payment. The other sessions remain unearned and no second cash receipt is recorded."
+        },
+        "equation_effect": {
+          "hint": "Can one completed prepaid session reduce an obligation without changing cash or settling every session?",
+          "explanation": "Liabilities decrease by ${amount_dollars} (Unearned Revenue) and equity increases by ${amount_dollars} through Service Revenue. Assets are unchanged. Only the completed session is released; the obligation for the remaining prepaid sessions stays recorded."
+        }
+      }
+    }
+  ]
+}

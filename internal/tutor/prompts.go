@@ -53,6 +53,9 @@ func FormatUserPrompt(req Request, isHint bool) string {
 	if req.ConceptID != "" {
 		sb.WriteString(fmt.Sprintf("Concept: %s\n", req.ConceptID))
 	}
+	if !isHint && req.Explanation != "" {
+		sb.WriteString(fmt.Sprintf("Reviewed Stage Explanation:\n%s\n", req.Explanation))
+	}
 
 	if isHint {
 		sb.WriteString("\nGenerate a short (2-3 sentence) causal Socratic hint guiding the learner toward the correct accounting reasoning without giving away the option letter or exact answer directly.")

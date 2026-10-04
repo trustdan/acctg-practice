@@ -40,6 +40,7 @@ func (s ScaffoldLevel) String() string {
 
 // QuestionInstance represents an instantiated, reproducible question created from a bank template.
 type QuestionInstance struct {
+	Pedagogy      PedagogySnapshot           `json:"pedagogy,omitempty"`
 	InstanceID    string                     `json:"instance_id"`
 	QuestionID    string                     `json:"question_id"`
 	Version       int                        `json:"version"`
@@ -56,13 +57,23 @@ type QuestionInstance struct {
 
 // StageAnswer stores the derived correct answer and options snapshot for a particular drill stage.
 type StageAnswer struct {
-	Stage             DrillStage     `json:"stage"`
-	Prompt            string         `json:"prompt"`
-	CorrectOptionID   string         `json:"correct_option_id"`
-	Options           []AnswerOption `json:"options"`
-	CausalHint        string         `json:"causal_hint"`
-	Explanation       string         `json:"explanation"`
-	RelevantConceptID string         `json:"relevant_concept_id"`
+	Stage             DrillStage        `json:"stage"`
+	Prompt            string            `json:"prompt"`
+	CorrectOptionID   string            `json:"correct_option_id"`
+	Options           []AnswerOption    `json:"options"`
+	CausalHint        string            `json:"causal_hint"`
+	MistakeHints      map[string]string `json:"mistake_hints,omitempty"` // Reviewed hints keyed by option ID, stored with the instance.
+	Explanation       string            `json:"explanation"`
+	RelevantConceptID string            `json:"relevant_concept_id"`
+}
+
+// HintForOption preserves the original stage hint for historical snapshots
+// without misconception routing, and for untagged/unknown options.
+func (s StageAnswer) HintForOption(optionID string) string {
+	if hint := s.MistakeHints[optionID]; hint != "" {
+		return hint
+	}
+	return s.CausalHint
 }
 
 // AnswerOption represents a single selectable choice in a multiple-choice stage prompt.
@@ -77,6 +88,7 @@ type AnswerOption struct {
 type AssistanceLevel string
 
 const (
+	AssistanceContrast  AssistanceLevel = "contrast"  // Immediate reviewed comparison, not independent retrieval.
 	AssistanceNone      AssistanceLevel = "none"      // First independent response
 	AssistanceHinted    AssistanceLevel = "hinted"    // Learner received a Socratic hint before answering
 	AssistanceRetry     AssistanceLevel = "retry"     // Learner retried after an incorrect first response
@@ -86,6 +98,8 @@ const (
 
 // Attempt represents a single persisted learner interaction on a drill stage.
 type Attempt struct {
+	SettingGroup     string          `json:"setting_group,omitempty"`
+	PedagogyVersion  int             `json:"pedagogy_version,omitempty"`
 	AttemptID        string          `json:"attempt_id"`
 	SessionID        string          `json:"session_id"`
 	InstanceID       string          `json:"instance_id"`

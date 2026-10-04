@@ -132,17 +132,21 @@ func (d *DB) SaveQuestionInstance(inst *domain.QuestionInstance, sessionID strin
 		return fmt.Errorf("failed to marshal entry: %w", err)
 	}
 
+	pedagogyJSON, err := json.Marshal(inst.Pedagogy)
+	if err != nil {
+		return fmt.Errorf("failed to marshal pedagogy: %w", err)
+	}
 	query := `
 INSERT INTO question_instances (
     id, session_id, question_id, question_version, family_id, rule_version,
-    prompt_text, parameters_json, random_seed, stage_answers_json, entry_json, created_at, scaffold_level
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    prompt_text, parameters_json, random_seed, stage_answers_json, entry_json, created_at, scaffold_level, pedagogy_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO NOTHING;`
 
 	_, err = d.db.Exec(query,
 		inst.InstanceID, sessionID, inst.QuestionID, inst.Version, inst.FamilyID, inst.RuleVersion,
 		inst.PromptText, string(paramsJSON), inst.RandomSeed, string(stageAnswersJSON), string(entryJSON), time.Now().UTC(),
-		int(inst.ScaffoldLevel),
+		int(inst.ScaffoldLevel), string(pedagogyJSON),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to save question instance: %w", err)
@@ -154,17 +158,17 @@ ON CONFLICT(id) DO NOTHING;`
 func (d *DB) GetQuestionInstance(instanceID string) (*domain.QuestionInstance, error) {
 	query := `
 SELECT id, question_id, question_version, family_id, rule_version,
-       prompt_text, parameters_json, random_seed, stage_answers_json, entry_json, scaffold_level
+       prompt_text, parameters_json, random_seed, stage_answers_json, entry_json, scaffold_level, pedagogy_json
 FROM question_instances WHERE id = ?;`
 
 	row := d.db.QueryRow(query, instanceID)
 	var inst domain.QuestionInstance
-	var paramsJSON, stageAnswersJSON, entryJSON string
+	var paramsJSON, stageAnswersJSON, entryJSON, pedagogyJSON string
 	var scaffoldLevelInt int
 
 	err := row.Scan(
 		&inst.InstanceID, &inst.QuestionID, &inst.Version, &inst.FamilyID, &inst.RuleVersion,
-		&inst.PromptText, &paramsJSON, &inst.RandomSeed, &stageAnswersJSON, &entryJSON, &scaffoldLevelInt,
+		&inst.PromptText, &paramsJSON, &inst.RandomSeed, &stageAnswersJSON, &entryJSON, &scaffoldLevelInt, &pedagogyJSON,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -173,6 +177,9 @@ FROM question_instances WHERE id = ?;`
 		return nil, err
 	}
 	inst.ScaffoldLevel = domain.ScaffoldLevel(scaffoldLevelInt)
+	if err := json.Unmarshal([]byte(pedagogyJSON), &inst.Pedagogy); err != nil {
+		return nil, fmt.Errorf("invalid pedagogy snapshot: %w", err)
+	}
 
 	if err := json.Unmarshal([]byte(paramsJSON), &inst.Parameters); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal parameters: %w", err)
@@ -208,14 +215,14 @@ func (d *DB) RecordAttempt(att domain.Attempt) error {
 INSERT INTO attempts (
     id, session_id, instance_id, stage, concept_id,
     selected_option_id, is_correct, assistance, error_tag,
-    grading_version, answered_at, reference_used
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    grading_version, answered_at, reference_used, setting_group, pedagogy_version
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO NOTHING;`
 
 	_, err := d.db.Exec(query,
 		att.AttemptID, att.SessionID, att.InstanceID, string(att.Stage), att.ConceptID,
 		att.SelectedOptionID, isCorrectInt, string(att.Assistance), att.ErrorTag,
-		att.GradingVersion, att.AnsweredAt.UTC(), refUsedInt,
+		att.GradingVersion, att.AnsweredAt.UTC(), refUsedInt, att.SettingGroup, att.PedagogyVersion,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to record attempt: %w", err)
@@ -235,8 +242,8 @@ func (d *DB) RecordAttemptsBatch(attempts []domain.Attempt) error {
 INSERT INTO attempts (
     id, session_id, instance_id, stage, concept_id,
     selected_option_id, is_correct, assistance, error_tag,
-    grading_version, answered_at, reference_used
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    grading_version, answered_at, reference_used, setting_group, pedagogy_version
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO NOTHING;`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
@@ -258,7 +265,7 @@ ON CONFLICT(id) DO NOTHING;`)
 		_, err := stmt.Exec(
 			att.AttemptID, att.SessionID, att.InstanceID, string(att.Stage), att.ConceptID,
 			att.SelectedOptionID, isCorrectInt, string(att.Assistance), att.ErrorTag,
-			att.GradingVersion, att.AnsweredAt.UTC(), refUsedInt,
+			att.GradingVersion, att.AnsweredAt.UTC(), refUsedInt, att.SettingGroup, att.PedagogyVersion,
 		)
 		if err != nil {
 			return fmt.Errorf("failed executing batch insert for %s: %w", att.AttemptID, err)
@@ -270,22 +277,22 @@ ON CONFLICT(id) DO NOTHING;`)
 
 // GetAttemptsForInstance retrieves all recorded attempts for a question instance in chronological order.
 func (d *DB) GetAttemptsForInstance(instanceID string) ([]domain.Attempt, error) {
-	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used FROM attempts WHERE instance_id = ? ORDER BY answered_at ASC", instanceID)
+	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used, setting_group, pedagogy_version FROM attempts WHERE instance_id = ? ORDER BY answered_at ASC", instanceID)
 }
 
 // GetAttemptsForSession retrieves all recorded attempts for a session in chronological order.
 func (d *DB) GetAttemptsForSession(sessionID string) ([]domain.Attempt, error) {
-	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used FROM attempts WHERE session_id = ? ORDER BY answered_at ASC", sessionID)
+	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used, setting_group, pedagogy_version FROM attempts WHERE session_id = ? ORDER BY answered_at ASC", sessionID)
 }
 
 // GetAllAttempts retrieves all recorded attempts across the entire database.
 func (d *DB) GetAllAttempts() ([]domain.Attempt, error) {
-	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used FROM attempts ORDER BY answered_at ASC")
+	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used, setting_group, pedagogy_version FROM attempts ORDER BY answered_at ASC")
 }
 
 // GetAttemptsForConcept retrieves attempts tied to a specific learning concept.
 func (d *DB) GetAttemptsForConcept(conceptID string) ([]domain.Attempt, error) {
-	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used FROM attempts WHERE concept_id = ? ORDER BY answered_at ASC", conceptID)
+	return d.queryAttempts("SELECT id, session_id, instance_id, stage, concept_id, selected_option_id, is_correct, assistance, error_tag, grading_version, answered_at, reference_used, setting_group, pedagogy_version FROM attempts WHERE concept_id = ? ORDER BY answered_at ASC", conceptID)
 }
 
 func (d *DB) queryAttempts(query string, args ...any) ([]domain.Attempt, error) {
@@ -306,7 +313,7 @@ func (d *DB) queryAttempts(query string, args ...any) ([]domain.Attempt, error) 
 		err := rows.Scan(
 			&a.AttemptID, &a.SessionID, &a.InstanceID, &stageStr, &a.ConceptID,
 			&a.SelectedOptionID, &isCorrectInt, &assistStr, &errorTag,
-			&a.GradingVersion, &a.AnsweredAt, &refUsedInt,
+			&a.GradingVersion, &a.AnsweredAt, &refUsedInt, &a.SettingGroup, &a.PedagogyVersion,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed scanning attempt row: %w", err)

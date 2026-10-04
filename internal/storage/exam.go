@@ -313,3 +313,34 @@ ORDER BY answered_at ASC;`
 	}
 	return attempts, nil
 }
+
+// GetExamQuestionSnapshots returns original questions in insertion (exam) order.
+func (d *DB) GetExamQuestionSnapshots(sessionID string) ([]*domain.QuestionInstance, error) {
+	rows, err := d.db.Query("SELECT id FROM question_instances WHERE session_id = ? ORDER BY rowid", sessionID)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	var instances []*domain.QuestionInstance
+	for _, id := range ids {
+		inst, err := d.GetQuestionInstance(id)
+		if err != nil {
+			return nil, err
+		}
+		instances = append(instances, inst)
+	}
+	return instances, nil
+}

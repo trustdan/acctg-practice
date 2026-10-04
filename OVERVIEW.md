@@ -50,10 +50,8 @@ All credentials and tokens reside securely in local user-data storage and are ne
 
 The application delivers offline progressive drills, reviewed seed families, immediate feedback, attempts saved durably, concept scheduling, and a readable mastery screen. Subsequent extensions added provider integration, creative candidate generation/review, full journal-entry input, T-account rendering, statement construction, and exam mode. 
 
-The immediate hardening roadmap addresses real-world student and contributor ergonomics:
-- **TUI Viewport Ergonomics**: Vertical scrolling on recap and tall card displays to prevent visual clipping on standard terminals.
-- **Provider Auth & Discovery**: Repairing OpenAI OAuth authorization parameters and supporting live model catalog selection across OpenAI, Anthropic, and Google.
-- **Comprehensive Documentation & Mac/Wine Guide**: Rewriting the README with an engaging intro, hyperlinked Table of Contents, and prominent macOS/Wine instructions.
-- **Contributor Governance**: Formalizing Pull Request templates, issue reporting guidelines, accounting rule verification checklists, and release packaging.
-- **Startup Arcade Game Enhancements**: Continuous machine-gun bursts with simultaneous steering, tactical smart bombs (`B`), progressive speed acceleration, dual audit health systems (Internal Audit Shields and External Audit Global Integrity), heavy accounting obstacles (`[FRAUD]`, `[INSIDER TRADING]`), and persistent SQLite high score leaderboard with retro 3-initials arcade entry.
+The application now includes scrolling recaps, provider selection/model discovery, contributor templates, platform launchers and the startup arcade with persistent scores. Code and automated verification do not establish native-platform or live-provider release validation; those checks remain open.
 
+The embedded bank currently has 90 active reviewed scenarios, one retired record and 13 supported families. The integration pass fixed journal amount/navigation consistency and immutable exam resume, and made bank-backed offline help use focused reviewed explanations. Pedagogy policy 2 adds reviewed setting groups, 13 guided comparison pairs, six priority misconception profiles, ten amount-scope profiles and contextual account choices. Evidence version 2 requires independent success across settings plus delayed transfer before reducing guidance. Existing history remains replayable; historical attempts without reviewed metadata receive no inferred transfer credit.
+
+The focused quality prerequisites at 90 are complete. Further breadth remains a separately reviewed sequence toward 180; no additional scenarios are part of this pass. See [quality closeout](docs/QUALITY-REVIEW90.md), [expansion plan](docs/CONTENT-EXPANSION-PLAN.md) and [handoff](docs/HANDOFF.md). Actual syllabus/slides, course-specific visual verification and empirical learning effectiveness remain unresolved.

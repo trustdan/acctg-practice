@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "equipment_purchase_workshop",
+      "version": 1,
+      "family_id": "equipment_purchase_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair workshop pays ${amount_dollars} cash today to buy and take ownership of a machine expected to serve it for several years. The machine is delivered today, but production will begin next month. The full purchase price is paid now; no amount was previously recorded as owed. Record only this purchase, with no depreciation or other costs.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "capex_vs_expense",
+        "equipment_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "equipment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:47:07Z",
+        "source": "Expansion batch 3; continuing user-delegated review; complete teaching, timing, canonical rules, distractors, contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH3-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does waiting until next month to use the delivered machine change whether the workshop owns it today?",
+          "explanation": "Equipment records the machine now owned for future use. Waiting to begin production does not postpone this purchase. An expense would treat the entire multi-year benefit as already used; Cash records the payment."
+        },
+        "counter_account": {
+          "hint": "Did money leave today, even though production will start later?",
+          "explanation": "Cash decreased when the workshop paid today, so Cash is credited. Neither Notes Payable nor Accounts Payable arises from this fully paid purchase; no shares were issued."
+        },
+        "balanced_entry": {
+          "hint": "The workshop owns the delivered machine and has paid for it. What resource arrived, and what resource left?",
+          "explanation": "Debit Equipment ${amount_dollars} and Credit Cash ${amount_dollars}. The machine is acquired now, before production starts. An immediate expense would consume its full future benefit; reversing the entry would describe giving up equipment for cash."
+        },
+        "equation_effect": {
+          "hint": "Is cash the only resource the workshop has after buying the delivered machine?",
+          "explanation": "Equipment increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. Starting production later does not remove the machine from today's resources."
+        }
+      }
+    },
+    {
+      "id": "equipment_purchase_replacement",
+      "version": 1,
+      "family_id": "equipment_purchase_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair workshop pays ${amount_dollars} cash today to buy a replacement machine from a dealer and takes delivery and ownership immediately. The new machine will be used for several years. This is a purchase of a whole machine, not a repair service. The old machine is kept; no sale, trade-in, or disposal occurs today. No amount for the new machine was previously recorded as owed. Record only the new purchase, with no depreciation.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "capex_vs_expense",
+        "equipment_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "equipment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:47:07Z",
+        "source": "Expansion batch 3; continuing user-delegated review; complete teaching, timing, canonical rules, distractors, contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH3-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Did the workshop acquire another whole machine or merely pay to fix one it already owned?",
+          "explanation": "Equipment records the newly acquired machine. Calling it a replacement does not make buying a whole multi-year resource a repair cost. The old machine is kept, so this event records no disposal."
+        },
+        "direction": {
+          "hint": "With the old machine kept and a new one acquired, is more or less machinery recorded?",
+          "explanation": "Equipment increases by the cost of the new machine. Its purpose as a replacement does not remove the old machine in this event. Cash decreases in a separate account."
+        },
+        "counter_account": {
+          "hint": "How did the workshop settle the dealer's price today?",
+          "explanation": "Cash decreases because the dealer was paid in full today. A payable would report a remaining debt, while Common Stock would imply shares issued to the dealer; neither happened."
+        },
+        "balanced_entry": {
+          "hint": "Only the new machine purchase is recorded, with no old-machine disposal. What resource was acquired and how was it paid for?",
+          "explanation": "Debit Equipment ${amount_dollars} and Credit Cash ${amount_dollars}. Buying the whole machine creates a multi-year resource rather than an immediate repair expense. Crediting Equipment would remove machinery even though none was disposed of."
+        },
+        "equation_effect": {
+          "hint": "Does the label replacement turn the new machine's entire future usefulness into a cost consumed today?",
+          "explanation": "Equipment increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. No disposal or depreciation is part of this event."
+        }
+      }
+    },
+    {
+      "id": "cash_rent_workshop",
+      "version": 1,
+      "family_id": "cash_rent",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair workshop pays ${amount_dollars} cash today for using rented workspace during the current month. It acquires no ownership of the building or any machinery, and this payment covers no future months. No amount for this month was previously recorded as owed or prepaid.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_expense",
+        "rent_expense_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "rent_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:47:07Z",
+        "source": "Expansion batch 3; continuing user-delegated review; complete teaching, timing, canonical rules, distractors, contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH3-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Did the payment acquire an owned resource for future years or pay for this month's use of space?",
+          "explanation": "Rent Expense records this month's workspace use. No equipment or building was purchased. Prepaid Rent would mean future occupancy, but this payment covers only the current month."
+        },
+        "counter_account": {
+          "hint": "Was this month's workspace paid for today or left unpaid?",
+          "explanation": "Cash is credited because the workshop paid today. Accounts Payable would describe an unpaid obligation, which this event rules out."
+        },
+        "balanced_entry": {
+          "hint": "The space was used this month and paid for now. What current cost arose and what resource left?",
+          "explanation": "Debit Rent Expense ${amount_dollars} and Credit Cash ${amount_dollars}. Unlike buying a machine, this payment acquires no owned multi-year resource. A prepaid debit would defer a cost for current use."
+        },
+        "equation_effect": {
+          "hint": "After paying for current workspace use, does a purchased resource remain for future periods?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases by ${amount_dollars} through Rent Expense. Liabilities are unchanged. This is current use of rented space, rather than an exchange of cash for owned machinery."
+        }
+      }
+    },
+    {
+      "id": "borrow_cash_future_equipment",
+      "version": 1,
+      "family_id": "borrow_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "An incorporated repair workshop receives ${amount_dollars} cash today from a bank after signing a promissory note requiring repayment. It plans to buy a machine next month, but no machine has been ordered, delivered, or paid for today. The bank receives no shares, and this receipt is not payment for customer work. Record only today's borrowing; ignore interest.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "notes_payable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:47:07Z",
+        "source": "Expansion batch 3; continuing user-delegated review; complete teaching, timing, canonical rules, distractors, contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH3-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What did the workshop actually receive today before any machine purchase occurred?",
+          "explanation": "Cash records the money received from the bank. A plan to buy machinery does not create Equipment today. No customer service was provided in exchange for this loan."
+        },
+        "counter_account": {
+          "hint": "Must the workshop repay this money, or did the bank purchase ownership?",
+          "explanation": "Notes Payable records the obligation under the promissory note. Common Stock would mean an ownership contribution, and Service Revenue would mean earning from work. Neither describes the bank loan."
+        },
+        "balanced_entry": {
+          "hint": "Money arrived under a repayment promise, while the machine purchase is still only a plan. What resource and obligation arose today?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Notes Payable ${amount_dollars}. Do not record Equipment before a purchase occurs. Crediting revenue would treat repayable financing as earning, and crediting stock would turn the lender into an owner."
+        },
+        "equation_effect": {
+          "hint": "Does intending to buy equipment remove the obligation to repay the bank?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and liabilities increase by ${amount_dollars} (Notes Payable). Equity is unchanged. The later equipment purchase is a separate event, so no equipment or expense is recorded today."
+        }
+      }
+    },
+    {
+      "id": "issue_shares_future_equipment",
+      "version": 1,
+      "family_id": "issue_shares",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "An incorporated repair workshop receives ${amount_dollars} cash today from investors in exchange for newly issued common shares. It plans to buy a machine next month, but no machine has been ordered, delivered, or paid for today. The investors are not lenders and are not paying for customer work. Record only today's share issuance.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "common_stock_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "common_stock",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:47:07Z",
+        "source": "Expansion batch 3; continuing user-delegated review; complete teaching, timing, canonical rules, distractors, contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH3-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived today while the machine purchase remains a future plan?",
+          "explanation": "Cash records the investor money received today. Equipment has not been purchased. The investors paid for ownership rather than completed work, so the receipt is not revenue."
+        },
+        "direction": {
+          "hint": "Does receiving the investment add cash today even though it may be spent next month?",
+          "explanation": "Cash increases when investors pay today. Planning a later machine purchase does not decrease cash or create Equipment now."
+        },
+        "counter_account": {
+          "hint": "Did these investors acquire shares or a right to repayment under a loan?",
+          "explanation": "Common Stock records the contribution for newly issued shares. Notes Payable would report a loan obligation, but the investors bought ownership. Service Revenue would describe earned customer work, which did not occur."
+        },
+        "balanced_entry": {
+          "hint": "Only the ownership investment happens today. What resource arrived and what capital contribution arose?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Common Stock ${amount_dollars}. This is contributed capital rather than revenue or borrowing. The planned equipment purchase must be recorded separately when it occurs."
+        },
+        "equation_effect": {
+          "hint": "Does buying ownership create a loan obligation just because the money may fund a future machine?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and equity increases by ${amount_dollars} (Common Stock). Liabilities are unchanged. Equity rises through contributed capital, not income; no equipment purchase has occurred."
+        }
+      }
+    }
+  ]
+}

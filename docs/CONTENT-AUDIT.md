@@ -1,10 +1,12 @@
 # Content audit
 
+Current status (October 3, 2026): the focused quality work at 90 is complete under pedagogy policy 2. [Quality closeout](QUALITY-REVIEW90.md) records ten amount profiles, contextual account choices and the remaining external validation gates. Earlier sections retain the findings and next steps at their original checkpoints.
+
 Step 1 of [CONTENT-EXPANSION-PLAN.md](CONTENT-EXPANSION-PLAN.md). Findings only: no content, status, or code was changed. Recommendations need human semantic approval before any wording is versioned.
 
 Sources inspected: curriculum/seed-questions.json, curriculum/accounts.json, internal/drill/generator.go, internal/drill/session.go, internal/tutor/offline.go, internal/exam/errors.go, internal/engine/event.go. No syllabus or slides available.
 
-Teaching (prompts, options, hints, explanations) is defined per **family** in generator.go, not per scenario. Both scenarios in a family therefore share identical teaching; only `scenario_template` and amounts differ. Findings below are split accordingly.
+Teaching (prompts, options, hints, explanations) is defined per **family** in generator.go, with optional reviewed per-scenario teaching overrides. Findings below describe the audited baseline; later implementation records supersede resolved findings.
 
 Stage numbering: S1 identify account, S2 category, S3 direction, S4 debit/credit, S5 counter-account, S6 balanced entry, S7 equation effect.
 
@@ -203,3 +205,160 @@ Five revised scenario templates, approved by the user without edits on 2026-10-0
 | earn_advance_logistics | W2 | The freight logistics carrier safely delivers cargo today, completing a shipping contract for which the shipper paid ${amount_dollars} last month. The carrier recorded its obligation to deliver the cargo at that time. No cash changes hands today. |
 | cash_rent_basic | W5 | The company pays ${amount_dollars} cash today for rent for the current month. No rent was previously recorded as owed or paid in advance. |
 | dividend_cash_retail | W4 | A retail corporation declares and pays ${amount_dollars} of cash dividends to its stockholders today. No dividend was declared earlier. |
+
+## Teaching rewrite batch 1: revenue families — reviewed and applied by delegated review (2026-10-03)
+
+Covers cash_service, customer_advance, service_on_credit, collect_receivable, and earn_advance (generator.go; shared by both scenarios in each family). Correct answers, option IDs, and grading are unchanged. Instances already stored keep their snapshotted text.
+
+Rules applied:
+- A hint is a question that points to the economic fact or rule needed, not to the answer. Hints are shown after a first wrong answer, whichever wrong option was picked.
+- Hints must make sense on their own. The scaffold can skip stages, so the S1/S5 hints cannot rely on S2-S4, and the S6/S7 hints cannot rely on any earlier stage.
+- An explanation states the answer, says why, and says why the most tempting wrong option fails. It is shown after a correct answer and after the answer is revealed.
+- S1 text never says "debited" or "credited" (T3). Category labels are bare ("Revenue"), and the effect on equity is stated separately (decision 2). Prompts never name the answer (T1, T2, earn_advance S1).
+- Debit means left, not "money in" or "money out".
+
+`${amount}` is the instance amount.
+
+### Shared stage text (Cash in every family; adapted for other assets)
+
+| Stage | Field | Proposed |
+|---|---|---|
+| S2 Cash category | Hint | Is cash something the company owns and can use, something it owes, or the owners' stake? |
+| S2 Cash category | Explanation | Cash is an Asset: a resource the company owns and can use. It is not Revenue. Revenue records earning, and cash can arrive without any earning (a loan, a customer advance). |
+| S3 Cash increase | Hint | Compare the company's cash before and after today's payment. Is it higher or lower? |
+| S3 Cash increase | Explanation | The company holds more money after the payment, so Cash increases. |
+| S4 Asset increase | Hint | An account increases on the same side as its normal balance. Which side is an asset's normal balance? |
+| S4 Asset increase | Explanation | Assets have a normal debit balance, so an increase is recorded as a Debit (left side). Debit only means left; whether a debit increases an account depends on the account's category. |
+| S7 (all) | Hint opening | Place each account in the entry under Assets, Liabilities, or Equity. (Each family then adds one question; see below.) |
+
+### customer_advance (Dr Cash / Cr Unearned Revenue)
+
+| Stage | Field | Current | Proposed |
+|---|---|---|---|
+| S1 | Prompt | Which account is directly affected by the cash payment received from the customer today? | What did the company receive today, and which account records it? |
+| S1 | Hint | The company physically received money today. What asset account tracks cash inflows? | Set aside whether the work is done. What came into the business today? |
+| S1 | Explanation | Cash is received immediately, so the Cash account is affected. | The customer paid cash today, so Cash is affected. Service Revenue is tempting, but receiving money is not the same as earning it; the work happens next month. |
+| S2-S4 | | | Shared text above. |
+| S5 | Option | Service Revenue (Revenue / Equity) | Service Revenue (Revenue) |
+| S5 | Hint | The service has not been performed yet. Revenue cannot be recognized before it is earned. Receiving cash before performing work creates an obligation (liability) to the customer. | Has the company done the work yet? If not, what does it now owe the customer? |
+| S5 | Explanation | Because the service has not been provided, the company has an obligation to perform in the future, recorded as Unearned Revenue (a liability). | The company has been paid but has not done the work, so it owes the customer the service (or a refund). That obligation is Unearned Revenue, a Liability. Service Revenue would record earning before any work is done. Accounts Receivable would mean the customer still owes money, but the customer has already paid. |
+| S6 | Hint | You need a Debit to Cash (asset up) and a Credit to Unearned Revenue (liability up) for equal amounts. | The customer paid for work the company will do next month. What did the company gain today, and what does it now owe? |
+| S6 | Explanation | Debit Cash ${amount} and Credit Unearned Revenue ${amount}. | Debit Cash ${amount} (asset up) and Credit Unearned Revenue ${amount} (liability up). Crediting Service Revenue instead would report revenue for work not yet done. |
+| S7 | Hint | Cash is an Asset. Unearned Revenue is a Liability. Has any Equity/Revenue changed? | Shared opening, then: Has the company earned anything yet? |
+| S7 | Explanation | Assets increase by ${amount} and Liabilities increase by ${amount}. Both sides of the equation remain in balance. | Assets increase by ${amount} (Cash) and Liabilities increase by ${amount} (Unearned Revenue). Equity is unchanged because nothing has been earned yet; it increases next month, when the work is done. |
+
+### cash_service (Dr Cash / Cr Service Revenue)
+
+| Stage | Field | Current | Proposed |
+|---|---|---|---|
+| S1 | Options | A/R, Unearned Revenue, A/P untagged | A/R `wrong_account`; Unearned Revenue `revenue_deferred_when_earned`; A/P `wrong_account` (D5) |
+| S1 | Hint | The business received currency/funds today. | What came into the business today, and in what form? |
+| S1 | Explanation | Cash is received immediately today, increasing the Cash account. | The customer paid cash today, so Cash is affected. Accounts Receivable would apply only if the customer still owed the money, and Unearned Revenue only if the payment came before the work. |
+| S2-S4 | | | Shared text above. |
+| S5 | Prompt (T2) | Because services were performed today and cash was received, what counter-account earns this inflow? | Which account records what the company did for the customer in exchange for the cash? |
+| S5 | Hint | The work is completed today. When work is performed, what account records earnings? | Is the work finished, or does the company still owe it to the customer? |
+| S5 | Explanation | Work completed today with immediate cash payment is recorded as Service Revenue. | The work was completed today, so the company has earned revenue: Service Revenue. Unearned Revenue would mean the work is still owed, but it is already done. |
+| S6 | Options (D6) | 3 options | Add "Debit Accounts Receivable ${amount} / Credit Service Revenue ${amount}", tagged `wrong_account` (records a credit sale when the customer paid). |
+| S6 | Hint | Debit the asset that increased (Cash) and credit the revenue account that increased (Service Revenue). | The customer paid today for work finished today. What did the company receive, and what did it earn? |
+| S6 | Explanation | Debit Cash ${amount} and Credit Service Revenue ${amount}. | Debit Cash ${amount} and Credit Service Revenue ${amount}. Payment and work happened on the same day, so there is no receivable and no unearned revenue. |
+| S7 | Hint | Cash increases total assets. Does earning revenue increase owner's equity? | Shared opening, then: Did the company earn anything, and does anyone owe anyone afterward? |
+| S7 | Explanation | Assets increase by ${amount} and Equity increases by ${amount} through earned revenue. | Assets increase by ${amount} (Cash). Equity increases by ${amount} because revenue increases equity. Liabilities are unchanged because nothing is owed afterward. |
+
+### service_on_credit (Dr Accounts Receivable / Cr Service Revenue)
+
+| Stage | Field | Current | Proposed |
+|---|---|---|---|
+| S1 | Options | A/P, Unearned Revenue untagged | A/P `wrong_account`; Unearned Revenue `revenue_deferred_when_earned` (D5) |
+| S1 | Hint | The customer owes the company for work completed on credit. | Did any money arrive today? If not, what does the company hold instead? |
+| S1 | Explanation (T3) | Accounts Receivable is debited because the company holds a claim to collect cash in the future. | The company has the right to collect from the customer later, which is Accounts Receivable. Cash is tempting, but no money arrived today. |
+| S2 | Hint | Accounts Receivable is an economic resource (a legal claim) owned and controlled by the company. | Is a right to collect money later something the company owns, something it owes, or the owners' stake? |
+| S2 | Explanation | Accounts Receivable is an Asset. | Accounts Receivable is an Asset: the right to collect cash later. It is not Revenue. Revenue records the earning; the receivable records the amount still to be collected. |
+| S3 | Hint | A new claim to collect future money was created. | For the work completed today, does the invoice create a new amount to collect or settle an existing one? |
+| S3 | Explanation | Accounts Receivable increases when new services are billed on account. | The customer now owes the company money, so Accounts Receivable increases. |
+| S4 | | | Shared asset text above. |
+| S5 | Prompt (T1) | The work has been completed today. What account earns this inflow under accrual accounting? | The work was completed today but has not been paid for. Which account balances the entry? |
+| S5 | Options | Unearned Revenue, A/P untagged | Unearned Revenue `revenue_deferred_when_earned`; A/P `wrong_account` (D5) |
+| S5 | Hint | Under accrual accounting, revenue is recognized when performance is satisfied, regardless of when cash is collected. | Under accrual accounting, does revenue wait for the cash, or for the work? |
+| S5 | Explanation | Service Revenue is credited because the service was performed today. | Revenue is recorded when the work is done, not when cash arrives, so the balancing account is Service Revenue. Cash would record a payment that has not happened. |
+| S6 | Hint | Debit Accounts Receivable (asset up) and Credit Service Revenue (equity up). | The work is done but unpaid. What does the company now hold, and what did it earn? |
+| S6 | Explanation | Debit Accounts Receivable ${amount} and Credit Service Revenue ${amount}. | Debit Accounts Receivable ${amount} and Credit Service Revenue ${amount}. Debiting Cash would record money that has not been collected yet. |
+| S7 | Hint | Accounts Receivable increases assets; Service Revenue increases equity. | Shared opening, then: Did the company earn anything, and did any cash move? |
+| S7 | Explanation | Assets increase by ${amount} (+Accounts Receivable) and Equity increases by ${amount} (+Service Revenue). | Assets increase by ${amount} (Accounts Receivable). Equity increases by ${amount} because revenue increases equity. Liabilities are unchanged. Cash stays the same until the customer pays. |
+
+### collect_receivable (Dr Cash / Cr Accounts Receivable)
+
+| Stage | Field | Current | Proposed |
+|---|---|---|---|
+| S1 | Options | A/P untagged | A/P `wrong_account` (D5) |
+| S1 | Hint | The business received cash funds today. | What arrived in the business today? |
+| S1 | Explanation (T3) | Cash is received, so Cash is debited. | The customer paid money today, so Cash is affected. Service Revenue is tempting, but this payment is for work already recorded as revenue last month. |
+| S2 | Options | Asset, Liability, Equity | Add "Revenue", matching the other families. |
+| S2-S4 | | | Shared text above. (Replaces the S2 hint "Cash is an asset.") |
+| S5 | Options | Unearned Revenue, A/P untagged | Both `wrong_account` (D5) |
+| S5 | Hint | Revenue was already recognized in the prior period. Crediting revenue again would double-count sales! Which asset was holding the customer's promise to pay? | Revenue was recorded last month, when the work was done. What has the company been holding since then that this payment settles? |
+| S5 | Explanation | Accounts Receivable is credited to clear the existing claim. No new revenue is recorded. | The payment settles the amount the customer owed, so the balancing account is Accounts Receivable, which decreases. Crediting Service Revenue again would count last month's work twice. |
+| S6 | Hint | Debit Cash (cash up) and Credit Accounts Receivable (receivable cleared). | The work was recorded as revenue last month. What did the company receive today, and what did that payment settle? |
+| S6 | Explanation | Debit Cash ${amount} and Credit Accounts Receivable ${amount}. | Debit Cash ${amount} and Credit Accounts Receivable ${amount}. Revenue is not touched; it was recorded when the work was done. |
+| S7 | Options (D4) | "Assets increase / Liabilities increase" untagged | Tagged `wrong_account` (treats the payment as a customer advance) |
+| S7 | Hint | One asset (Cash) went up, and another asset (Accounts Receivable) went down by the exact same amount. | Shared opening, then: Did total assets change, or did one asset turn into another? |
+| S7 | Explanation | This is an asset exchange. Total assets are unchanged, and no new equity/revenue is recognized. | Cash increases by ${amount} and Accounts Receivable decreases by ${amount}: one asset turned into another. Total assets, liabilities, and equity are unchanged. |
+
+### earn_advance (Dr Unearned Revenue / Cr Service Revenue)
+
+| Stage | Field | Current | Proposed |
+|---|---|---|---|
+| S1 | Prompt | Services paid for last month are now completed today. Which liability account is fulfilled and debited? | No cash changes hands today. Which account recorded what the company owed this customer before today's work? |
+| S1 | Options | A/R untagged | A/R `advance_confused_with_receivable` (D5) |
+| S1 | Hint | No cash changed hands today. The liability representing future work is being discharged. | When the customer paid last month, what did the company owe in return? |
+| S1 | Explanation (T3) | Unearned Revenue is fulfilled and reduced by debiting it. | Last month's payment created an obligation to do the work, recorded as Unearned Revenue. Today's work settles it. Cash is not involved, because the money arrived last month. |
+| S2 | Hint | Unearned Revenue represents an obligation to deliver goods or services to the customer. | Is an obligation to do work for a customer something the company owns, something it owes, or the owners' stake? |
+| S2 | Explanation | Unearned Revenue is a Liability. | Unearned Revenue is a Liability: the company owes the customer work, or a refund. Despite its name, it is not a Revenue account. |
+| S3 | Prompt | Does the liability Unearned Revenue increase or decrease as the promised service is delivered? | Does Unearned Revenue increase or decrease as the promised service is delivered? (Drops "the liability", the S2 answer.) |
+| S3 | Hint | The obligation to do future work has been fulfilled, reducing the outstanding liability. | Before today, the company owed the customer this work. After finishing it, how much does it still owe? |
+| S3 | Explanation | Unearned Revenue decreases when performance is satisfied. | The obligation has been fulfilled, so Unearned Revenue decreases. |
+| S4 | Hint | Liabilities have a normal credit balance. Decreases go on the opposite side (debit). | Which side is a liability's normal balance, and does a decrease go on that side or the opposite one? |
+| S4 | Explanation | Liabilities decrease by Debit. | Liabilities have a normal credit balance, so a decrease is recorded as a Debit (left side). This debit does not mean money went out; no cash moved today. |
+| S5 | Options | A/R untagged | A/R `advance_confused_with_receivable` (D5) |
+| S5 | Hint | Performance is complete. Revenue is recognized when earned. | After completing the prepaid work today, has the company earned anything new? |
+| S5 | Explanation | Service Revenue is credited because the earnings process is complete. | Completing the work earns revenue, so the balancing account is Service Revenue. Cash would record a payment, but the customer paid last month. |
+| S6 | Hint | Debit Unearned Revenue (liability down) and Credit Service Revenue (revenue up). | The customer paid last month, and the work is done today. What does the company no longer owe, and what has it now earned? |
+| S6 | Explanation | Debit Unearned Revenue ${amount} and Credit Service Revenue ${amount}. | Debit Unearned Revenue ${amount} and Credit Service Revenue ${amount}. No cash is recorded today, because the cash was recorded when it arrived last month. |
+| S7 | Options (D3) | "No effect on any balance; memo entry only." (untagged) | Replace with "Assets increase by ${amount} (+Cash); Liabilities increase by ${amount} (+Unearned Revenue); Equity unchanged.", tagged `cash_recorded_on_earning_advance` (records the advance again). |
+| S7 | Hint | Liabilities decreased because work was done; Equity increased because revenue was earned. Total assets did not change. | Shared opening, then: Did any cash move today? |
+| S7 | Explanation | Liabilities decrease by ${amount} and Equity increases by ${amount}. Total assets are unaffected. | Liabilities decrease by ${amount} (Unearned Revenue). Equity increases by ${amount} because revenue increases equity. Total assets are unchanged, because the cash arrived last month. |
+
+### Not in this batch
+
+- X2 (choosing the hint based on which wrong option was picked) is a separate code change, planned for after this batch.
+- `wrong_account` is a weak label for three distractors: A/R on a cash sale, Unearned Revenue on a collection, and liabilities rising on a collection. Each describes a real mistake. They could get their own labels later; for now, the generic hint ("who owes whom afterward?") fits all three.
+
+### Delegated review and implementation - 2026-10-03
+
+The user explicitly delegated review to Codex ("I don't have the energy to review it, can you?"). Codex reviewed economic timing, canonical postings, stage independence, plausible distractors, and terminology, then applied this batch. This is a delegated assistant review, not a claim that the user read or personally approved every string.
+
+Review refinements: the credit-sale direction hint now avoids assuming a prior zero balance; earn_advance S5 now asks "The prepaid work is completed today. Which account balances the entry?" instead of naming revenue in the prompt. Both core classification distinctions and the generic wrong_account tags are retained. The implausible memo option is replaced with opt_assets_up_liab_up, preserving the identity of historical snapshotted options.
+
+Affected active templates were incremented by one version, with delegated reviewer provenance and unchanged scenario wording, amounts, concept tags, fixtures, and rule versions. There are ten affected scenarios (two per revenue family); earlier audit references to nine were a counting error. Saved instances retain their stage snapshots. This batch adds no scenarios.
+
+## Teaching rewrite batch 2 and X2 completed - 2026-10-03
+
+The user instructed Codex to proceed after delegating review. The remaining eight-family teaching package is recorded in [TEACHING-BATCH2-REVIEW.md](TEACHING-BATCH2-REVIEW.md). All seven stages now have question hints and causal explanations; early prompts no longer name the account/category/side being asked, and category options use bare category names. Shared hints and explanations remain family-specific where economic timing differs. Current rent now includes the prepaid misconception; insurance consumption includes the no-entry misconception with `prepaid_not_expensed_on_consumption`. Missing account/equation tags were attached without changing canonical accounts or rules.
+
+X2 now routes first-error feedback by the actual submitted option. Reviewed `mistake_hints` are snapshotted on each stage at generation time; saved instances without them retain their original stage hint. Repeated hint requests preserve the submitted error until the stage advances. Offline help uses the snapshot when present; tutor requests no longer carry a previous stage's error forward. Unknown or generic tags fall back to the reviewed stage question.
+
+All eighteen active templates receive a new version for X2; the eight remaining families also include the teaching rewrite in that version. Provenance explicitly identifies delegated assistant review, not personal user review. Rule versions and canonical fixtures remain unchanged. Tests cover all thirteen families at all allowed amounts with faded scaffolding, selected-option routing, one assisted retry, correct-option tags, historical fallback, restart/duplicate-save immutability, and tutor context. Full `go test ./...` and `go vet ./...` passed before the final additional regression checks; affected-package checks passed afterward.
+
+Windows terminal checks: equipment full scaffold showed its targeted expense-misconception hint, retry, causal explanation, and scrollable offline explanation. An isolated in-memory harness completed prepaid consumption with faded scaffold, rejecting no-entry, accepting the assisted correction and equation effect, and showing the balanced recap. Remaining low-severity distractor wording and X4 repeated offline explanation lecture are deferred; no new family/account is needed for the pilot.
+
+## Integration follow-up at 90 - 2026-10-03
+
+See [CONTENT-INTEGRATION90.md](CONTENT-INTEGRATION90.md) for exhaustive journal/recap, exam/snapshot, tutoring/context and evidence checks. X4 resolved for bank-backed explanations: OfflineTutor now returns the reviewed stage explanation without appending the repeated general lecture. Missing-teaching requests retain generic fallback. Reviewed explanations also reach optional AI explanation prompts, without being included in hint requests. No active template/version was rewritten.
+
+Journal next now renders allowed amounts and excludes inactive records; exams filter eligibility and resume original saved snapshots. Remaining priorities are explicit reviewed contrast scheduling, distinct-setting retrieval evidence, missing source/role/no-entry/amount distractors and weak payable fillers. The review is complete; those quality items remain open rather than being inferred from 90 scenarios or a green test suite.
+
+
+## Reviewed transfer follow-up at 90 - 2026-10-03
+
+[Transfer review](TRANSFER-REVIEW90.md) records policy 1: all 90 reviewed setting bindings, 13 matched pairs, bounded assisted after-error selection and six priority distractor profiles. Evidence version 2 requires two successful reviewed groups and delayed group-changing retrieval for either scaffold reduction; assisted exposures postpone delay and guided comparisons cannot inflate independent evidence. Migration 9 preserves snapshots/history with empty historical transfer metadata. The earlier scheduler/evidence limitations described above are resolved by this follow-up.
+
+Bank remains 90 active/one retired/13 families. Reviewed contrast and distinct-setting eligibility are implemented; remaining weak fillers and amount-interpretation distractors need focused review before further breadth. Course evidence, 180 and native-platform/live-provider release checks remain open. See HANDOFF for actual final verification results.

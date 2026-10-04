@@ -62,7 +62,7 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 	}
 
 	instance := &domain.QuestionInstance{
-		InstanceID:    fmt.Sprintf("%s-%d-%d", q.ID, seed, amtVal),
+		InstanceID:    fmt.Sprintf("%s-v%d-%d-%d", q.ID, q.Version, seed, amtVal),
 		QuestionID:    q.ID,
 		Version:       q.Version,
 		FamilyID:      q.FamilyID,
@@ -117,6 +117,16 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 			}
 		}
 	}
+	policy, profile, err := bank.ReviewedPedagogy(q)
+	if err != nil {
+		return nil, fmt.Errorf("invalid pedagogy policy: %w", err)
+	}
+	instance.Pedagogy = policy
+	if policy.PolicyVersion > 0 {
+		instance.InstanceID += fmt.Sprintf("-p%d", policy.PolicyVersion)
+	}
+	applyReviewedDistractors(instance, money, seed, profile)
+	snapshotMistakeHints(instance)
 	return instance, nil
 }
 
@@ -150,11 +160,11 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Which account is directly affected by the cash payment received from the customer today?",
+		Prompt:            "What did the company receive today, and which account records it?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage1Opts,
-		CausalHint:        "The company physically received money today. What asset account tracks cash inflows?",
-		Explanation:       "Cash is received immediately, so the Cash account is affected.",
+		CausalHint:        "Set aside whether the work is done. What came into the business today?",
+		Explanation:       "The customer paid cash today, so Cash is affected. Service Revenue is tempting, but receiving money is not the same as earning it; the work happens next month.",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -171,8 +181,8 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "What category of account is Cash?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Cash represents an economic resource owned and controlled by the company.",
-		Explanation:       "Cash is a current Asset representing available financial resources.",
+		CausalHint:        "Is cash something the company owns and can use, something it owes, or the owners' stake?",
+		Explanation:       "Cash is an Asset: a resource the company owns and can use. It is not Revenue. Revenue records earning, and cash can arrive without any earning (a loan, a customer advance).",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -187,8 +197,8 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "Does Cash increase or decrease upon receiving this customer payment?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "Money came into the business bank account from the customer.",
-		Explanation:       "Receiving cash increases the Cash account balance.",
+		CausalHint:        "Compare the company's cash before and after today's payment. Is it higher or lower?",
+		Explanation:       "The company holds more money after the payment, so Cash increases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -203,26 +213,26 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "How is an increase to an Asset (Cash) recorded in double-entry bookkeeping?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets have a normal debit balance. Debits increase assets; credits decrease them.",
-		Explanation:       "Assets increase on the Debit (left) side.",
+		CausalHint:        "An account increases on the same side as its normal balance. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is recorded as a Debit (left side). Debit only means left; whether a debit increases an account depends on the account's category.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
 	// Stage 5: Counter-Account Identification (Key pedagogical decision!)
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_unearned_rev", Text: "Unearned Revenue (Liability)"},
-		{ID: "opt_service_rev", Text: "Service Revenue (Revenue / Equity)", ErrorTag: engine.TagRevenueRecognizedPrematurely},
+		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: engine.TagRevenueRecognizedPrematurely},
 		{ID: "opt_ar", Text: "Accounts Receivable (Asset)", ErrorTag: engine.TagAdvanceConfusedWithReceivable},
 		{ID: "opt_common_stock", Text: "Common Stock (Equity)", ErrorTag: engine.TagWrongAccount},
 	}, seed, 105)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "What counter-account balances this entry for services to be performed next month?",
+		Prompt:            "What counter-account balances this receipt for services still to be performed?",
 		CorrectOptionID:   "opt_unearned_rev",
 		Options:           stage5Opts,
-		CausalHint:        "The service has not been performed yet. Revenue cannot be recognized before it is earned. Receiving cash before performing work creates an obligation (liability) to the customer.",
-		Explanation:       "Because the service has not been provided, the company has an obligation to perform in the future, recorded as Unearned Revenue (a liability).",
+		CausalHint:        "Has the company done the work yet? If not, what does it now owe the customer?",
+		Explanation:       "The company has been paid but has not done the work, so it owes the customer the service (or a refund). That obligation is Unearned Revenue, a Liability. Service Revenue would record earning before any work is done. Accounts Receivable would mean the customer still owes money, but the customer has already paid.",
 		RelevantConceptID: "cash_vs_revenue",
 	}
 
@@ -239,8 +249,8 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "What is the complete balanced journal entry for this customer advance?",
 		CorrectOptionID:   "opt_dr_cash_cr_unearned",
 		Options:           stage6Opts,
-		CausalHint:        "You need a Debit to Cash (asset up) and a Credit to Unearned Revenue (liability up) for equal amounts.",
-		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Unearned Revenue %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The customer paid for work the company will do next month. What did the company gain today, and what does it now owe?",
+		Explanation:       fmt.Sprintf("Debit Cash %s (asset up) and Credit Unearned Revenue %s (liability up). Crediting Service Revenue instead would report revenue for work not yet done.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -254,8 +264,8 @@ func buildCustomerAdvanceStages(inst *domain.QuestionInstance, amt domain.Money,
 			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueRecognizedPrematurely},
 			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 107),
-		CausalHint:        "Cash is an Asset. Unearned Revenue is a Liability. Has any Equity/Revenue changed?",
-		Explanation:       fmt.Sprintf("Assets increase by %s and Liabilities increase by %s. Both sides of the equation remain in balance.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Place each account in the entry under Assets, Liabilities, or Equity. Has the company earned anything yet?",
+		Explanation:       fmt.Sprintf("Assets increase by %s (Cash) and Liabilities increase by %s (Unearned Revenue). Equity is unchanged because nothing has been earned yet; it increases next month, when the work is done.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "cash_vs_revenue",
 	}
 }
@@ -264,9 +274,9 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 1: Identify Primary Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_ar", Text: "Accounts Receivable"},
-		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
-		{ID: "opt_ap", Text: "Accounts Payable"},
+		{ID: "opt_ar", Text: "Accounts Receivable", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_unearned_rev", Text: "Unearned Revenue", ErrorTag: engine.TagRevenueDeferredWhenEarned},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
 	}, seed, 201)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
@@ -274,8 +284,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "Which account reflects the immediate payment received today?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage1Opts,
-		CausalHint:        "The business received currency/funds today.",
-		Explanation:       "Cash is received immediately today, increasing the Cash account.",
+		CausalHint:        "What came into the business today, and in what form?",
+		Explanation:       "The customer paid cash today, so Cash is affected. Accounts Receivable would apply only if the customer still owed the money, and Unearned Revenue only if the payment came before the work.",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -292,8 +302,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "What category of account is Cash?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Cash represents an economic resource owned and controlled by the company.",
-		Explanation:       "Cash is a current Asset.",
+		CausalHint:        "Is cash something the company owns and can use, something it owes, or the owners' stake?",
+		Explanation:       "Cash is an Asset: a resource the company owns and can use. It is not Revenue. Revenue records earning, and cash can arrive without any earning (a loan, a customer advance).",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -308,8 +318,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "Does Cash increase or decrease upon receiving this payment?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "Money came into the business from the customer.",
-		Explanation:       "Cash increases with the receipt of money.",
+		CausalHint:        "Compare the company's cash before and after today's payment. Is it higher or lower?",
+		Explanation:       "The company holds more money after the payment, so Cash increases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -324,8 +334,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "How is an increase in an Asset (Cash) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets have a normal debit balance; increases go on the left side.",
-		Explanation:       "Assets increase by Debit.",
+		CausalHint:        "An account increases on the same side as its normal balance. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is recorded as a Debit (left side). Debit only means left; whether a debit increases an account depends on the account's category.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -339,11 +349,11 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "Because services were performed today and cash was received, what counter-account earns this inflow?",
+		Prompt:            "Which account records what the company did for the customer in exchange for the cash?",
 		CorrectOptionID:   "opt_service_rev",
 		Options:           stage5Opts,
-		CausalHint:        "The work is completed today. When work is performed, what account records earnings?",
-		Explanation:       "Work completed today with immediate cash payment is recorded as Service Revenue.",
+		CausalHint:        "Is the work finished, or does the company still owe it to the customer?",
+		Explanation:       "The work was completed today, so the company has earned revenue: Service Revenue. Unearned Revenue would mean the work is still owed, but it is already done.",
 		RelevantConceptID: "cash_vs_revenue",
 	}
 
@@ -352,6 +362,7 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
 		{ID: "opt_dr_rev_cr_cash", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 		{ID: "opt_dr_cash_cr_unearned", Text: fmt.Sprintf("Debit Cash %s / Credit Unearned Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueDeferredWhenEarned},
+		{ID: "opt_dr_ar_cr_rev", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagWrongAccount},
 	}, seed, 206)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -359,8 +370,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "What is the complete balanced journal entry for this cash service transaction?",
 		CorrectOptionID:   "opt_dr_cash_cr_rev",
 		Options:           stage6Opts,
-		CausalHint:        "Debit the asset that increased (Cash) and credit the revenue account that increased (Service Revenue).",
-		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Service Revenue %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The customer paid today for work finished today. What did the company receive, and what did it earn?",
+		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Service Revenue %s. Payment and work happened on the same day, so there is no receivable and no unearned revenue.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -374,8 +385,8 @@ func buildCashServiceStages(inst *domain.QuestionInstance, amt domain.Money, see
 			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Unearned Revenue); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueDeferredWhenEarned},
 			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 207),
-		CausalHint:        "Cash increases total assets. Does earning revenue increase owner's equity?",
-		Explanation:       fmt.Sprintf("Assets increase by %s and Equity increases by %s through earned revenue.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Place each account in the entry under Assets, Liabilities, or Equity. Did the company earn anything, and does anyone owe anyone afterward?",
+		Explanation:       fmt.Sprintf("Assets increase by %s (Cash). Equity increases by %s because revenue increases equity. Liabilities are unchanged because nothing is owed afterward.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "cash_vs_revenue",
 	}
 }
@@ -385,17 +396,17 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_ar", Text: "Accounts Receivable"},
 		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
-		{ID: "opt_ap", Text: "Accounts Payable"},
-		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_unearned_rev", Text: "Unearned Revenue", ErrorTag: engine.TagRevenueDeferredWhenEarned},
 	}, seed, 301)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "The customer was invoiced for services completed today and has not paid yet. Which account records this claim?",
+		Prompt:            "The customer owes payment for services completed today and has not paid yet. Which account records this claim?",
 		CorrectOptionID:   "opt_ar",
 		Options:           stage1Opts,
-		CausalHint:        "The customer owes the company for work completed on credit.",
-		Explanation:       "Accounts Receivable is debited because the company holds a claim to collect cash in the future.",
+		CausalHint:        "Did any money arrive today? If not, what does the company hold instead?",
+		Explanation:       "The company has the right to collect from the customer later, which is Accounts Receivable. Cash is tempting, but no money arrived today.",
 		RelevantConceptID: "accounts_receivable_classification",
 	}
 
@@ -412,8 +423,8 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "What category of account is Accounts Receivable?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Accounts Receivable is an economic resource (a legal claim) owned and controlled by the company.",
-		Explanation:       "Accounts Receivable is an Asset.",
+		CausalHint:        "Is a right to collect money later something the company owns, something it owes, or the owners' stake?",
+		Explanation:       "Accounts Receivable is an Asset: the right to collect cash later. It is not Revenue. Revenue records the earning; the receivable records the amount still to be collected.",
 		RelevantConceptID: "accounts_receivable_classification",
 	}
 
@@ -425,11 +436,11 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 
 	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
 		Stage:             domain.StageDirection,
-		Prompt:            "Does Accounts Receivable increase or decrease when the company bills a new customer?",
+		Prompt:            "Does Accounts Receivable increase or decrease when completed work creates a new unpaid customer claim?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "A new claim to collect future money was created.",
-		Explanation:       "Accounts Receivable increases when new services are billed on account.",
+		CausalHint:        "For the work completed today, does the invoice create a new amount to collect or settle an existing one?",
+		Explanation:       "The customer now owes the company money, so Accounts Receivable increases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -444,8 +455,8 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "How is an increase to an Asset (Accounts Receivable) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets increase on the debit (left) side.",
-		Explanation:       "Assets increase by Debit.",
+		CausalHint:        "An account increases on the same side as its normal balance. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is recorded as a Debit (left side). Debit only means left; whether a debit increases an account depends on the account's category.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -453,17 +464,17 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_service_rev", Text: "Service Revenue"},
 		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
-		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
-		{ID: "opt_ap", Text: "Accounts Payable"},
+		{ID: "opt_unearned_rev", Text: "Unearned Revenue", ErrorTag: engine.TagRevenueDeferredWhenEarned},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
 	}, seed, 305)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "The work has been completed today. What account earns this inflow under accrual accounting?",
+		Prompt:            "The work was completed today but has not been paid for. Which account balances the entry?",
 		CorrectOptionID:   "opt_service_rev",
 		Options:           stage5Opts,
-		CausalHint:        "Under accrual accounting, revenue is recognized when performance is satisfied, regardless of when cash is collected.",
-		Explanation:       "Service Revenue is credited because the service was performed today.",
+		CausalHint:        "Under accrual accounting, does revenue wait for the cash, or for the work?",
+		Explanation:       "Revenue is recorded when the work is done, not when cash arrives, so the balancing account is Service Revenue. Cash would record a payment that has not happened.",
 		RelevantConceptID: "cash_vs_revenue",
 	}
 
@@ -479,8 +490,8 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "What is the complete balanced journal entry for this service on credit?",
 		CorrectOptionID:   "opt_dr_ar_cr_rev",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Accounts Receivable (asset up) and Credit Service Revenue (equity up).",
-		Explanation:       fmt.Sprintf("Debit Accounts Receivable %s and Credit Service Revenue %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The work is done but unpaid. What does the company now hold, and what did it earn?",
+		Explanation:       fmt.Sprintf("Debit Accounts Receivable %s and Credit Service Revenue %s. Debiting Cash would record money that has not been collected yet.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -494,8 +505,8 @@ func buildServiceOnCreditStages(inst *domain.QuestionInstance, amt domain.Money,
 			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s; Equity unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueDeferredWhenEarned},
 		}, seed, 307),
-		CausalHint:        "Accounts Receivable increases assets; Service Revenue increases equity.",
-		Explanation:       fmt.Sprintf("Assets increase by %s (+Accounts Receivable) and Equity increases by %s (+Service Revenue).", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Place each account in the entry under Assets, Liabilities, or Equity. Did the company earn anything, and did any cash move?",
+		Explanation:       fmt.Sprintf("Assets increase by %s (Accounts Receivable). Equity increases by %s because revenue increases equity. Liabilities are unchanged. Cash stays the same until the customer pays.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "cash_vs_revenue",
 	}
 }
@@ -505,16 +516,16 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagDuplicateRevenueOnCollection},
-		{ID: "opt_ap", Text: "Accounts Payable"},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
 	}, seed, 401)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "The customer pays cash to settle their invoice. Which account reflects the cash received today?",
+		Prompt:            "Cash arrives to settle the customer's invoice. Which account reflects the cash received today?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage1Opts,
-		CausalHint:        "The business received cash funds today.",
-		Explanation:       "Cash is received, so Cash is debited.",
+		CausalHint:        "What arrived in the business today?",
+		Explanation:       "The customer paid money today, so Cash is affected. Service Revenue is tempting, but this payment is for work already recorded as revenue last month.",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -523,6 +534,7 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 		{ID: "opt_asset", Text: "Asset"},
 		{ID: "opt_liability", Text: "Liability"},
 		{ID: "opt_equity", Text: "Equity"},
+		{ID: "opt_revenue", Text: "Revenue"},
 	}, seed, 402)
 
 	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
@@ -530,8 +542,8 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 		Prompt:            "What category of account is Cash?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Cash is an asset.",
-		Explanation:       "Cash is an Asset.",
+		CausalHint:        "Is cash something the company owns and can use, something it owes, or the owners' stake?",
+		Explanation:       "Cash is an Asset: a resource the company owns and can use. It is not Revenue. Revenue records earning, and cash can arrive without any earning (a loan, a customer advance).",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -546,8 +558,8 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 		Prompt:            "Does Cash increase or decrease upon collecting this customer payment?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "Funds came in.",
-		Explanation:       "Cash increases.",
+		CausalHint:        "Compare the company's cash before and after today's payment. Is it higher or lower?",
+		Explanation:       "The company holds more money after the payment, so Cash increases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -562,8 +574,8 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 		Prompt:            "How is an increase to an Asset (Cash) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets increase on the debit side.",
-		Explanation:       "Assets increase by Debit.",
+		CausalHint:        "An account increases on the same side as its normal balance. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is recorded as a Debit (left side). Debit only means left; whether a debit increases an account depends on the account's category.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -571,17 +583,17 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_ar", Text: "Accounts Receivable"},
 		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagDuplicateRevenueOnCollection},
-		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
-		{ID: "opt_ap", Text: "Accounts Payable"},
+		{ID: "opt_unearned_rev", Text: "Unearned Revenue", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
 	}, seed, 405)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "The customer is paying an invoice where revenue was already recognized last month. What account must be credited?",
+		Prompt:            "Payment settles an invoice whose revenue was already recognized earlier. What account must be credited?",
 		CorrectOptionID:   "opt_ar",
 		Options:           stage5Opts,
-		CausalHint:        "Revenue was already recognized in the prior period. Crediting revenue again would double-count sales! Which asset was holding the customer's promise to pay?",
-		Explanation:       "Accounts Receivable is credited to clear the existing claim. No new revenue is recorded.",
+		CausalHint:        "Revenue was recorded last month, when the work was done. What has the company been holding since then that this payment settles?",
+		Explanation:       "The payment settles the amount the customer owed, so the balancing account is Accounts Receivable, which decreases. Crediting Service Revenue again would count last month's work twice.",
 		RelevantConceptID: "collection_vs_earning",
 	}
 
@@ -597,8 +609,8 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 		Prompt:            "What is the complete balanced journal entry for collecting this receivable?",
 		CorrectOptionID:   "opt_dr_cash_cr_ar",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Cash (cash up) and Credit Accounts Receivable (receivable cleared).",
-		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Accounts Receivable %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The work was recorded as revenue last month. What did the company receive today, and what did that payment settle?",
+		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Accounts Receivable %s. Revenue is not touched; it was recorded when the work was done.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -610,10 +622,10 @@ func buildCollectReceivableStages(inst *domain.QuestionInstance, amt domain.Mone
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_asset_swap", Text: fmt.Sprintf("Asset exchange: Cash increases (+%s) and Accounts Receivable decreases (-%s); Total Assets and Equity unchanged.", amt.FormatDollars(), amt.FormatDollars())},
 			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagDuplicateRevenueOnCollection},
-			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagWrongAccount},
 		}, seed, 407),
-		CausalHint:        "One asset (Cash) went up, and another asset (Accounts Receivable) went down by the exact same amount.",
-		Explanation:       "This is an asset exchange. Total assets are unchanged, and no new equity/revenue is recognized.",
+		CausalHint:        "Place each account in the entry under Assets, Liabilities, or Equity. Did total assets change, or did one asset turn into another?",
+		Explanation:       fmt.Sprintf("Cash increases by %s and Accounts Receivable decreases by %s: one asset turned into another. Total assets, liabilities, and equity are unchanged.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "collection_vs_earning",
 	}
 }
@@ -623,16 +635,16 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_unearned_rev", Text: "Unearned Revenue"},
 		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnEarningAdvance},
-		{ID: "opt_ar", Text: "Accounts Receivable"},
+		{ID: "opt_ar", Text: "Accounts Receivable", ErrorTag: engine.TagAdvanceConfusedWithReceivable},
 	}, seed, 501)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Services paid for last month are now completed today. Which liability account is fulfilled and debited?",
+		Prompt:            "No new cash changes hands when this prepaid work is completed. Which account recorded the obligation before completion?",
 		CorrectOptionID:   "opt_unearned_rev",
 		Options:           stage1Opts,
-		CausalHint:        "No cash changed hands today. The liability representing future work is being discharged.",
-		Explanation:       "Unearned Revenue is fulfilled and reduced by debiting it.",
+		CausalHint:        "When the customer paid earlier, what did the company owe in return?",
+		Explanation:       "The earlier payment created an obligation to do the work, recorded as Unearned Revenue. Completing the prepaid work settles it. Cash is not involved in this completion entry because the receipt was already recorded.",
 		RelevantConceptID: "earned_vs_unearned",
 	}
 
@@ -649,8 +661,8 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "What category of account is Unearned Revenue?",
 		CorrectOptionID:   "opt_liability",
 		Options:           stage2Opts,
-		CausalHint:        "Unearned Revenue represents an obligation to deliver goods or services to the customer.",
-		Explanation:       "Unearned Revenue is a Liability.",
+		CausalHint:        "Is an obligation to do work for a customer something the company owns, something it owes, or the owners' stake?",
+		Explanation:       "Unearned Revenue is a Liability: the company owes the customer work, or a refund. Despite its name, it is not a Revenue account.",
 		RelevantConceptID: "unearned_revenue_classification",
 	}
 
@@ -662,11 +674,11 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 
 	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
 		Stage:             domain.StageDirection,
-		Prompt:            "Does the liability Unearned Revenue increase or decrease as the promised service is delivered?",
+		Prompt:            "Does Unearned Revenue increase or decrease as the promised service is delivered?",
 		CorrectOptionID:   "opt_decrease",
 		Options:           stage3Opts,
-		CausalHint:        "The obligation to do future work has been fulfilled, reducing the outstanding liability.",
-		Explanation:       "Unearned Revenue decreases when performance is satisfied.",
+		CausalHint:        "Before completion, the company owed the customer this work. After finishing it, how much does it still owe?",
+		Explanation:       "The obligation has been fulfilled, so Unearned Revenue decreases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -681,8 +693,8 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "How is a decrease to a Liability (Unearned Revenue) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Liabilities have a normal credit balance. Decreases go on the opposite side (debit).",
-		Explanation:       "Liabilities decrease by Debit.",
+		CausalHint:        "Which side is a liability's normal balance, and does a decrease go on that side or the opposite one?",
+		Explanation:       "Liabilities have a normal credit balance, so a decrease is recorded as a Debit (left side). This debit does not mean money went out; no new cash moves when the prepaid work is completed.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -690,16 +702,16 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_service_rev", Text: "Service Revenue"},
 		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnEarningAdvance},
-		{ID: "opt_ar", Text: "Accounts Receivable"},
+		{ID: "opt_ar", Text: "Accounts Receivable", ErrorTag: engine.TagAdvanceConfusedWithReceivable},
 	}, seed, 505)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "Now that the service is performed, what counter-account recognizes the earned revenue?",
+		Prompt:            "The prepaid work is completed today. Which account balances the entry?",
 		CorrectOptionID:   "opt_service_rev",
 		Options:           stage5Opts,
-		CausalHint:        "Performance is complete. Revenue is recognized when earned.",
-		Explanation:       "Service Revenue is credited because the earnings process is complete.",
+		CausalHint:        "After completing the prepaid work today, has the company earned anything new?",
+		Explanation:       "Completing the work earns revenue, so the balancing account is Service Revenue. Cash would record a payment, but the receipt was recorded earlier.",
 		RelevantConceptID: "earned_vs_unearned",
 	}
 
@@ -715,8 +727,8 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "What is the complete balanced journal entry for earning this advance?",
 		CorrectOptionID:   "opt_dr_unearned_cr_rev",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Unearned Revenue (liability down) and Credit Service Revenue (revenue up).",
-		Explanation:       fmt.Sprintf("Debit Unearned Revenue %s and Credit Service Revenue %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The customer paid earlier, and the prepaid work is now complete. What does the company no longer owe, and what has it now earned?",
+		Explanation:       fmt.Sprintf("Debit Unearned Revenue %s and Credit Service Revenue %s. No new cash is recorded at completion because the receipt was recorded earlier.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -728,10 +740,10 @@ func buildEarnAdvanceStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_liab_down_eq_up", Text: fmt.Sprintf("Liabilities decrease by %s (-Unearned Revenue); Equity increases by %s (+Service Revenue); Total Assets unchanged.", amt.FormatDollars(), amt.FormatDollars())},
 			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s; Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnEarningAdvance},
-			{ID: "opt_no_net_change", Text: "No effect on any balance; memo entry only."},
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Unearned Revenue); Equity unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnEarningAdvance},
 		}, seed, 507),
-		CausalHint:        "Liabilities decreased because work was done; Equity increased because revenue was earned. Total assets did not change.",
-		Explanation:       fmt.Sprintf("Liabilities decrease by %s and Equity increases by %s. Total assets are unaffected.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Place each account in the entry under Assets, Liabilities, or Equity. Does any new cash move when the prepaid work is completed?",
+		Explanation:       fmt.Sprintf("Liabilities decrease by %s (Unearned Revenue). Equity increases by %s because revenue increases equity. Total assets are unchanged in this completion entry because the cash receipt was recorded earlier.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "earned_vs_unearned",
 	}
 }
@@ -740,23 +752,23 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 	// Stage 1: Identify Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_rent_expense", Text: "Rent Expense"},
-		{ID: "opt_prepaid_rent", Text: "Prepaid Rent"},
-		{ID: "opt_ap", Text: "Accounts Payable"},
+		{ID: "opt_prepaid_rent", Text: "Prepaid Rent", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
 	}, seed, 601)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Which account records the rent expense incurred for the current month?",
+		Prompt:            "Which account records the cost of using the premises this month?",
 		CorrectOptionID:   "opt_rent_expense",
 		Options:           stage1Opts,
-		CausalHint:        "The rent is for the current month, meaning it is an operating expense of the current period.",
-		Explanation:       "Rent Expense is debited for current-period occupancy cost.",
+		CausalHint:        "Does today's payment buy future use of the premises or pay for the current month's use?",
+		Explanation:       "Rent Expense records the current month's occupancy cost. Prepaid Rent would represent future use, and Accounts Payable would represent an amount still owed; this rent was paid today.",
 		RelevantConceptID: "rent_expense_classification",
 	}
 
 	// Stage 2: Category
 	stage2Opts := shuffleOptions([]domain.AnswerOption{
-		{ID: "opt_expense", Text: "Expense (Equity reduction)"},
+		{ID: "opt_expense", Text: "Expense"},
 		{ID: "opt_asset", Text: "Asset"},
 		{ID: "opt_liability", Text: "Liability"},
 	}, seed, 602)
@@ -766,8 +778,8 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 		Prompt:            "What category of account is Rent Expense?",
 		CorrectOptionID:   "opt_expense",
 		Options:           stage2Opts,
-		CausalHint:        "Expenses reflect costs of doing business that reduce owner equity.",
-		Explanation:       "Rent Expense is an Expense account.",
+		CausalHint:        "Does this account track a future resource, an obligation, or a cost incurred in operating the business?",
+		Explanation:       "Rent Expense is an Expense: a cost of using the premises this month. It reduces equity through income; it is not an asset providing future use.",
 		RelevantConceptID: "rent_expense_classification",
 	}
 
@@ -782,8 +794,8 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 		Prompt:            "Does the expense account balance increase or decrease when recording this rent payment?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "Incurring an expense increases the total accumulated expenses for the period.",
-		Explanation:       "Expense balances increase when additional costs are incurred.",
+		CausalHint:        "Does recognizing this month's rent add to the costs accumulated this period or remove a previously recorded cost?",
+		Explanation:       "Rent Expense increases as this month's cost is recorded. Cash decreases, but that does not make the expense account decrease.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -798,8 +810,8 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 		Prompt:            "How is an increase in an Expense (Rent Expense) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Expenses have normal debit balances because they reduce equity.",
-		Explanation:       "Expenses increase by Debit.",
+		CausalHint:        "An account increases on its normal-balance side. Which side is an expense's normal balance?",
+		Explanation:       "Expenses have a normal debit balance, so an increase is a Debit (left side). Expenses reduce equity, but the expense account itself increases; credit would decrease it.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -807,16 +819,16 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_ap", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
-		{ID: "opt_service_rev", Text: "Service Revenue"},
+		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagWrongAccount},
 	}, seed, 605)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "Because rent was paid immediately in cash, what account is credited?",
+		Prompt:            "Which other account changes when the company pays for this month's use of the premises?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage5Opts,
-		CausalHint:        "Cash was paid out of the company's account.",
-		Explanation:       "Cash is credited because funds were disbursed.",
+		CausalHint:        "Did the company hand over money today or only promise to pay later?",
+		Explanation:       "Cash decreases because the company paid today, so Cash is credited. Recording a payable instead would leave the already-paid amount outstanding.",
 		RelevantConceptID: "cash_vs_expense",
 	}
 
@@ -825,6 +837,7 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 		{ID: "opt_dr_rent_cr_cash", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
 		{ID: "opt_dr_cash_cr_rent", Text: fmt.Sprintf("Debit Cash %s / Credit Rent Expense %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
 		{ID: "opt_dr_rent_cr_ap", Text: fmt.Sprintf("Debit Rent Expense %s / Credit Accounts Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagPayableRecordedForCashPayment},
+		{ID: "opt_dr_prepaid_cr_cash", Text: fmt.Sprintf("Debit Prepaid Rent %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagWrongAccount},
 	}, seed, 606)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -832,8 +845,8 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 		Prompt:            "What is the complete balanced journal entry for paying cash rent?",
 		CorrectOptionID:   "opt_dr_rent_cr_cash",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Rent Expense (expense up) and Credit Cash (asset down).",
-		Explanation:       fmt.Sprintf("Debit Rent Expense %s and Credit Cash %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The premises were used this month and paid for today. What cost was incurred, and what resource was given up?",
+		Explanation:       fmt.Sprintf("Debit Rent Expense %s and Credit Cash %s. The cost belongs to this month, so treating it as a prepayment would defer a cost already incurred; a payable would ignore today's payment.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -844,11 +857,11 @@ func buildCashRentStages(inst *domain.QuestionInstance, amt domain.Money, seed i
 		CorrectOptionID: "opt_assets_down_eq_down",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Rent Expense); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s; Equity unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_no_net_change", Text: "No change; expenses do not affect balance sheet."},
+			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s; Equity unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_no_net_change", Text: "No change; expenses do not affect balance sheet.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 607),
-		CausalHint:        "Cash decreased assets; rent expense decreased equity.",
-		Explanation:       fmt.Sprintf("Assets decrease by %s and Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Did the payment leave the company with a new future resource, or was this month's benefit already used?",
+		Explanation:       fmt.Sprintf("Assets decrease by %s (Cash) and equity decreases by %s through Rent Expense. No debt was settled: the rent was not previously owed. The expense increases even though equity decreases.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "cash_vs_expense",
 	}
 }
@@ -857,17 +870,17 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 	// Stage 1: Identify Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_notes_payable", Text: "Notes Payable"},
+		{ID: "opt_notes_payable", Text: "Notes Payable", ErrorTag: engine.TagWrongAccount},
 		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagRevenueRecordedOnBorrowing},
 	}, seed, 701)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Which account records the cash borrowed and deposited today?",
+		Prompt:            "What did the company receive today, and which account records it?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage1Opts,
-		CausalHint:        "Funds were borrowed and deposited into the bank account.",
-		Explanation:       "Cash is received and debited.",
+		CausalHint:        "What came into the business from the lender today?",
+		Explanation:       "Cash records the money received. Notes Payable records the separate repayment obligation; Service Revenue would imply earning from work, which borrowing does not create.",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -883,8 +896,8 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 		Prompt:            "What category of account is Cash?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Cash is an asset.",
-		Explanation:       "Cash is an Asset.",
+		CausalHint:        "Is cash a resource the company owns, an amount it owes, or an ownership claim?",
+		Explanation:       "Cash is an Asset because the company owns and can use it. Cash is not Revenue: earning, borrowing, and owner investment can all bring in cash.",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -899,8 +912,8 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 		Prompt:            "Does Cash increase or decrease upon borrowing money?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "Money came into the company.",
-		Explanation:       "Cash increases.",
+		CausalHint:        "Compare the money held before and after today's receipt. Is there more or less?",
+		Explanation:       "Cash increases because money arrived today. A future repayment obligation does not cancel today's receipt.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -915,8 +928,8 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 		Prompt:            "How is an increase to an Asset (Cash) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets increase by Debit.",
-		Explanation:       "Assets increase by Debit.",
+		CausalHint:        "An account increases on its normal-balance side. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is a Debit (left side). A credit would decrease the asset; debit does not mean money came in.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -924,16 +937,16 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_notes_payable", Text: "Notes Payable (Liability)"},
 		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: engine.TagRevenueRecordedOnBorrowing},
-		{ID: "opt_common_stock", Text: "Common Stock (Equity)"},
+		{ID: "opt_common_stock", Text: "Common Stock (Equity)", ErrorTag: engine.TagWrongAccount},
 	}, seed, 705)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "What counter-account records the formal obligation to repay the lender?",
+		Prompt:            "Which account balances the receipt from the lender?",
 		CorrectOptionID:   "opt_notes_payable",
 		Options:           stage5Opts,
-		CausalHint:        "Borrowing money creates a liability (debt to be repaid), not earned revenue.",
-		Explanation:       "Notes Payable is credited for the promissory note liability.",
+		CausalHint:        "Did the lender buy ownership, pay for work, or expect the money back?",
+		Explanation:       "Notes Payable records the signed promise to repay, so it is credited as the liability increases. Service Revenue would claim earning; Common Stock would claim an ownership investment. Neither happened.",
 		RelevantConceptID: "notes_payable_classification",
 	}
 
@@ -949,8 +962,8 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 		Prompt:            "What is the complete balanced journal entry for borrowing cash on a note?",
 		CorrectOptionID:   "opt_dr_cash_cr_notes",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Cash (asset up) and Credit Notes Payable (liability up).",
-		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Notes Payable %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The company received money under a signed loan agreement. What did it gain, and what must it do later?",
+		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Notes Payable %s. Cash increased and a debt was created. Crediting Service Revenue instead would report borrowing as income.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -962,10 +975,10 @@ func buildBorrowCashStages(inst *domain.QuestionInstance, amt domain.Money, seed
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Notes Payable); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars())},
 			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Revenue); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRevenueRecordedOnBorrowing},
-			{ID: "opt_no_net_change", Text: "No net change in total assets."},
+			{ID: "opt_no_net_change", Text: "No net change in total assets.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 707),
-		CausalHint:        "Cash increased assets; debt increased liabilities. Has any equity changed?",
-		Explanation:       fmt.Sprintf("Assets increase by %s and Liabilities increase by %s. Equity is unaffected.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Does receiving a loan create earning, an ownership contribution, or a repayment obligation?",
+		Explanation:       fmt.Sprintf("Assets increase by %s (Cash) and liabilities increase by %s (Notes Payable). Equity is unchanged because the cash was borrowed, not earned or contributed by owners.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "cash_vs_revenue",
 	}
 }
@@ -974,17 +987,17 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 	// Stage 1: Identify Account
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_common_stock", Text: "Common Stock"},
+		{ID: "opt_common_stock", Text: "Common Stock", ErrorTag: engine.TagWrongAccount},
 		{ID: "opt_service_rev", Text: "Service Revenue", ErrorTag: engine.TagRevenueRecordedOnShareIssue},
 	}, seed, 801)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Which account records the cash received from the owner investment?",
+		Prompt:            "What did the company receive from the investors today?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage1Opts,
-		CausalHint:        "Investors paid cash into the company.",
-		Explanation:       "Cash is received and debited.",
+		CausalHint:        "What resource did investors hand over in exchange for their shares?",
+		Explanation:       "Cash records the money received. Common Stock records the ownership contribution on the other side of the entry; Service Revenue would imply work for a customer, which did not happen.",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -1000,8 +1013,8 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "What category of account is Cash?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Cash is an asset.",
-		Explanation:       "Cash is an Asset.",
+		CausalHint:        "Is cash a resource the company owns, an amount it owes, or an ownership claim?",
+		Explanation:       "Cash is an Asset because the company owns and can use it. Cash is not Revenue: earning, borrowing, and owner investment can all bring in cash.",
 		RelevantConceptID: "cash_classification",
 	}
 
@@ -1016,8 +1029,8 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "Does Cash increase or decrease upon issuing stock for cash?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "The company receives funds from investors.",
-		Explanation:       "Cash increases.",
+		CausalHint:        "Compare the money held before and after today's receipt. Is there more or less?",
+		Explanation:       "Cash increases because money arrived today. A future repayment obligation does not cancel today's receipt.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1032,8 +1045,8 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "How is an increase to an Asset (Cash) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets increase by Debit.",
-		Explanation:       "Assets increase by Debit.",
+		CausalHint:        "An account increases on its normal-balance side. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is a Debit (left side). A credit would decrease the asset; debit does not mean money came in.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1041,16 +1054,16 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_common_stock", Text: "Common Stock (Equity)"},
 		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: engine.TagRevenueRecordedOnShareIssue},
-		{ID: "opt_notes_payable", Text: "Notes Payable (Liability)"},
+		{ID: "opt_notes_payable", Text: "Notes Payable (Liability)", ErrorTag: engine.TagWrongAccount},
 	}, seed, 805)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "What counter-account records the equity interest issued to the owners?",
+		Prompt:            "Which account balances the receipt from investors who bought shares?",
 		CorrectOptionID:   "opt_common_stock",
 		Options:           stage5Opts,
-		CausalHint:        "Owner investment provides contributed capital (Common Stock), not earned revenue from business operations.",
-		Explanation:       "Common Stock is credited for contributed capital.",
+		CausalHint:        "Did the investors buy ownership, lend money to be repaid, or pay for work?",
+		Explanation:       "Common Stock records capital contributed in exchange for shares. Service Revenue would treat investment as earning, and Notes Payable would treat the investors as lenders.",
 		RelevantConceptID: "common_stock_classification",
 	}
 
@@ -1066,8 +1079,8 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 		Prompt:            "What is the complete balanced journal entry for issuing common stock for cash?",
 		CorrectOptionID:   "opt_dr_cash_cr_stock",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Cash (asset up) and Credit Common Stock (equity up).",
-		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Common Stock %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The company received money in exchange for common shares. What resource came in, and what claim did the investors receive?",
+		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Common Stock %s. Owners contributed capital; no services were earned and no loan was created.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1078,11 +1091,11 @@ func buildIssueSharesStages(inst *domain.QuestionInstance, amt domain.Money, see
 		CorrectOptionID: "opt_assets_up_eq_up",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Equity increases by %s (+Common Stock); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s; Equity unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_no_net_change", Text: "No net change in total assets."},
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s; Equity unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_no_net_change", Text: "No net change in total assets.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 807),
-		CausalHint:        "Cash increases assets; Common Stock increases equity.",
-		Explanation:       fmt.Sprintf("Assets increase by %s and Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "What did the investors receive for their money: an ownership stake or a promise of repayment?",
+		Explanation:       fmt.Sprintf("Assets increase by %s (Cash) and equity increases by %s (Common Stock). Liabilities are unchanged. Equity rose through contributed capital, not through revenue.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "cash_vs_revenue",
 	}
 }
@@ -1097,11 +1110,11 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Which account records the advance payment for 12 months of insurance coverage?",
+		Prompt:            "Which account records the insurance coverage acquired today?",
 		CorrectOptionID:   "opt_prepaid_insurance",
 		Options:           stage1Opts,
-		CausalHint:        "The insurance policy covers 12 future months. An advance payment for future economic benefits is an asset, not an immediate operating expense.",
-		Explanation:       "Prepaid Insurance is an asset account debited when paying for future coverage in advance.",
+		CausalHint:        "Has the purchased coverage been used yet, or can the company still use it in future months?",
+		Explanation:       "Prepaid Insurance records the coverage still available. Insurance Expense would mean coverage was used, but none has expired today. Cash records the payment, not the remaining coverage.",
 		RelevantConceptID: "prepaid_insurance_classification",
 	}
 
@@ -1117,8 +1130,8 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "What category of account is Prepaid Insurance?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Prepaid Insurance represents an economic resource (the legal right to future protection) owned and controlled by the company.",
-		Explanation:       "Prepaid Insurance is an Asset.",
+		CausalHint:        "Is unused coverage a future benefit the company controls or a cost already used up?",
+		Explanation:       "Prepaid Insurance is an Asset: the right to future coverage. It becomes an expense as coverage is used; paying today does not mean the entire benefit was consumed today.",
 		RelevantConceptID: "prepaid_insurance_classification",
 	}
 
@@ -1132,8 +1145,8 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "Does the Prepaid Insurance account balance increase or decrease upon purchasing the policy?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "A new 12-month policy was purchased and added to the company's prepaid resources.",
-		Explanation:       "Prepaid Insurance increases upon purchasing the policy.",
+		CausalHint:        "Does buying the policy add to the coverage still available or use up coverage already purchased?",
+		Explanation:       "Prepaid Insurance increases because the company acquired unused coverage. Cash decreases, but a different asset increases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1147,8 +1160,8 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "How is an increase to an Asset (Prepaid Insurance) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets have a normal debit balance; increases go on the debit (left) side.",
-		Explanation:       "Assets increase by Debit.",
+		CausalHint:        "An account increases on its normal-balance side. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is a Debit (left side). A credit would decrease the asset; debit does not mean money came in.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1156,16 +1169,16 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_insurance_expense", Text: "Insurance Expense", ErrorTag: engine.TagExpenseRecordedOnPrepaidPurchase},
 		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
-		{ID: "opt_service_revenue", Text: "Service Revenue"},
+		{ID: "opt_service_revenue", Text: "Service Revenue", ErrorTag: engine.TagWrongAccount},
 	}, seed, 905)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "Because the policy was paid immediately in cash, what counter-account is credited?",
+		Prompt:            "Which other account changes when the policy is paid for today?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage5Opts,
-		CausalHint:        "Cash was disbursed from the company's bank account today.",
-		Explanation:       "Cash is an asset that decreased and is credited.",
+		CausalHint:        "Did the company hand over money today or only promise to pay later?",
+		Explanation:       "Cash decreases because the company paid today, so Cash is credited. Recording a payable instead would leave the already-paid amount outstanding.",
 		RelevantConceptID: "prepaid_vs_expense",
 	}
 
@@ -1181,8 +1194,8 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 		Prompt:            "What is the complete balanced journal entry for purchasing this prepaid insurance policy?",
 		CorrectOptionID:   "opt_dr_prepaid_cr_cash",
 		Options:           stage6Opts,
-		CausalHint:        "Debit the asset that increased (Prepaid Insurance) and credit the asset disbursed (Cash).",
-		Explanation:       fmt.Sprintf("Debit Prepaid Insurance %s and Credit Cash %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The policy was paid for today and no coverage has expired. What benefit was acquired, and what resource was given up?",
+		Explanation:       fmt.Sprintf("Debit Prepaid Insurance %s and Credit Cash %s. Unused coverage is an asset. Debiting Insurance Expense would charge future coverage to today's income.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1193,10 +1206,10 @@ func buildPrepaidPurchaseStages(inst *domain.QuestionInstance, amt domain.Money,
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_asset_swap", Text: fmt.Sprintf("Asset exchange: Prepaid Insurance increases (+%s) and Cash decreases (-%s); Total Assets and Equity unchanged.", amt.FormatDollars(), amt.FormatDollars())},
 			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Insurance Expense).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnPrepaidPurchase},
-			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 907),
-		CausalHint:        "One asset increased (Prepaid Insurance) and another asset decreased (Cash) by the same amount. No expense has expired yet!",
-		Explanation:       fmt.Sprintf("This is an asset exchange: Prepaid Insurance increases by %s, Cash decreases by %s. Total Assets and Equity are unchanged.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Did paying for unused coverage use up a benefit or exchange money for a benefit still available?",
+		Explanation:       fmt.Sprintf("Prepaid Insurance increases by %s and Cash decreases by %s. Total assets, liabilities, and equity are unchanged. Equity would fall when coverage is consumed, not when this unused policy is purchased.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "prepaid_vs_expense",
 	}
 }
@@ -1206,21 +1219,21 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 		{ID: "opt_insurance_expense", Text: "Insurance Expense"},
 		{ID: "opt_prepaid_insurance", Text: "Prepaid Insurance"},
 		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
-		{ID: "opt_rent_expense", Text: "Rent Expense"},
+		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagWrongAccount},
 	}, seed, 1001)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "One month of insurance coverage has expired. Which expense account recognizes the cost incurred for the month?",
+		Prompt:            "Which account records the cost of insurance coverage used this month?",
 		CorrectOptionID:   "opt_insurance_expense",
 		Options:           stage1Opts,
-		CausalHint:        "The economic benefit of one month of coverage has been consumed. Expenses reflect consumed assets.",
-		Explanation:       "Insurance Expense is debited for the cost of insurance coverage used during the period.",
+		CausalHint:        "Was coverage acquired today, or was part of previously purchased coverage used up?",
+		Explanation:       "Insurance Expense records the coverage used this month. Prepaid Insurance tracks the coverage remaining; Cash does not change because the policy was paid for earlier.",
 		RelevantConceptID: "insurance_expense_classification",
 	}
 
 	stage2Opts := shuffleOptions([]domain.AnswerOption{
-		{ID: "opt_expense", Text: "Expense (Equity reduction)"},
+		{ID: "opt_expense", Text: "Expense"},
 		{ID: "opt_asset", Text: "Asset"},
 		{ID: "opt_liability", Text: "Liability"},
 		{ID: "opt_revenue", Text: "Revenue"},
@@ -1231,8 +1244,8 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 		Prompt:            "What category of account is Insurance Expense?",
 		CorrectOptionID:   "opt_expense",
 		Options:           stage2Opts,
-		CausalHint:        "Insurance Expense represents expired asset costs, which reduce owner equity.",
-		Explanation:       "Insurance Expense is an Expense account.",
+		CausalHint:        "Does the account describe protection still available or protection already used during the month?",
+		Explanation:       "Insurance Expense is an Expense: the cost of protection already used. Prepaid Insurance is the Asset for protection still available; these accounts describe different parts of the same policy.",
 		RelevantConceptID: "insurance_expense_classification",
 	}
 
@@ -1246,8 +1259,8 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 		Prompt:            "Does Insurance Expense increase or decrease as coverage expires during the month?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "Incurring an expense increases the total expenses accumulated for the period.",
-		Explanation:       "Expenses increase as costs are recognized.",
+		CausalHint:        "Does recognizing the coverage used this month add to this period's costs or remove a previously recorded cost?",
+		Explanation:       "Insurance Expense increases as consumed coverage is recorded. The prepaid asset decreases; the cost account increases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1261,25 +1274,25 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 		Prompt:            "How is an increase in an Expense (Insurance Expense) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Expenses have normal debit balances; increases are recorded on the debit (left) side.",
-		Explanation:       "Expenses increase by Debit.",
+		CausalHint:        "An account increases on its normal-balance side. Which side is an expense's normal balance?",
+		Explanation:       "Expenses have a normal debit balance, so an increase is a Debit (left side). Expenses reduce equity, but the expense account itself increases; credit would decrease it.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_prepaid_insurance", Text: "Prepaid Insurance"},
 		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
-		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
-		{ID: "opt_service_revenue", Text: "Service Revenue"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_service_revenue", Text: "Service Revenue", ErrorTag: engine.TagWrongAccount},
 	}, seed, 1005)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "Which asset account holding the unexpired coverage must be reduced as coverage expires?",
+		Prompt:            "Which other account changes when already-paid insurance coverage is used?",
 		CorrectOptionID:   "opt_prepaid_insurance",
 		Options:           stage5Opts,
-		CausalHint:        "No cash is paid when insurance expires; the policy was already paid for in advance. The prepaid asset balance is reduced as coverage expires.",
-		Explanation:       "Prepaid Insurance is credited to reduce the remaining asset balance.",
+		CausalHint:        "What balance has been holding the coverage that is now used up?",
+		Explanation:       "Prepaid Insurance decreases as its coverage is consumed, so it is credited. Cash would record another payment, but no money leaves today.",
 		RelevantConceptID: "prepaid_vs_expense",
 	}
 
@@ -1287,6 +1300,7 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 		{ID: "opt_dr_expense_cr_prepaid", Text: fmt.Sprintf("Debit Insurance Expense %s / Credit Prepaid Insurance %s", amt.FormatDollars(), amt.FormatDollars())},
 		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit Insurance Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
 		{ID: "opt_dr_prepaid_cr_expense", Text: fmt.Sprintf("Debit Prepaid Insurance %s / Credit Insurance Expense %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_no_entry", Text: "No entry; the full policy remains prepaid.", ErrorTag: engine.TagPrepaidNotExpensedOnConsumption},
 	}, seed, 1006)
 
 	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
@@ -1294,8 +1308,8 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 		Prompt:            "What is the complete balanced journal entry for recording this expired insurance?",
 		CorrectOptionID:   "opt_dr_expense_cr_prepaid",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Insurance Expense (expense up) and Credit Prepaid Insurance (asset down).",
-		Explanation:       fmt.Sprintf("Debit Insurance Expense %s and Credit Prepaid Insurance %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Coverage bought earlier has now been used, with no payment today. What cost arose, and what future benefit remains smaller?",
+		Explanation:       fmt.Sprintf("Debit Insurance Expense %s and Credit Prepaid Insurance %s. Crediting Cash would record a second payment. No entry would leave used-up coverage reported as a future resource.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1308,8 +1322,8 @@ func buildPrepaidConsumptionStages(inst *domain.QuestionInstance, amt domain.Mon
 			{ID: "opt_assets_down_cash", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Insurance Expense).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedOnPrepaidExpiration},
 			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 1007),
-		CausalHint:        "Assets decrease because Prepaid Insurance expired. Equity decreases because an expense occurred. Cash was unaffected today.",
-		Explanation:       fmt.Sprintf("Assets decrease by %s (-Prepaid Insurance) and Equity decreases by %s (-Insurance Expense). Zero cash moved today.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Is the consumed coverage still a resource available for the future, and did money move today?",
+		Explanation:       fmt.Sprintf("Assets decrease by %s (Prepaid Insurance) and equity decreases by %s through Insurance Expense. Cash and liabilities are unchanged. Keeping all balances unchanged would fail to recognize the coverage consumed.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "prepaid_vs_expense",
 	}
 }
@@ -1319,16 +1333,16 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 		{ID: "opt_equipment", Text: "Equipment"},
 		{ID: "opt_expense_misconception", Text: "An expense for the cost of the machinery", ErrorTag: engine.TagExpenseRecordedOnEquipmentPurchase},
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
 	}, seed, 1101)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Which account records the productive machinery and equipment acquired today?",
+		Prompt:            "Which account records the newly acquired machinery?",
 		CorrectOptionID:   "opt_equipment",
 		Options:           stage1Opts,
-		CausalHint:        "Equipment has multi-year productive utility. Long-term productive resources are capitalized as assets, not expensed immediately.",
-		Explanation:       "Equipment is an asset account debited for acquired physical machinery.",
+		CausalHint:        "Will the purchased machinery provide use only today or over future years?",
+		Explanation:       "Equipment records the machinery the company now owns. An immediate expense would treat the full multi-year resource as already used; Cash records how it was paid for.",
 		RelevantConceptID: "equipment_classification",
 	}
 
@@ -1344,8 +1358,8 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 		Prompt:            "What category of account is Equipment?",
 		CorrectOptionID:   "opt_asset",
 		Options:           stage2Opts,
-		CausalHint:        "Equipment is a tangible, long-term productive economic resource owned and controlled by the company.",
-		Explanation:       "Equipment is a non-current Asset.",
+		CausalHint:        "Is machinery that can be used in future years a resource still owned or a cost already consumed?",
+		Explanation:       "Equipment is an Asset: a productive resource available over future years. Paying cash does not make the entire purchase an immediate operating expense.",
 		RelevantConceptID: "equipment_classification",
 	}
 
@@ -1359,8 +1373,8 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 		Prompt:            "Does the Equipment account balance increase or decrease upon acquisition?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "Purchasing new machinery increases the total equipment owned.",
-		Explanation:       "Equipment increases when new assets are purchased.",
+		CausalHint:        "After this purchase, does the company own more machinery or less?",
+		Explanation:       "Equipment increases because new machinery was acquired. Cash decreases, but the Equipment account tracks machinery, not money.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1374,25 +1388,25 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 		Prompt:            "How is an increase in an Asset (Equipment) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Assets have a normal debit balance; increases are recorded on the debit (left) side.",
-		Explanation:       "Assets increase by Debit.",
+		CausalHint:        "An account increases on its normal-balance side. Which side is an asset's normal balance?",
+		Explanation:       "Assets have a normal debit balance, so an increase is a Debit (left side). A credit would decrease the asset; debit does not mean money came in.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_notes_payable", Text: "Notes Payable", ErrorTag: engine.TagWrongAccount},
-		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
-		{ID: "opt_common_stock", Text: "Common Stock"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagPayableRecordedForCashPayment},
+		{ID: "opt_common_stock", Text: "Common Stock", ErrorTag: engine.TagWrongAccount},
 	}, seed, 1105)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "Because the equipment was purchased for cash, what account is credited?",
+		Prompt:            "Which other account changes when the machinery is paid for today?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage5Opts,
-		CausalHint:        "Cash was disbursed from the company bank account.",
-		Explanation:       "Cash is credited because financial assets were spent.",
+		CausalHint:        "Did the company hand over money today or only promise to pay later?",
+		Explanation:       "Cash decreases because the company paid today, so Cash is credited. Recording a payable instead would leave the already-paid amount outstanding.",
 		RelevantConceptID: "capex_vs_expense",
 	}
 
@@ -1407,8 +1421,8 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 		Prompt:            "What is the complete balanced journal entry for this cash equipment purchase?",
 		CorrectOptionID:   "opt_dr_equip_cr_cash",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Equipment (asset up) and Credit Cash (asset down).",
-		Explanation:       fmt.Sprintf("Debit Equipment %s and Credit Cash %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Machinery with years of future use was paid for today. What resource was acquired, and what resource was given up?",
+		Explanation:       fmt.Sprintf("Debit Equipment %s and Credit Cash %s. Both are assets. An expense debit would treat the full future benefit as already used; a payable would ignore the cash payment.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1419,10 +1433,10 @@ func buildEquipmentPurchaseCashStages(inst *domain.QuestionInstance, amt domain.
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_asset_swap", Text: fmt.Sprintf("Asset exchange: Equipment increases (+%s) and Cash decreases (-%s); Total Assets and Equity unchanged.", amt.FormatDollars(), amt.FormatDollars())},
 			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Expense).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnEquipmentPurchase},
-			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 1107),
-		CausalHint:        "Buying equipment is a capital expenditure (asset swap), NOT an operating expense. Total assets and equity do not change.",
-		Explanation:       fmt.Sprintf("This is an asset exchange: Equipment increases by %s and Cash decreases by %s. Total assets and equity remain unchanged.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Did this cash purchase leave the company with another resource, or was the entire benefit used today?",
+		Explanation:       fmt.Sprintf("Equipment increases by %s and Cash decreases by %s. Total assets, liabilities, and equity are unchanged. Buying on credit would increase a liability, but this machinery was paid for today.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "capex_vs_expense",
 	}
 }
@@ -1432,16 +1446,16 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 		{ID: "opt_notes_payable", Text: "Notes Payable"},
 		{ID: "opt_expense_misconception", Text: "An expense for the loan payment", ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_service_revenue", Text: "Service Revenue"},
+		{ID: "opt_service_revenue", Text: "Service Revenue", ErrorTag: engine.TagWrongAccount},
 	}, seed, 1201)
 
 	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
 		Stage:             domain.StageIdentifyAccount,
-		Prompt:            "Which liability account is reduced when repaying principal on the bank promissory note?",
+		Prompt:            "Which account records what the company owed the bank before today's principal payment?",
 		CorrectOptionID:   "opt_notes_payable",
 		Options:           stage1Opts,
-		CausalHint:        "Repaying loan principal settles a previously recorded debt obligation (liability).",
-		Explanation:       "Notes Payable is debited to reduce the outstanding loan balance.",
+		CausalHint:        "What was recorded when the company originally received the loan?",
+		Explanation:       "Notes Payable tracks the principal owed to the bank. Repayment settles that debt; an expense would imply a new cost of operating or borrowing. This transaction includes principal only, not interest.",
 		RelevantConceptID: "notes_payable_classification",
 	}
 
@@ -1457,8 +1471,8 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 		Prompt:            "What category of account is Notes Payable?",
 		CorrectOptionID:   "opt_liability",
 		Options:           stage2Opts,
-		CausalHint:        "Notes Payable represents a formal written debt obligation to a creditor.",
-		Explanation:       "Notes Payable is a Liability.",
+		CausalHint:        "Does a signed promise to repay the bank describe a resource owned or an obligation owed?",
+		Explanation:       "Notes Payable is a Liability: principal the company must repay. An expense records a cost incurred; the loan principal is previously borrowed money, not a new expense.",
 		RelevantConceptID: "notes_payable_classification",
 	}
 
@@ -1469,11 +1483,11 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 
 	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
 		Stage:             domain.StageDirection,
-		Prompt:            "Does the liability Notes Payable increase or decrease upon principal repayment?",
+		Prompt:            "Does Notes Payable increase or decrease when principal is repaid?",
 		CorrectOptionID:   "opt_decrease",
 		Options:           stage3Opts,
-		CausalHint:        "Paying off debt reduces the remaining obligation owed to the bank.",
-		Explanation:       "Notes Payable decreases when principal is paid.",
+		CausalHint:        "After repaying part of the principal, does the company owe the bank more or less?",
+		Explanation:       "Notes Payable decreases as principal is settled. Borrowing would increase the debt, but today's event is repayment.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1487,24 +1501,24 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 		Prompt:            "How is a decrease in a Liability (Notes Payable) recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Liabilities have a normal credit balance; decreasing a liability requires a Debit.",
-		Explanation:       "Liabilities decrease by Debit.",
+		CausalHint:        "Which side is a liability's normal balance, and does a decrease use that side or the opposite side?",
+		Explanation:       "Liabilities have a normal credit balance, so a decrease is a Debit (left side). The debit reduces debt; it does not mean cash increased.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
-		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
-		{ID: "opt_service_revenue", Text: "Service Revenue"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_service_revenue", Text: "Service Revenue", ErrorTag: engine.TagWrongAccount},
 	}, seed, 1205)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "What account reflects the cash disbursed to settle the loan principal?",
+		Prompt:            "Which other account changes when the company pays principal today?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage5Opts,
-		CausalHint:        "Funds flowed out of the business bank account.",
-		Explanation:       "Cash is credited because money was disbursed.",
+		CausalHint:        "Did the company hand over money today or only promise to pay later?",
+		Explanation:       "Cash decreases because the company paid today, so Cash is credited. Recording a payable instead would leave the already-paid amount outstanding.",
 		RelevantConceptID: "principal_repayment_vs_expense",
 	}
 
@@ -1519,8 +1533,8 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 		Prompt:            "What is the complete balanced journal entry for repaying note principal with cash?",
 		CorrectOptionID:   "opt_dr_notes_cr_cash",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Notes Payable (liability down) and Credit Cash (asset down).",
-		Explanation:       fmt.Sprintf("Debit Notes Payable %s and Credit Cash %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Previously borrowed principal is repaid today, with interest excluded. What obligation is settled, and what resource leaves?",
+		Explanation:       fmt.Sprintf("Debit Notes Payable %s and Credit Cash %s. Debt and cash both decrease. Debiting an expense instead would reduce income for a principal payment that is not a cost.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1531,10 +1545,10 @@ func buildRepayNotePrincipalStages(inst *domain.QuestionInstance, amt domain.Mon
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Liabilities decrease by %s (-Notes Payable); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars())},
 			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Expense).", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
-			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only."},
+			{ID: "opt_no_net_change", Text: "No net change in total assets; asset swap only.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 1207),
-		CausalHint:        "Repaying loan principal settles debt (liabilities down) with money (assets down). Principal reduction is NOT an expense!",
-		Explanation:       fmt.Sprintf("Assets decrease by %s (-Cash) and Liabilities decrease by %s (-Notes Payable). Equity is unaffected.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Does repayment of previously borrowed principal incur a new cost or settle an existing obligation?",
+		Explanation:       fmt.Sprintf("Assets decrease by %s (Cash) and liabilities decrease by %s (Notes Payable). Equity is unchanged because principal repayment is not an expense. Both sides of the equation fall equally.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "principal_repayment_vs_expense",
 	}
 }
@@ -1543,7 +1557,7 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 	stage1Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_dividends", Text: "Dividends"},
 		{ID: "opt_expense_misconception", Text: "An expense for the payment to stockholders", ErrorTag: engine.TagExpenseRecordedOnDividend},
-		{ID: "opt_service_revenue", Text: "Service Revenue"},
+		{ID: "opt_service_revenue", Text: "Service Revenue", ErrorTag: engine.TagWrongAccount},
 		{ID: "opt_cash", Text: "Cash"},
 	}, seed, 1301)
 
@@ -1552,13 +1566,13 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 		Prompt:            "Which account records cash distributions paid directly to stockholders?",
 		CorrectOptionID:   "opt_dividends",
 		Options:           stage1Opts,
-		CausalHint:        "Dividends represent a direct distribution of corporate earnings to stockholders, not an operating expense of doing business.",
-		Explanation:       "Dividends is debited to track distributions of profits to shareholders.",
+		CausalHint:        "Are the stockholders being paid for work, or receiving a distribution because they own shares?",
+		Explanation:       "Dividends records the distribution declared and paid to owners today. An expense would treat owners as suppliers of a business service; this distribution is not a cost of earning revenue.",
 		RelevantConceptID: "dividends_classification",
 	}
 
 	stage2Opts := shuffleOptions([]domain.AnswerOption{
-		{ID: "opt_dividends_cat", Text: "Dividends (Equity reduction)"},
+		{ID: "opt_dividends_cat", Text: "Dividends"},
 		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagExpenseRecordedOnDividend},
 		{ID: "opt_liability", Text: "Liability"},
 		{ID: "opt_asset", Text: "Asset"},
@@ -1569,8 +1583,8 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 		Prompt:            "What category of account is Dividends?",
 		CorrectOptionID:   "opt_dividends_cat",
 		Options:           stage2Opts,
-		CausalHint:        "Dividends distribute accumulated earnings directly to owners, reducing Equity.",
-		Explanation:       "Dividends is a distribution account that directly reduces Equity.",
+		CausalHint:        "Does this account track operating costs, a resource owned, or distributions to owners?",
+		Explanation:       "Dividends is the Dividends category, which reduces equity. It is not an Expense and does not reduce net income; the account is closed to Retained Earnings at period end.",
 		RelevantConceptID: "dividends_classification",
 	}
 
@@ -1584,8 +1598,8 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 		Prompt:            "Does the Dividends account balance increase or decrease when recording this dividend distribution?",
 		CorrectOptionID:   "opt_increase",
 		Options:           stage3Opts,
-		CausalHint:        "The accumulated total of dividends distributed during the period increases.",
-		Explanation:       "Dividends increases as new distributions are made.",
+		CausalHint:        "Does declaring this distribution add to the dividends accumulated this period or reverse a previous distribution?",
+		Explanation:       "Dividends increases as a new distribution is recorded, even though equity decreases. The distribution account and total equity move in opposite directions.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1599,24 +1613,24 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 		Prompt:            "How is an increase in Dividends recorded?",
 		CorrectOptionID:   "opt_debit",
 		Options:           stage4Opts,
-		CausalHint:        "Dividends reduce equity, so they have a normal debit balance and increase on the debit side.",
-		Explanation:       "Dividends increases by Debit.",
+		CausalHint:        "Which side is the Dividends account's normal balance, and where does an increase belong?",
+		Explanation:       "Dividends has a normal debit balance, so an increase is a Debit (left side). Crediting Dividends would reduce recorded distributions; an equity reduction does not mean the Dividends account decreases.",
 		RelevantConceptID: "debit_credit_translation",
 	}
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
 		{ID: "opt_cash", Text: "Cash"},
 		{ID: "opt_dividends_payable", Text: "Dividends Payable", ErrorTag: engine.TagWrongAccount},
-		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
 	}, seed, 1305)
 
 	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
 		Stage:             domain.StageCounterAccount,
-		Prompt:            "Because dividends were paid in cash, what account is credited?",
+		Prompt:            "Which other account changes when this newly declared distribution is paid today?",
 		CorrectOptionID:   "opt_cash",
 		Options:           stage5Opts,
-		CausalHint:        "Cash was disbursed to stockholders.",
-		Explanation:       "Cash is credited because cash was distributed.",
+		CausalHint:        "Did the company hand over money today or only promise to pay later?",
+		Explanation:       "Cash decreases because the company paid today, so Cash is credited. Recording a payable instead would leave the already-paid amount outstanding.",
 		RelevantConceptID: "dividend_vs_expense",
 	}
 
@@ -1631,8 +1645,8 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 		Prompt:            "What is the complete balanced journal entry for paying cash dividends?",
 		CorrectOptionID:   "opt_dr_div_cr_cash",
 		Options:           stage6Opts,
-		CausalHint:        "Debit Dividends (equity reduction) and Credit Cash (asset down).",
-		Explanation:       fmt.Sprintf("Debit Dividends %s and Credit Cash %s.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "The dividend was declared and paid today, with no earlier declaration. What distribution was recorded, and what resource left?",
+		Explanation:       fmt.Sprintf("Debit Dividends %s and Credit Cash %s. It is an owner distribution, not an expense. Debiting Dividends Payable would settle an earlier declaration, but no such payable existed.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "debit_credit_translation",
 	}
 
@@ -1642,11 +1656,11 @@ func buildDividendCashStages(inst *domain.QuestionInstance, amt domain.Money, se
 		CorrectOptionID: "opt_assets_down_eq_down",
 		Options: shuffleOptions([]domain.AnswerOption{
 			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Dividends); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars())},
-			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
 			{ID: "opt_no_net_change", Text: "No change in equity; dividends are an asset.", ErrorTag: engine.TagEquationEffectMissed},
 		}, seed, 1307),
-		CausalHint:        "Dividends reduce assets (-Cash) and reduce equity (-Dividends). Dividends are NOT an expense on the income statement.",
-		Explanation:       fmt.Sprintf("Assets decrease by %s (-Cash) and Equity decreases by %s (-Dividends). Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars()),
+		CausalHint:        "Does distributing cash to owners change operating income or the owners' stake directly?",
+		Explanation:       fmt.Sprintf("Assets decrease by %s (Cash) and equity decreases by %s through Dividends. Liabilities are unchanged because declaration and payment happened today. Net income is unchanged: dividends are not an expense.", amt.FormatDollars(), amt.FormatDollars()),
 		RelevantConceptID: "dividend_vs_expense",
 	}
 }

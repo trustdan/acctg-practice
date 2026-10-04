@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_service_training",
+      "version": 1,
+      "family_id": "cash_service",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A training company finishes a one-day workshop today. Participants pay ${amount_dollars} cash at the end of the workshop today. No participant was invoiced or paid before today, and no work remains for these payments.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T19:55:34Z",
+        "source": "Pilot batch 1; user delegated review and instructed continuation; Codex reviewed timing, complete stage teaching, misconceptions, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded terminal examples; see docs/PILOT-BATCH1-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What did the participants hand over at the end of today's workshop?",
+          "explanation": "Cash records the participants' payment today. Accounts Receivable would mean payment is still owed; Unearned Revenue would mean the workshop is still owed. Neither remains outstanding."
+        },
+        "counter_account": {
+          "hint": "Was the workshop completed before the participants paid, or is the company still committed to provide it later?",
+          "explanation": "Service Revenue records the completed workshop. The cash was earned today; Unearned Revenue would imply that this workshop still needs to be provided."
+        },
+        "balanced_entry": {
+          "hint": "The workshop is finished and its participants paid today. What resource came in, and what was earned?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Service Revenue ${amount_dollars}. There is no unpaid invoice or future workshop obligation for this payment."
+        },
+        "equation_effect": {
+          "hint": "For this completed, paid workshop, does anyone still owe money or work?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and equity increases by ${amount_dollars} through Service Revenue. No liability remains for this workshop."
+        }
+      }
+    },
+    {
+      "id": "customer_advance_training",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A training company receives ${amount_dollars} cash today from participants reserving places at a workshop next month. None of the instruction has been provided, and the company must still deliver the full workshop. No payment or related obligation was recorded earlier.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "unearned_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T19:55:34Z",
+        "source": "Pilot batch 1; user delegated review and instructed continuation; Codex reviewed timing, complete stage teaching, misconceptions, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded terminal examples; see docs/PILOT-BATCH1-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What did the participants hand over today, before attending any instruction?",
+          "explanation": "Cash records the payment received today. Receiving money does not mean the workshop has been earned; all instruction still lies ahead."
+        },
+        "counter_account": {
+          "hint": "After accepting these reservations, what must the company still provide to the participants?",
+          "explanation": "Unearned Revenue records the company's obligation to deliver the workshop. Service Revenue would count instruction that has not happened; Accounts Receivable would claim the participants have not paid."
+        },
+        "balanced_entry": {
+          "hint": "The participants paid today but will attend next month. What resource arrived, and what promise remains?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Unearned Revenue ${amount_dollars}. The company has more cash and owes the workshop; it has not yet earned this payment."
+        },
+        "equation_effect": {
+          "hint": "Has reserving a place earned the company's payment, or does the company still owe all the instruction?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and liabilities increase by ${amount_dollars} (Unearned Revenue). Equity is unchanged because no instruction has been delivered."
+        }
+      }
+    },
+    {
+      "id": "earn_advance_training",
+      "version": 1,
+      "family_id": "earn_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A training company finishes a one-day workshop today. Participants paid ${amount_dollars} last month, and the company recorded its obligation to provide this workshop then. Today's completed instruction satisfies the whole obligation for those payments. No cash changes hands today.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "earned_vs_unearned",
+        "unearned_revenue_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T19:55:34Z",
+        "source": "Pilot batch 1; user delegated review and instructed continuation; Codex reviewed timing, complete stage teaching, misconceptions, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded terminal examples; see docs/PILOT-BATCH1-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Before today's workshop, what did the company owe the participants who had already paid?",
+          "explanation": "Unearned Revenue recorded the workshop still owed after last month's payment. Completing today's instruction settles that obligation; Cash was already recorded last month."
+        },
+        "counter_account": {
+          "hint": "Has completing the promised workshop earned anything even though no new payment arrived?",
+          "explanation": "Service Revenue records the workshop earned today. Cash would repeat last month's receipt, and Accounts Receivable would imply the already-paid participants still owe money."
+        },
+        "balanced_entry": {
+          "hint": "Today's workshop fulfills the whole promise paid for last month. What obligation ends, and what is now earned?",
+          "explanation": "Debit Unearned Revenue ${amount_dollars} and Credit Service Revenue ${amount_dollars}. The workshop obligation is settled and earning is recorded; there is no second cash receipt."
+        },
+        "equation_effect": {
+          "hint": "Can the company earn the prepaid workshop fee today without receiving another payment?",
+          "explanation": "Liabilities decrease by ${amount_dollars} (Unearned Revenue) and equity increases by ${amount_dollars} through Service Revenue. Assets are unchanged because the cash arrived last month."
+        }
+      }
+    },
+    {
+      "id": "service_on_credit_repairs",
+      "version": 1,
+      "family_id": "service_on_credit",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair company finishes a customer's repair today and releases the repaired item. It invoices the customer for ${amount_dollars}, payable in 30 days. The customer has made no payment or deposit, no work remains, and the company had not previously recorded this repair.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "accounts_receivable_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T19:55:34Z",
+        "source": "Pilot batch 1; user delegated review and instructed continuation; Codex reviewed timing, complete stage teaching, misconceptions, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded terminal examples; see docs/PILOT-BATCH1-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Did money arrive when the repaired item was released, or is the invoice still unpaid?",
+          "explanation": "Accounts Receivable records the right to collect for the completed repair. Cash would record a payment that has not happened; Unearned Revenue would describe unfinished work, but the repair is complete."
+        },
+        "counter_account": {
+          "hint": "Is earning based on finishing the repair or on waiting 30 days for payment?",
+          "explanation": "Service Revenue records the completed repair today. An unpaid invoice delays cash collection, not earning; Cash is not the counter-account because no money arrived."
+        },
+        "balanced_entry": {
+          "hint": "The repair is complete and the invoice is unpaid. What right does the company hold, and what has it earned?",
+          "explanation": "Debit Accounts Receivable ${amount_dollars} and Credit Service Revenue ${amount_dollars}. The customer owes the billed amount; no cash or customer advance is recorded."
+        },
+        "equation_effect": {
+          "hint": "Does an unpaid invoice for completed work represent a resource, even before money arrives?",
+          "explanation": "Assets increase by ${amount_dollars} (Accounts Receivable) and equity increases by ${amount_dollars} through Service Revenue. Cash and liabilities are unchanged."
+        }
+      }
+    },
+    {
+      "id": "collect_receivable_repairs",
+      "version": 1,
+      "family_id": "collect_receivable",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair company receives ${amount_dollars} cash today to settle a customer's unpaid repair invoice in full. The repair was finished last month, when the company recorded both the earning and the customer's unpaid amount. No repair or other work is performed for this payment today.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "collection_vs_earning",
+        "cash_classification",
+        "accounts_receivable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T19:55:34Z",
+        "source": "Pilot batch 1; user delegated review and instructed continuation; Codex reviewed timing, complete stage teaching, misconceptions, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded terminal examples; see docs/PILOT-BATCH1-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What did the customer hand over today to settle the old repair invoice?",
+          "explanation": "Cash records the payment received today. Service Revenue would count the repair a second time: the earning was already recorded last month."
+        },
+        "counter_account": {
+          "hint": "What previously recorded unpaid amount disappears when the customer settles this invoice?",
+          "explanation": "Accounts Receivable decreases because the customer's unpaid amount is settled. Service Revenue was recorded last month; crediting it again would count the same repair twice."
+        },
+        "balanced_entry": {
+          "hint": "Last month's repair and earning were already recorded. What resource arrived today, and what unpaid amount was settled?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Accounts Receivable ${amount_dollars}. The payment replaces the right to collect with cash; it does not create new earning."
+        },
+        "equation_effect": {
+          "hint": "Did today's settlement create an additional resource, or turn the existing claim into cash?",
+          "explanation": "Cash increases by ${amount_dollars} and Accounts Receivable decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged; the repair's earning was recorded last month."
+        }
+      }
+    },
+    {
+      "id": "borrow_cash_future_payroll",
+      "version": 1,
+      "family_id": "borrow_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company receives ${amount_dollars} cash today from a bank and signs a note requiring repayment in two years. It plans to use the money to pay employees next month. No employee payment or other spending occurs today, and no customer work or share issuance is involved. Ignore interest.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "notes_payable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T19:55:34Z",
+        "source": "Pilot batch 1; user delegated review and instructed continuation; Codex reviewed timing, complete stage teaching, misconceptions, matched contrasts, supported rule_version 1, all amounts/scaffolds, and representative full/faded terminal examples; see docs/PILOT-BATCH1-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What came into the business today, before any employee payment was made?",
+          "explanation": "Cash records the bank's payment into the company today. Planning to use the money for payroll later does not mean cash has been spent or a payroll cost has been recorded today."
+        },
+        "counter_account": {
+          "hint": "Does the intended future payroll use change what the bank expects back?",
+          "explanation": "Notes Payable records the bank loan. Future spending plans do not turn borrowing into Service Revenue or an ownership contribution."
+        },
+        "balanced_entry": {
+          "hint": "Money was borrowed today and nothing was spent. What resource arrived, and what must the company repay?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Notes Payable ${amount_dollars}. Borrowing creates cash and debt. Planned future payroll is a separate event, and no expense is recorded in this entry."
+        },
+        "equation_effect": {
+          "hint": "Does planning to spend the loan later reduce today's cash or create income today?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and liabilities increase by ${amount_dollars} (Notes Payable). Equity is unchanged; neither earning nor spending occurred today."
+        }
+      }
+    }
+  ]
+}

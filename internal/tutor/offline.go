@@ -61,6 +61,9 @@ func (o *OfflineTutor) Explain(ctx context.Context, req Request) (Response, erro
 }
 
 func (o *OfflineTutor) generateSocraticHint(req Request) string {
+	if req.MistakeHint != "" {
+		return req.MistakeHint
+	}
 	// First check if there is an error tag from a submitted or inspected distractor
 	if req.ErrorTag != "" {
 		if tagHint := socraticHintForErrorTag(req.ErrorTag); tagHint != "" {
@@ -99,8 +102,7 @@ func (o *OfflineTutor) generateExplanation(req Request) string {
 
 	// If vetted explanation exists, use it as the foundation
 	if req.Explanation != "" {
-		sb.WriteString(req.Explanation)
-		sb.WriteString("\n\n")
+		return req.Explanation
 	}
 
 	// Pedagogical core principles
@@ -126,7 +128,7 @@ func socraticHintForErrorTag(tag string) string {
 	case engine.TagRevenueRecognizedPrematurely:
 		return "Consider the earning process: did the company perform the service today, or did the customer merely pay an advance deposit for future work? When cash is collected before performance, what obligation does the company owe?"
 	case engine.TagCashRecordedOnEarningAdvance:
-		return "Check cash timing: was cash received today, or was the cash deposit collected in an earlier transaction? Today we delivered the service, reducing our unearned obligation."
+		return "Check cash timing: does completing the prepaid work bring a new payment, or was its receipt recorded in an earlier transaction? Completing the service reduces the unearned obligation."
 	case engine.TagExpenseRecordedOnPrepaidPurchase:
 		return "Consider the benefit horizon: does this payment cover only today, or upcoming months? Paying in advance for future coverage acquires an asset (Prepaid Insurance), not an expense of the current period."
 	case engine.TagExpenseRecordedOnEquipmentPurchase:
@@ -157,6 +159,8 @@ func socraticHintForErrorTag(tag string) string {
 		return "Did the company pay today or promise to pay later? If cash already left, is anything still owed?"
 	case engine.TagEquationEffectMissed:
 		return "Is this only an exchange of one asset for another, or did a liability or equity account change too? Place each account in the entry under Assets, Liabilities, or Equity."
+	case engine.TagWrongAmount:
+		return "Which amount belongs to today's event: the stated payment or portion, or a larger total that includes other transactions?"
 	case engine.TagWrongAccount:
 		return "Re-read the scenario: what changed hands today, and who owes whom afterward? Choose the account that describes that change."
 	case engine.TagReversedSides:
@@ -175,7 +179,7 @@ func familyContrastExplanation(familyID string) string {
 	case "customer_advance":
 		return "Contrast: Receiving cash before performing work creates a liability (Unearned Revenue). Revenue is earned only later when the service or goods are delivered to the customer."
 	case "earn_advance":
-		return "Contrast: When fulfilling an advance, no new cash is received today. Instead, the liability Unearned Revenue is debited (decreased), and Service Revenue is credited (increased)."
+		return "Contrast: When fulfilling an advance, no new cash is received in the completion transaction. Instead, the liability Unearned Revenue is debited (decreased), and Service Revenue is credited (increased)."
 	case "prepaid_purchase":
 		return "Contrast: Paying now for future coverage exchanges one asset for another (Debit Prepaid Insurance, Credit Cash). Insurance Expense is recognized month by month as the coverage expires."
 	case "prepaid_consumption":

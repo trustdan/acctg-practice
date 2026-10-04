@@ -49,6 +49,7 @@ type SessionState struct {
 	CurrentAssistance  domain.AssistanceLevel
 	Attempts           []domain.Attempt
 	IsCompleted        bool
+	lastWrongOptionID  string
 }
 
 // SubmitFeedback represents the result returned to the UI after answering a stage.
@@ -74,6 +75,10 @@ func NewSession(sessionID string, inst *domain.QuestionInstance) *SessionState {
 		}
 	}
 
+	assistance := domain.AssistanceNone
+	if inst.Pedagogy.Remediation {
+		assistance = domain.AssistanceContrast
+	}
 	return &SessionState{
 		SessionID:          sessionID,
 		Instance:           inst,
@@ -81,7 +86,7 @@ func NewSession(sessionID string, inst *domain.QuestionInstance) *SessionState {
 		CurrentIndex:       0,
 		RetryAvailable:     true,
 		ReferenceConsulted: false,
-		CurrentAssistance:  domain.AssistanceNone,
+		CurrentAssistance:  assistance,
 		Attempts:           make([]domain.Attempt, 0),
 		IsCompleted:        len(activeSeq) == 0,
 	}
@@ -109,7 +114,7 @@ func (s *SessionState) RequestHint() (string, error) {
 	if s.CurrentAssistance == domain.AssistanceNone {
 		s.CurrentAssistance = domain.AssistanceHinted
 	}
-	return stage.CausalHint, nil
+	return stage.HintForOption(s.lastWrongOptionID), nil
 }
 
 // RecordReferenceUse flags that the reference cheatsheet was consulted during this stage.
@@ -171,6 +176,8 @@ func (s *SessionState) SubmitOption(selectedOptionID string, answeredAt time.Tim
 		ReferenceUsed:    refUsed,
 		ErrorTag:         selectedOpt.ErrorTag,
 		GradingVersion:   1,
+		SettingGroup:     s.Instance.Pedagogy.SettingGroup,
+		PedagogyVersion:  s.Instance.Pedagogy.PolicyVersion,
 		AnsweredAt:       answeredAt,
 	}
 	s.Attempts = append(s.Attempts, attempt)
@@ -190,16 +197,17 @@ func (s *SessionState) SubmitOption(selectedOptionID string, answeredAt time.Tim
 	}
 
 	// Incorrect answer
+	s.lastWrongOptionID = selectedOpt.ID
 	if s.RetryAvailable {
 		// First error: provide targeted causal hint, allow one retry
 		s.RetryAvailable = false
 		s.CurrentAssistance = domain.AssistanceRetry
 		feedback.AdvanceStage = false
-		feedback.Hint = stage.CausalHint
+		feedback.Hint = stage.HintForOption(selectedOpt.ID)
 		if selectedOpt.ErrorTag != "" {
-			feedback.Explanation = fmt.Sprintf("Incorrect. %s", stage.CausalHint)
+			feedback.Explanation = fmt.Sprintf("Incorrect. %s", feedback.Hint)
 		} else {
-			feedback.Explanation = fmt.Sprintf("Incorrect. Hint: %s", stage.CausalHint)
+			feedback.Explanation = fmt.Sprintf("Incorrect. Hint: %s", feedback.Hint)
 		}
 		return feedback, nil
 	}
@@ -221,10 +229,14 @@ func (s *SessionState) SubmitOption(selectedOptionID string, answeredAt time.Tim
 }
 
 func (s *SessionState) advanceToNextStage() {
+	s.lastWrongOptionID = ""
 	s.CurrentIndex++
 	s.RetryAvailable = true
 	s.ReferenceConsulted = false
 	s.CurrentAssistance = domain.AssistanceNone
+	if s.Instance.Pedagogy.Remediation {
+		s.CurrentAssistance = domain.AssistanceContrast
+	}
 	if s.CurrentIndex >= len(s.StageSequence) {
 		s.IsCompleted = true
 	}

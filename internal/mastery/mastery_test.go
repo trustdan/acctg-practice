@@ -372,8 +372,8 @@ func TestCosmeticVariantsCannotGraduateAlone(t *testing.T) {
 	if stats.ScaffoldLevel == domain.ScaffoldFaded {
 		t.Errorf("rapid cosmetic variants alone graduated concept to ScaffoldFaded!")
 	}
-	if stats.ScaffoldLevel != domain.ScaffoldIntermediate {
-		t.Errorf("expected ScaffoldIntermediate, got %v", stats.ScaffoldLevel)
+	if stats.ScaffoldLevel != domain.ScaffoldFull {
+		t.Errorf("single unreviewed setting must retain Full, got %v", stats.ScaffoldLevel)
 	}
 
 	// Half life must remain strictly DefaultHalfLifeDays (3.0)
@@ -388,10 +388,10 @@ func TestDelayedRetrievalGraduationAndBoundedHalfLife(t *testing.T) {
 
 	// 1. Initial learning attempt at t = 0m
 	attempts = append(attempts, domain.Attempt{
-		AttemptID:        "att-1",
-		SessionID:        "sess-1",
-		InstanceID:       "inst-1",
-		QuestionID:       "q1",
+		AttemptID:  "att-1",
+		SessionID:  "sess-1",
+		InstanceID: "inst-1",
+		QuestionID: "q1", SettingGroup: "context_a", PedagogyVersion: 1,
 		Stage:            domain.StageIdentifyAccount,
 		ConceptID:        "cash_vs_revenue",
 		SelectedOptionID: "opt_cash",
@@ -403,10 +403,10 @@ func TestDelayedRetrievalGraduationAndBoundedHalfLife(t *testing.T) {
 
 	// 2. Second attempt at t = 15m (>= 10m gap) -> First delayed success
 	attempts = append(attempts, domain.Attempt{
-		AttemptID:        "att-2",
-		SessionID:        "sess-2",
-		InstanceID:       "inst-2",
-		QuestionID:       "q2",
+		AttemptID:  "att-2",
+		SessionID:  "sess-2",
+		InstanceID: "inst-2",
+		QuestionID: "q2", SettingGroup: "context_b", PedagogyVersion: 1,
 		Stage:            domain.StageIdentifyAccount,
 		ConceptID:        "cash_vs_revenue",
 		SelectedOptionID: "opt_cash",
@@ -431,10 +431,10 @@ func TestDelayedRetrievalGraduationAndBoundedHalfLife(t *testing.T) {
 
 	// 3. Third attempt at t = 45m (>= 10m gap) -> Second delayed success
 	attempts = append(attempts, domain.Attempt{
-		AttemptID:        "att-3",
-		SessionID:        "sess-3",
-		InstanceID:       "inst-3",
-		QuestionID:       "q3",
+		AttemptID:  "att-3",
+		SessionID:  "sess-3",
+		InstanceID: "inst-3",
+		QuestionID: "q3", SettingGroup: "context_a", PedagogyVersion: 1,
 		Stage:            domain.StageIdentifyAccount,
 		ConceptID:        "cash_vs_revenue",
 		SelectedOptionID: "opt_cash",
@@ -468,19 +468,19 @@ func TestPoorPerformanceRestoresScaffolding(t *testing.T) {
 	// Build up to ScaffoldFaded
 	attempts = append(attempts,
 		domain.Attempt{
-			AttemptID: "att-1", SessionID: "s1", InstanceID: "i1", QuestionID: "q1",
+			AttemptID: "att-1", SessionID: "s1", InstanceID: "i1", QuestionID: "q1", SettingGroup: "context_a", PedagogyVersion: 1,
 			Stage: domain.StageIdentifyAccount, ConceptID: "cash_vs_revenue",
 			SelectedOptionID: "opt_1", IsCorrect: true, Assistance: domain.AssistanceNone,
 			GradingVersion: 1, AnsweredAt: startTime,
 		},
 		domain.Attempt{
-			AttemptID: "att-2", SessionID: "s2", InstanceID: "i2", QuestionID: "q2",
+			AttemptID: "att-2", SessionID: "s2", InstanceID: "i2", QuestionID: "q2", SettingGroup: "context_b", PedagogyVersion: 1,
 			Stage: domain.StageIdentifyAccount, ConceptID: "cash_vs_revenue",
 			SelectedOptionID: "opt_1", IsCorrect: true, Assistance: domain.AssistanceNone,
 			GradingVersion: 1, AnsweredAt: startTime.Add(15 * time.Minute),
 		},
 		domain.Attempt{
-			AttemptID: "att-3", SessionID: "s3", InstanceID: "i3", QuestionID: "q3",
+			AttemptID: "att-3", SessionID: "s3", InstanceID: "i3", QuestionID: "q3", SettingGroup: "context_a", PedagogyVersion: 1,
 			Stage: domain.StageIdentifyAccount, ConceptID: "cash_vs_revenue",
 			SelectedOptionID: "opt_1", IsCorrect: true, Assistance: domain.AssistanceNone,
 			GradingVersion: 1, AnsweredAt: startTime.Add(35 * time.Minute),

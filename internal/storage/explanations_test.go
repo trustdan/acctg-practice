@@ -20,7 +20,7 @@ func TestSavedExplanationSurvivesRestartAndVersion7Upgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = raw.Exec("DROP TABLE saved_explanations; DELETE FROM schema_migrations WHERE version=8"); err != nil {
+	if _, err = raw.Exec("DROP TABLE saved_explanations; ALTER TABLE question_instances DROP COLUMN pedagogy_json; ALTER TABLE attempts DROP COLUMN setting_group; ALTER TABLE attempts DROP COLUMN pedagogy_version; DELETE FROM schema_migrations WHERE version>=8"); err != nil {
 		t.Fatal(err)
 	}
 	raw.Close()

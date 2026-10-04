@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "prepaid_purchase_renewal",
+      "version": 1,
+      "family_id": "prepaid_purchase",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair corporation pays ${amount_dollars} cash today to renew its insurance for a period beginning next month. Its existing policy still covers the current month. None of the new renewal coverage has begun or been used today, and no amount for the renewal was previously recorded as owed. Record only the payment for the future renewal, not any consumption of the existing policy.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "prepaid_insurance_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "prepaid_insurance",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:55:11Z",
+        "source": "Expansion batch 4; continuing user-delegated review; complete stage teaching, timing, supported rules, misconception options, matched contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH4-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Is today's payment buying protection already used or protection beginning after the current policy period?",
+          "explanation": "Prepaid Insurance records the unused renewal coverage. The existing policy protecting the business today does not make the newly purchased future coverage an expense. Cash records how the renewal was paid for."
+        },
+        "counter_account": {
+          "hint": "Did the corporation pay the insurer now or leave the renewal price unpaid?",
+          "explanation": "Cash decreases because the insurer was paid today, so Cash is credited. A payable would report an unpaid renewal price, but no amount for this renewal remains owed."
+        },
+        "balanced_entry": {
+          "hint": "Set aside the existing policy. What future benefit did this renewal payment acquire, and what resource left today?",
+          "explanation": "Debit Prepaid Insurance ${amount_dollars} and Credit Cash ${amount_dollars}. The new coverage starts next month. Expensing this renewal now would confuse the current policy's protection with the unused protection just purchased."
+        },
+        "equation_effect": {
+          "hint": "Does paying for next month's protection leave a future resource after the cash payment?",
+          "explanation": "Prepaid Insurance increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. Consumption of the separate current policy is outside this event."
+        }
+      }
+    },
+    {
+      "id": "prepaid_consumption_partial_policy",
+      "version": 1,
+      "family_id": "prepaid_consumption",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At month-end, a repair corporation records ${amount_dollars} of insurance coverage used during this month from a policy paid for and recorded as a prepaid asset earlier. The stated amount is only this month's consumed portion, not the full policy price. Additional unused coverage remains for later months. No cash is paid today, and this month's consumption has not previously been recorded.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "insurance_expense_classification",
+        "prepaid_insurance_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "insurance_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "prepaid_insurance",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:55:11Z",
+        "source": "Expansion batch 4; continuing user-delegated review; complete stage teaching, timing, supported rules, misconception options, matched contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH4-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Can this month's used protection remain a future benefit just because other months are still covered?",
+          "explanation": "Insurance Expense records only the coverage used this month. The unused portion remains Prepaid Insurance. An unexpired policy can still contain a consumed portion that must be recognized as a cost."
+        },
+        "direction": {
+          "hint": "Does recognizing this month's consumed portion add to or reverse insurance costs recorded this period?",
+          "explanation": "Insurance Expense increases by the consumed portion. The remaining policy coverage is still an asset, but it does not cancel the cost of protection already used."
+        },
+        "counter_account": {
+          "hint": "Which earlier balance contains the coverage that was partly used this month?",
+          "explanation": "Prepaid Insurance decreases by the consumed portion, so it is credited. Only this month's used coverage is removed; unused later-month coverage remains. Crediting Cash would repeat a payment made earlier."
+        },
+        "balanced_entry": {
+          "hint": "Only the stated portion has been used and the policy was paid for earlier. What cost arose and which future benefit became smaller?",
+          "explanation": "Debit Insurance Expense ${amount_dollars} and Credit Prepaid Insurance ${amount_dollars}. This records this month's portion rather than the whole policy. No entry would leave used coverage in the asset, while a Cash credit would record another payment."
+        },
+        "equation_effect": {
+          "hint": "Does having some future coverage left make this month's used coverage a resource still available?",
+          "explanation": "Assets decrease by ${amount_dollars} (Prepaid Insurance) and equity decreases by ${amount_dollars} through Insurance Expense. Cash and liabilities are unchanged. The unused remainder stays an asset; only this month's consumption affects this entry."
+        }
+      }
+    },
+    {
+      "id": "repay_principal_equipment_loan",
+      "version": 1,
+      "family_id": "repay_note_principal",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair corporation pays ${amount_dollars} cash today to its bank toward principal on a previously recorded promissory note. The loan originally helped buy a machine, whose purchase was recorded earlier. The machine remains owned and in use; no sale or disposal occurs today. This payment contains principal only; ignore interest. Record only this repayment, with no depreciation or new purchase.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "principal_repayment_vs_expense",
+        "notes_payable_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "notes_payable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:55:11Z",
+        "source": "Expansion batch 4; continuing user-delegated review; complete stage teaching, timing, supported rules, misconception options, matched contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH4-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What existing obligation is reduced when the bank receives previously borrowed principal?",
+          "explanation": "Notes Payable records the principal owed to the bank. Repayment reduces that obligation. The machine purchase was already recorded and the machine is kept, so today's loan payment neither acquires nor disposes of equipment."
+        },
+        "counter_account": {
+          "hint": "What resource did the corporation transfer to the bank today?",
+          "explanation": "Cash decreases because the bank was paid today, so Cash is credited. The machine remains owned; its use as the original purpose of the loan does not make it the resource given up in this repayment."
+        },
+        "balanced_entry": {
+          "hint": "The machine purchase is already recorded and only loan principal is settled today. What obligation shrinks and what resource leaves?",
+          "explanation": "Debit Notes Payable ${amount_dollars} and Credit Cash ${amount_dollars}. Do not expense the principal or record the machine purchase again. No equipment is disposed of, and no interest cost is included."
+        },
+        "equation_effect": {
+          "hint": "Does repaying financing for an earlier purchase create a new operating cost today?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and liabilities decrease by ${amount_dollars} (Notes Payable). Equity and Equipment are unchanged. Repaying principal does not reduce net income or remove the machine."
+        }
+      }
+    },
+    {
+      "id": "dividend_cash_working_owners",
+      "version": 1,
+      "family_id": "dividend_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair corporation's board declares and pays a ${amount_dollars} cash distribution to its stockholders today in proportion to their share ownership. Some stockholders also work for the company, but this payment is solely an ownership distribution, not pay for their work. No distribution was declared or recorded as owed earlier, and the payment does not repay any loan.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "dividend_vs_expense",
+        "dividends_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "dividends",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:55:11Z",
+        "source": "Expansion batch 4; continuing user-delegated review; complete stage teaching, timing, supported rules, misconception options, matched contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH4-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Is the payment based on work performed or on the recipients' share ownership?",
+          "explanation": "Dividends records the newly declared ownership distribution. Stockholders can also be employees, but this payment is based on shares rather than work. Treating it as an expense would misstate income."
+        },
+        "counter_account": {
+          "hint": "Was this distribution merely promised for later or actually paid today?",
+          "explanation": "Cash decreases because declaration and payment both occur today. Dividends Payable would describe a distribution still owed, but no amount for this distribution remains unpaid."
+        },
+        "balanced_entry": {
+          "hint": "No earlier distribution payable exists and this payment is for ownership rather than work. What distribution arose and what resource left?",
+          "explanation": "Debit Dividends ${amount_dollars} and Credit Cash ${amount_dollars}. Employee status does not turn an ownership distribution into wages. Neither a loan nor an earlier dividend payable is being settled."
+        },
+        "equation_effect": {
+          "hint": "Does a payment based on share ownership reduce operating income just because some owners also work here?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases by ${amount_dollars} through Dividends. Liabilities and net income are unchanged. The ownership distribution reduces equity directly rather than creating an expense."
+        }
+      }
+    },
+    {
+      "id": "borrow_cash_stockholder_note",
+      "version": 1,
+      "family_id": "borrow_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair corporation receives ${amount_dollars} cash today from one of its stockholders after signing a promissory note requiring repayment. The stockholder is acting as a lender for this transaction and receives no new shares. This is not payment for any customer work. Record only today's loan receipt; ignore interest.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "notes_payable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T22:55:11Z",
+        "source": "Expansion batch 4; continuing user-delegated review; complete stage teaching, timing, supported rules, misconception options, matched contrasts, all amounts/scaffolds, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH4-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource actually arrived today regardless of the lender's existing ownership?",
+          "explanation": "Cash records the money received today. The stockholder's existing shares do not change the resource received or make the loan receipt revenue."
+        },
+        "counter_account": {
+          "hint": "Does the signed agreement require repayment or grant new ownership for this payment?",
+          "explanation": "Notes Payable records the obligation under the promissory note. Common Stock would mean new shares were issued, but none were. An existing owner can lend money without making another ownership contribution."
+        },
+        "balanced_entry": {
+          "hint": "The corporation received repayable money and issued no new shares. What resource and obligation arose?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Notes Payable ${amount_dollars}. The source being a stockholder does not make this contributed capital. Crediting revenue would call a loan earning; reversing the entry would record repayment rather than receipt."
+        },
+        "equation_effect": {
+          "hint": "Does the lender already holding shares remove the corporation's promise to repay this new money?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and liabilities increase by ${amount_dollars} (Notes Payable). Equity and net income are unchanged. The lender's existing ownership is separate from this loan obligation."
+        }
+      }
+    }
+  ]
+}

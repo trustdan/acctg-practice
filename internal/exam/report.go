@@ -12,7 +12,8 @@ import (
 	"github.com/trustdan/acctg-practice/internal/engine"
 )
 
-// ResumeExamRunner restores an interrupted exam runner from persisted storage.
+// ResumeExamRunner is the legacy reconstruction path for an unchanged bank.
+// Application resume uses ResumeExamSnapshots so bank edits cannot replace saved questions.
 func ResumeExamRunner(
 	record ExamSessionRecord,
 	attempts []ExamAttemptRecord,
@@ -21,6 +22,13 @@ func ResumeExamRunner(
 	eng *engine.Engine,
 	gen *drill.Generator,
 ) (*ExamRunner, error) {
+	var active []bank.QuestionJSON
+	for _, q := range allQuestions {
+		if bank.IsActiveForPractice(q.Status) {
+			active = append(active, q)
+		}
+	}
+	allQuestions = active
 	if len(allQuestions) == 0 {
 		return nil, fmt.Errorf("cannot resume exam with empty question bank")
 	}
@@ -73,6 +81,40 @@ func ResumeExamRunner(
 		})
 	}
 
+	return resumeExamQuestions(record, attempts, examQuestions)
+}
+
+// ResumeExamSnapshots replays the immutable questions saved when the exam began.
+func ResumeExamSnapshots(record ExamSessionRecord, attempts []ExamAttemptRecord, instances []*domain.QuestionInstance) (*ExamRunner, error) {
+	if len(instances) != record.TotalQuestions {
+		return nil, fmt.Errorf("exam snapshot count does not match original session")
+	}
+	questions := make([]*ExamQuestion, 0, len(instances))
+	for i, inst := range instances {
+		if inst == nil {
+			return nil, fmt.Errorf("exam snapshot %d is missing", i)
+		}
+		stages := drill.ScaffoldStageSequence(inst.ScaffoldLevel)
+		for _, st := range stages {
+			if _, ok := inst.StageAnswers[st]; !ok {
+				return nil, fmt.Errorf("exam snapshot %s missing stage %s", inst.InstanceID, st)
+			}
+		}
+		questions = append(questions, &ExamQuestion{QuestionIndex: i, Instance: inst, Stages: stages, Responses: make(map[domain.DrillStage]*ExamStageResponse)})
+	}
+	return resumeExamQuestions(record, attempts, questions)
+}
+
+func resumeExamQuestions(record ExamSessionRecord, attempts []ExamAttemptRecord, examQuestions []*ExamQuestion) (*ExamRunner, error) {
+	known := make(map[string]bool)
+	for _, eq := range examQuestions {
+		known[eq.Instance.InstanceID] = true
+	}
+	for _, att := range attempts {
+		if !known[att.InstanceID] {
+			return nil, fmt.Errorf("exam attempt does not belong to the original question snapshots")
+		}
+	}
 	// Replay recorded attempts
 	attemptsByInstanceAndStage := make(map[string]map[domain.DrillStage]ExamAttemptRecord)
 	for _, att := range attempts {

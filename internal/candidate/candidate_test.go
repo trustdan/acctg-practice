@@ -26,6 +26,23 @@ func setupTestEngine(t *testing.T) (*engine.Engine, *domain.AccountCatalog) {
 	return eng, catalog
 }
 
+func TestOfflineAdvanceVariantsPassWordingGateAndRemainPending(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+	gen := candidate.NewOfflineCandidateGenerator(eng, catalog)
+	for seed := int64(1); seed <= 30; seed++ {
+		proposal, err := gen.Generate(context.Background(), candidate.GenerateRequest{FamilyID: bank.FamilyCustomerAdvance, Seed: seed})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if review := bank.CheckSemanticWording(proposal.FamilyID, proposal.ScenarioTemplate); !review.Approved {
+			t.Fatalf("seed %d offline advance fails wording gate: %v", seed, review.Violations)
+		}
+		if proposal.Status != candidate.StatusCandidatePendingReview {
+			t.Fatalf("wording check must not activate seed %d: %s", seed, proposal.Status)
+		}
+	}
+}
+
 func TestCandidateParsingStrictValidation(t *testing.T) {
 	eng, catalog := setupTestEngine(t)
 	prov := candidate.Provenance{

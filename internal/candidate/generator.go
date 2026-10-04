@@ -132,7 +132,7 @@ var offlineVariations = map[string][]templateVariation{
 			concepts:         []string{"cash_vs_revenue", "cash_classification", "unearned_revenue_classification", "liability_increase_credit"},
 		},
 		{
-			scenarioTemplate: "A catering company receives ${amount_dollars} cash today for a wedding banquet that will take place in two months. No food or services have been delivered.",
+			scenarioTemplate: "A catering company receives ${amount_dollars} cash in advance today for a wedding banquet that will take place in two months. No food or services have been delivered.",
 			parameters:       map[string][]int64{"amount_minor_units": {50000, 100000, 180000}},
 			concepts:         []string{"cash_vs_revenue", "cash_classification", "unearned_revenue_classification", "liability_increase_credit"},
 		},

@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "equipment_cash_existing_note",
+      "version": 1,
+      "family_id": "equipment_purchase_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} from its existing cash today to buy and take ownership of a machine for several years of use. The company already has an unrelated bank loan recorded from last month, but it neither borrows nor repays any loan today. The dealer is paid in full and no amount for this machine was previously recorded as owed. Record only the delivered machine purchase, with no depreciation.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "capex_vs_expense",
+        "equipment_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "equipment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:19:42Z",
+        "source": "Expansion batch 6; continuing user-delegated review; complete teaching/options/hints, timing, supported rules, all amounts/scaffolds, contrasts, prior debt/final payoff, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH6-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource did the company acquire today, apart from its earlier bank loan?",
+          "explanation": "Equipment records the new machine owned for future use. The old loan is a separate obligation and does not make the machine an immediate expense or an unpaid purchase."
+        },
+        "counter_account": {
+          "hint": "Was the dealer paid from money already held or by a new promise to repay a lender?",
+          "explanation": "Cash decreases because existing money paid the dealer today. Notes Payable already has a balance, but no new borrowing or repayment occurs. Accounts Payable would report a dealer debt that this paid purchase does not create."
+        },
+        "balanced_entry": {
+          "hint": "Record only the machine bought with existing cash. What resource arrived and what resource left?",
+          "explanation": "Debit Equipment ${amount_dollars} and Credit Cash ${amount_dollars}. The unrelated note is unchanged. A note or payable credit would create debt not incurred in this purchase; an expense debit would consume the entire multi-year benefit immediately."
+        },
+        "equation_effect": {
+          "hint": "Does merely having an old loan turn this fully paid purchase into another borrowing?",
+          "explanation": "Equipment increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. The previously recorded bank loan remains unchanged."
+        }
+      }
+    },
+    {
+      "id": "prepaid_purchase_machine_cover",
+      "version": 1,
+      "family_id": "prepaid_purchase",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today for an insurance policy protecting machinery it already owns. All the purchased coverage begins next month and none has been used today. No machine is bought, repaired, or improved by this payment. No amount for the policy was previously recorded as owed. Record only the insurance purchase.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "prepaid_insurance_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "prepaid_insurance",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:19:42Z",
+        "source": "Expansion batch 6; continuing user-delegated review; complete teaching/options/hints, timing, supported rules, all amounts/scaffolds, contrasts, prior debt/final payoff, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH6-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Did the payment acquire another machine or a right to insurance protection not yet used?",
+          "explanation": "Prepaid Insurance records the future protection purchased. Equipment records the machinery already owned, which this policy payment does not increase. Insurance Expense would recognize protection before any purchased coverage has been used."
+        },
+        "counter_account": {
+          "hint": "Did the company pay the insurer today or leave the policy price outstanding?",
+          "explanation": "Cash decreases because the insurer was paid today, so Cash is credited. Accounts Payable would imply an unpaid amount, while an expense counter-account would confuse payment with consumption."
+        },
+        "balanced_entry": {
+          "hint": "Future protection was purchased with cash for a machine already owned. What benefit arrived and what resource left?",
+          "explanation": "Debit Prepaid Insurance ${amount_dollars} and Credit Cash ${amount_dollars}. The object insured is machinery, but the resource purchased is unused protection. Do not increase Equipment or expense coverage before it is used."
+        },
+        "equation_effect": {
+          "hint": "Does buying future protection leave a resource after paying the insurer?",
+          "explanation": "Prepaid Insurance increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. Equipment is unchanged because no machine or improvement was acquired."
+        }
+      }
+    },
+    {
+      "id": "prepaid_consumption_no_claim",
+      "version": 1,
+      "family_id": "prepaid_consumption",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At month-end, a company records ${amount_dollars} of insurance protection used during this month from a policy paid for and recorded as a prepaid asset last month. No insured accident occurred and no claim was filed, but this month's protection has expired. The stated amount is the cost of this month's used coverage and has not previously been expensed. No cash is paid today. Record only this consumption of prepaid coverage.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "insurance_expense_classification",
+        "prepaid_insurance_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "insurance_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "prepaid_insurance",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:19:42Z",
+        "source": "Expansion batch 6; continuing user-delegated review; complete teaching/options/hints, timing, supported rules, all amounts/scaffolds, contrasts, prior debt/final payoff, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH6-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Was protection available and used during the month even though no accident occurred?",
+          "explanation": "Insurance Expense records the cost of protection consumed with time. The absence of a claim does not mean the company received no protection or that expired coverage remains an asset."
+        },
+        "counter_account": {
+          "hint": "Can last month's prepaid balance still include protection for a month that has ended?",
+          "explanation": "Prepaid Insurance decreases by the expired portion and is credited. The policy was paid for earlier, so Cash must not be credited again. Filing a claim is not required to recognize consumed coverage."
+        },
+        "balanced_entry": {
+          "hint": "The paid-for protection expired without a new payment. What cost arose and what future benefit became smaller?",
+          "explanation": "Debit Insurance Expense ${amount_dollars} and Credit Prepaid Insurance ${amount_dollars}. No entry would leave expired protection in the asset. A Cash credit would repeat the earlier payment; no accident or claim is needed for this expense."
+        },
+        "equation_effect": {
+          "hint": "Does having no accident keep this month's expired protection available for the future?",
+          "explanation": "Assets decrease by ${amount_dollars} (Prepaid Insurance) and equity decreases by ${amount_dollars} through Insurance Expense. Cash and liabilities are unchanged. The cost reflects protection used, not a payment for an accident."
+        }
+      }
+    },
+    {
+      "id": "repay_principal_final_payment",
+      "version": 1,
+      "family_id": "repay_note_principal",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today to its bank to repay all remaining principal on a previously recorded promissory note. The stated amount equals the entire principal balance immediately before payment. No new loan is received today. This payment includes no interest or fees; ignore interest. Record only this final principal repayment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "principal_repayment_vs_expense",
+        "notes_payable_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "notes_payable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:19:42Z",
+        "source": "Expansion batch 6; continuing user-delegated review; complete teaching/options/hints, timing, supported rules, all amounts/scaffolds, contrasts, prior debt/final payoff, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH6-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What previously recorded balance is completely settled by today's final principal payment?",
+          "explanation": "Notes Payable records the remaining principal owed to the bank. Paying it off reduces the liability to zero. An expense would treat repayment of old borrowed money as a new cost."
+        },
+        "direction": {
+          "hint": "After the bank receives the entire remaining principal, is any principal still owed on this note?",
+          "explanation": "Notes Payable decreases by its entire remaining principal balance and reaches zero. It does not become negative or increase; the company received no new borrowing."
+        },
+        "counter_account": {
+          "hint": "What resource left the company to settle the note today?",
+          "explanation": "Cash decreases because the bank received the payment today, so Cash is credited. The payment settles a bank note rather than creating or settling an unrelated trade payable."
+        },
+        "balanced_entry": {
+          "hint": "Only the remaining principal is paid, with no interest or fee. What obligation ends and what resource leaves?",
+          "explanation": "Debit Notes Payable ${amount_dollars} and Credit Cash ${amount_dollars}. The note's principal becomes zero. An expense debit would incorrectly reduce income, while reversing the entry would record borrowing instead of final repayment."
+        },
+        "equation_effect": {
+          "hint": "Does eliminating the remaining principal create a new cost or remove an existing obligation?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and liabilities decrease by ${amount_dollars} (Notes Payable). Equity is unchanged. This note is fully settled; no interest or fee affects income."
+        }
+      }
+    },
+    {
+      "id": "dividend_cash_prior_earnings",
+      "version": 1,
+      "family_id": "dividend_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation's board declares and pays a ${amount_dollars} cash distribution to stockholders today from profits accumulated and recorded in earlier periods. No dividend was declared or recorded as owed earlier. The company performs no customer work and earns no new revenue today. This distribution is solely for share ownership, not payment for work or repayment of a loan. Record only today's declaration and payment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "dividend_vs_expense",
+        "dividends_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "dividends",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:19:42Z",
+        "source": "Expansion batch 6; continuing user-delegated review; complete teaching/options/hints, timing, supported rules, all amounts/scaffolds, contrasts, prior debt/final payoff, and representative full/faded offline terminal checks; see docs/EXPANSION-BATCH6-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Is today's event new earning or a distribution of amounts already earned in earlier periods?",
+          "explanation": "Dividends records the newly declared owner distribution. Earlier profits were already recorded; distributing them creates neither new revenue nor an expense. Cash records the separate payment."
+        },
+        "counter_account": {
+          "hint": "Did the corporation distribute money today or leave the newly declared amount unpaid?",
+          "explanation": "Cash decreases because the distribution is paid today. Dividends Payable would describe an unpaid declaration, but none remains owed after this payment."
+        },
+        "balanced_entry": {
+          "hint": "Earlier profits are already recorded and the distribution is declared and paid today. What owner distribution arose and what resource left?",
+          "explanation": "Debit Dividends ${amount_dollars} and Credit Cash ${amount_dollars}. Do not record earlier revenue again or treat the distribution as an operating expense. Debiting a dividend payable would assume an earlier declaration that the scenario excludes."
+        },
+        "equation_effect": {
+          "hint": "Does distributing earlier profits change today's net income or the owners' equity directly?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases by ${amount_dollars} through Dividends. Liabilities and net income are unchanged. Earlier earnings stay recorded; this event is a distribution rather than new earning."
+        }
+      }
+    }
+  ]
+}

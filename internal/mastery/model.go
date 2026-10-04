@@ -30,6 +30,8 @@ const (
 
 // ConceptStats holds the learning evidence and mastery estimates for a single concept.
 type ConceptStats struct {
+	SuccessfulSettings       int                  `json:"successful_settings"`
+	TransferDelayedSuccesses int                  `json:"transfer_delayed_successes"`
 	ConceptID                string               `json:"concept_id"`
 	Alpha                    float64              `json:"alpha"`
 	Beta                     float64              `json:"beta"`
@@ -54,7 +56,7 @@ func NewConceptStats(conceptID string) *ConceptStats {
 		Beta:            DefaultBeta,
 		HalfLifeDays:    DefaultHalfLifeDays,
 		ScaffoldLevel:   domain.ScaffoldFull,
-		EvidenceVersion: 1,
+		EvidenceVersion: 2,
 	}
 }
 

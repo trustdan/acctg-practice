@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_service_stockholder_customer",
+      "version": 1,
+      "family_id": "cash_service",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation completes a repair today and receives ${amount_dollars} cash today from a customer who also owns shares in the corporation. The full payment is solely the agreed price of this completed repair, not a new investment or loan. No shares are issued, no prior invoice, advance, or entry exists for this repair, and no work remains. Record only today's completed service and receipt from the corporation's perspective.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived from the stockholder acting as a customer today?",
+          "explanation": "Cash records today's receipt for the repair. Holding shares does not change the resource received."
+        },
+        "counter_account": {
+          "hint": "Did this payment buy new ownership or pay for completed customer work?",
+          "explanation": "Service Revenue records the completed repair. The payer's existing share ownership creates no new Common Stock or loan in this transaction."
+        },
+        "balanced_entry": {
+          "hint": "What receipt and earning occur when an existing stockholder pays for a completed repair?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Do not record share capital, borrowing, an old collection, or a future-work obligation."
+        },
+        "equation_effect": {
+          "hint": "Does the customer's ownership role remove today's completed earning?",
+          "explanation": "Assets increase through Cash and equity increases through Service Revenue by ${amount_dollars}. Liabilities and existing Common Stock are unchanged."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:18:24Z",
+        "source": "Expansion batch 13; continuing delegated review; all rendered stages/options/stored hints, amounts/scaffolds/contrasts, payment application and final obligation regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH13-REVIEW.md"
+      }
+    },
+    {
+      "id": "service_on_credit_customer_withdrawal",
+      "version": 1,
+      "family_id": "service_on_credit",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair company completes a repair for a new customer today and invoices ${amount_dollars}. Before visiting, the customer withdrew that amount from their own bank account and still holds it, but has given no money to the repair company. The company has an enforceable claim for the full completed repair; no deposit, prior entry, or remaining work exists. Record only the company's completed unpaid service, not the customer's personal withdrawal.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "accounts_receivable_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Has the company received the customer's money or only gained a right to collect it?",
+          "explanation": "Accounts Receivable records the company's unpaid claim. Cash held by the customer is not cash held by the company."
+        },
+        "direction": {
+          "hint": "Does today's unpaid repair create or settle the company's claim?",
+          "explanation": "Accounts Receivable increases by the repair price. A withdrawal in the customer's own account does not pay the company."
+        },
+        "counter_account": {
+          "hint": "Was the company's repair earned even though the customer still holds the money?",
+          "explanation": "Service Revenue records the completed repair. The customer's personal cash position does not postpone this earning."
+        },
+        "balanced_entry": {
+          "hint": "Whose cash would a company Cash debit describe before payment is handed over?",
+          "explanation": "Debit Accounts Receivable ${amount_dollars} and Credit Service Revenue ${amount_dollars}. A Cash debit would record the customer's money as the company's without a receipt."
+        },
+        "equation_effect": {
+          "hint": "What resource belongs to the company while the customer still holds the withdrawn cash?",
+          "explanation": "Assets increase through Accounts Receivable and equity increases through Service Revenue by ${amount_dollars}. Company Cash and liabilities are unchanged."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:18:24Z",
+        "source": "Expansion batch 13; continuing delegated review; all rendered stages/options/stored hints, amounts/scaffolds/contrasts, payment application and final obligation regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH13-REVIEW.md"
+      }
+    },
+    {
+      "id": "collect_receivable_future_booking",
+      "version": 1,
+      "family_id": "collect_receivable",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A consulting company receives ${amount_dollars} cash today solely to settle a recorded invoice for work completed last month. The company already recorded that earning and the unpaid customer amount then; the receipt equals the full invoice balance. The customer also books a separate appointment for next month, but makes no payment for it and no new work is performed today. No fee, discount, or write-off applies. Record only collection of the old invoice, not an advance for the unpaid future booking.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "collection_vs_earning",
+        "cash_classification",
+        "accounts_receivable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived for the old invoice, apart from the unpaid new booking?",
+          "explanation": "Cash records the receipt applied to last month's recorded invoice. No portion pays for the future appointment."
+        },
+        "counter_account": {
+          "hint": "Which recorded claim does the explicitly applied payment settle?",
+          "explanation": "Accounts Receivable decreases for the old invoice. Revenue was already recorded; the separate unpaid appointment creates no advance receipt."
+        },
+        "balanced_entry": {
+          "hint": "What old balance ends when all of this payment applies to its invoice?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Accounts Receivable ${amount_dollars}. Do not repeat revenue or credit Unearned Revenue for an appointment receiving none of this money."
+        },
+        "equation_effect": {
+          "hint": "Does merely booking future work change how the old invoice payment is applied?",
+          "explanation": "Cash increases and Accounts Receivable decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. The unpaid booking is separate."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:18:24Z",
+        "source": "Expansion batch 13; continuing delegated review; all rendered stages/options/stored hints, amounts/scaffolds/contrasts, payment application and final obligation regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH13-REVIEW.md"
+      }
+    },
+    {
+      "id": "customer_advance_internal_setup",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A tutoring company receives ${amount_dollars} cash in advance today for an entire lesson next month. Staff have arranged chairs and tested their own equipment, but no instruction or other promised customer service has been delivered. Setup is internal preparation, not a separately sold or promised service; the company still owes the full lesson. This is the full price and no prior payment or related entry exists. Record only the receipt, with no separate setup cost or payment in this event.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "unearned_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived before the promised instruction was delivered?",
+          "explanation": "Cash records the receipt. Internal preparation does not change the money received into completed instruction."
+        },
+        "counter_account": {
+          "hint": "Has internal setup supplied the promised lesson or does the company still owe it?",
+          "explanation": "Unearned Revenue records the full lesson still owed. Internal readiness is not a separate promised service earning any part of this price."
+        },
+        "balanced_entry": {
+          "hint": "What money and obligation arise before any promised customer service is delivered?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Unearned Revenue ${amount_dollars}. Do not recognize Service Revenue merely because staff prepared to teach; no promised performance is complete."
+        },
+        "equation_effect": {
+          "hint": "Does arranging the room satisfy the customer's right to the full lesson?",
+          "explanation": "Assets and liabilities increase by ${amount_dollars}; equity is unchanged. Internal preparation does not release the lesson obligation."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:18:24Z",
+        "source": "Expansion batch 13; continuing delegated review; all rendered stages/options/stored hints, amounts/scaffolds/contrasts, payment application and final obligation regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH13-REVIEW.md"
+      }
+    },
+    {
+      "id": "earn_advance_final_remaining",
+      "version": 1,
+      "family_id": "earn_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A training company completes the final separately priced session of a prepaid course today. The customer paid for the entire course earlier, and the company recorded the receipt and its obligation then. All earlier sessions and their earning were already recorded. Today's final session has a price of ${amount_dollars}, equal to the entire remaining recorded advance immediately before completion, not the original full course price. No work remains for this course and no cash changes hands today. Record only earning the last remaining portion.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "earned_vs_unearned",
+        "unearned_revenue_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Which recorded obligation remains after earlier sessions were already earned?",
+          "explanation": "Unearned Revenue records the remaining final-session obligation. Earlier receipt and earning are not posted again."
+        },
+        "direction": {
+          "hint": "After the final session is delivered, does any recorded course obligation remain?",
+          "explanation": "Unearned Revenue decreases by the final session's price to zero. Previously earned sessions were already removed from that balance."
+        },
+        "counter_account": {
+          "hint": "What is earned by today's final session without another receipt?",
+          "explanation": "Service Revenue records only today's completed session. Cash was recorded earlier, and earlier sessions were already recognized as earned."
+        },
+        "balanced_entry": {
+          "hint": "How much of the recorded prepaid course remains to be earned today?",
+          "explanation": "Debit Unearned Revenue ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Use the remaining final-session price, not the original full course price; do not repeat receipt or earlier earning."
+        },
+        "equation_effect": {
+          "hint": "Does finishing the course bring more cash or release its last recorded obligation?",
+          "explanation": "Liabilities decrease and equity increases by ${amount_dollars}; assets are unchanged. The course obligation reaches zero and previously recorded earning stays intact."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:18:24Z",
+        "source": "Expansion batch 13; continuing delegated review; all rendered stages/options/stored hints, amounts/scaffolds/contrasts, payment application and final obligation regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH13-REVIEW.md"
+      }
+    }
+  ]
+}

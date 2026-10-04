@@ -10,7 +10,7 @@ Cash receipt is not sufficient to establish revenue: borrowing and owner contrib
 
 For a single event: establish what happened; identify a changing account; classify it; determine direction; translate into side; find the counter-account; assemble and balance the entry. Later ask statement and cash-flow effects. Ask only relevant steps; skip irrelevant cash questions for a noncash event. Teach decreases as well as increases. Shuffle options while retaining reproducibility.
 
-On the first error, ask a short hint aimed at the particular decision. One assisted retry is the default. After a second error, reveal a brief causal explanation and a matched contrast. Never loop indefinitely or call every hinted answer independent mastery. Offer 'explain differently' when the learner asks.
+On the first error, ask a short hint aimed at the particular decision. One assisted retry is the default. After a second error, reveal a brief causal explanation. Reviewed account, counter-account, entry and equation errors can queue a guided matched contrast as the next available session question, even if the retry succeeds. Never loop indefinitely or call every hinted answer independent mastery. Offer 'explain differently' when the learner asks.
 
 Separate instruction from assessment. Reference grid available in learning mode; record its use. Unassisted checks omit the grid and hints. Fade scaffolding per skill, not solely by a global level. Amounts start at $50/$100/$200; multi-account and period-end problems arrive after basic fluency.
 
@@ -30,3 +30,11 @@ Keep contexts unambiguous: a 'retainer' can mean multiple things, so specify pay
 The reported 2×3 grid likely places assets, liabilities, equity across columns and debit/credit across rows, but this is a hypothesis. Inspect the source visual before claiming a match. Label a generic grid clearly until verified. T-account left/right, journal lines, equation changes, and statement effects must derive from the same posting object.
 
 Scope direct-method cash flow and US GAAP classifications only after verifying course framework. Do not classify merely by counterparty: interest paid to a lender is a familiar exception to a financing shortcut under US GAAP. Use event-specific rules. Noncash investing/financing transactions may require disclosure despite no cash-flow line. Revenue does not always equal cash collected. Build statements from opening balances plus postings; retained earnings reconciles beginning balance + net income − dividends declared. Cash reconciliation uses actual cash postings.
+
+## Implemented transfer and amount policy at 90
+
+Guided comparisons replace the next ordinary question without extending the session. They preserve the amount where allowed, use all seven steps, remain assisted at every step and cannot chain another comparison. Normal selection penalizes recent reviewed reasoning groups as well as exact question IDs.
+
+Either scaffold reduction requires independent success in two reviewed groups and a delayed group-changing success. Delay is at least ten minutes since both the previous independent response and last exposure, including assisted practice. Names and amounts alone do not create new groups. Independent and assisted evidence remain separate; half-life starts at three days and requires two delayed transfers before bounded extension. See [MASTERY.md](MASTERY.md) for exact thresholds.
+
+Policy 2 adds explicit portion/original-total, actual/agreed cost and corporation-total/recipient amount choices in ten scenarios, plus contextual account choices across four revenue families. Wrong amount choices carry targeted stored hints. Unknown original totals remain symbolic, so these choices test scope rather than arithmetic. [Quality closeout](QUALITY-REVIEW90.md) records the reviewed boundaries. Learning effectiveness and course alignment remain unvalidated.

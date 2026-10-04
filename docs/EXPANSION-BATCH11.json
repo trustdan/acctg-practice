@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_rent_separate_insurance",
+      "version": 1,
+      "family_id": "cash_rent",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today for workspace used during the current month. It also has a separately paid and recorded insurance policy for next month; none of today's payment buys or consumes that insurance. This rent covers no future months and was not previously recorded as owed or prepaid. No building or equipment is purchased. Record only today's current-month rent payment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_expense",
+        "rent_expense_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "rent_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:00:56Z",
+        "source": "Expansion batch 11; continuing delegated review; complete rendered teaching/options/stored hints, all amount/scaffold/contrast and unrelated balance regressions, representative full/faded offline terminal review; see docs/EXPANSION-BATCH11-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What benefit does this payment cover: occupancy already used or the separate future policy?",
+          "explanation": "Rent Expense records this month's used workspace. The separately recorded future insurance remains an asset and is not part of this payment."
+        },
+        "counter_account": {
+          "hint": "Does the current rent payment draw on cash or use up the separate insurance coverage?",
+          "explanation": "Cash decreases for rent paid today. Prepaid Insurance stays unchanged; it is a different benefit."
+        },
+        "balanced_entry": {
+          "hint": "Which current cost and payment occur while the future policy remains unused?",
+          "explanation": "Debit Rent Expense ${amount_dollars} and Credit Cash ${amount_dollars}. Do not consume or purchase the separate recorded insurance again."
+        },
+        "equation_effect": {
+          "hint": "Does an unrelated unused policy offset the cost of current occupancy?",
+          "explanation": "Assets decrease through Cash and equity decreases through Rent Expense by ${amount_dollars}. Liabilities and the separate insurance asset are unchanged."
+        }
+      }
+    },
+    {
+      "id": "borrow_cash_collateral",
+      "version": 1,
+      "family_id": "borrow_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company receives ${amount_dollars} cash today from a bank and signs a promissory note requiring repayment. A machine already owned and recorded by the company is pledged as collateral, but remains owned, held, and used by the company. No machine is sold, delivered to the bank, or purchased today, and no shares or customer services are involved. Record only today's new loan receipt; ignore interest and assume no fees.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "notes_payable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:00:56Z",
+        "source": "Expansion batch 11; continuing delegated review; complete rendered teaching/options/stored hints, all amount/scaffold/contrast and unrelated balance regressions, representative full/faded offline terminal review; see docs/EXPANSION-BATCH11-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What new resource arrives while the already owned machine stays in use?",
+          "explanation": "Cash records the company's receipt of the bank loan. Pledging an existing machine does not acquire or dispose of it in this event."
+        },
+        "counter_account": {
+          "hint": "Must the company repay the bank even though it offered security?",
+          "explanation": "Notes Payable records the repayment obligation. Collateral does not turn the bank into an owner or customer."
+        },
+        "balanced_entry": {
+          "hint": "What money arrives and repayment promise arises without any machine changing ownership?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Notes Payable ${amount_dollars}. Leave the already recorded Equipment balance unchanged; collateral is not a sale or new purchase."
+        },
+        "equation_effect": {
+          "hint": "Does the company still own its machine after securing this new debt?",
+          "explanation": "Assets increase through Cash and liabilities increase through Notes Payable by ${amount_dollars}. Equity and existing Equipment are unchanged."
+        }
+      }
+    },
+    {
+      "id": "issue_shares_existing_lender",
+      "version": 1,
+      "family_id": "issue_shares",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation receives ${amount_dollars} cash today from an investor in exchange for newly issued common shares. The investor also holds a separate loan to the corporation, already recorded last month, but that debt is neither repaid, converted to shares, nor increased today. Today's cash buys ownership only and requires no repayment. No customer work is involved. Record only the new share issuance with the full receipt as share capital; ignore par-value splits and fees.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "common_stock_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "common_stock",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:00:56Z",
+        "source": "Expansion batch 11; continuing delegated review; complete rendered teaching/options/stored hints, all amount/scaffold/contrast and unrelated balance regressions, representative full/faded offline terminal review; see docs/EXPANSION-BATCH11-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrives for the newly issued shares today?",
+          "explanation": "Cash records the new receipt. The investor's separate previously recorded loan is not today's payment."
+        },
+        "counter_account": {
+          "hint": "Does this new payment buy ownership or add to the investor's separate loan?",
+          "explanation": "Common Stock records the new ownership capital. Notes Payable stays unchanged because the earlier loan is neither settled nor increased."
+        },
+        "balanced_entry": {
+          "hint": "What new capital arrives while the investor's older debt claim remains intact?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Common Stock ${amount_dollars}. Do not convert, repay, or repeat the separate recorded loan."
+        },
+        "equation_effect": {
+          "hint": "Does an investor's older lender role make this ownership payment repayable?",
+          "explanation": "Assets and equity increase by ${amount_dollars}; liabilities are unchanged. Existing debt remains owed separately from the newly issued shares."
+        },
+        "direction": {
+          "hint": "Does today's share payment add money even while the older loan stays separately owed?",
+          "explanation": "Cash increases by today's receipt for new shares. The earlier loan remains owed, but today's ownership payment adds no repayment obligation."
+        }
+      }
+    },
+    {
+      "id": "prepaid_purchase_budget_label",
+      "version": 1,
+      "family_id": "prepaid_purchase",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today for an insurance policy covering next month only. Its internal cash budget labels the payment insurance expense, but none of this policy's coverage has begun or been used today. No amount was previously recorded as owed or paid for this policy. The insurer is paid in full. Record the purchase based on the unused future protection, not the budget label.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "prepaid_insurance_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "prepaid_insurance",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:00:56Z",
+        "source": "Expansion batch 11; continuing delegated review; complete rendered teaching/options/stored hints, all amount/scaffold/contrast and unrelated balance regressions, representative full/faded offline terminal review; see docs/EXPANSION-BATCH11-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Has the policy supplied protection yet, regardless of the cash-budget label?",
+          "explanation": "Prepaid Insurance records the unused future protection. A spending label in a cash budget does not establish that a benefit was consumed."
+        },
+        "counter_account": {
+          "hint": "What resource left when the insurer was paid in full?",
+          "explanation": "Cash decreases by the premium paid today. There is no remaining payable and no consumption entry yet."
+        },
+        "balanced_entry": {
+          "hint": "Does paying for next month's protection use it up today?",
+          "explanation": "Debit Prepaid Insurance ${amount_dollars} and Credit Cash ${amount_dollars}. Calling the budget line an expense does not change the unused benefit into current Insurance Expense."
+        },
+        "equation_effect": {
+          "hint": "Is the payment only a loss of resources, or does unused protection replace cash?",
+          "explanation": "Prepaid Insurance increases and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. The budget label creates no separate posting."
+        }
+      }
+    },
+    {
+      "id": "prepaid_consumption_recent_payment",
+      "version": 1,
+      "family_id": "prepaid_consumption",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At month-end, a company records ${amount_dollars} of insurance protection that expired during this month. It bought the policy at the start of this same month, before any coverage expired, and already recorded the full payment as a prepaid asset then. The stated amount is only this month's consumed portion; additional coverage remains for later months. No cash is paid today and this consumption has not yet been recorded. Record only month-end consumption, even though the purchase and consumption occur in the same month.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "insurance_expense_classification",
+        "prepaid_insurance_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "insurance_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "prepaid_insurance",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:00:56Z",
+        "source": "Expansion batch 11; continuing delegated review; complete rendered teaching/options/stored hints, all amount/scaffold/contrast and unrelated balance regressions, representative full/faded offline terminal review; see docs/EXPANSION-BATCH11-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What cost has been used by month-end after the earlier purchase was recorded?",
+          "explanation": "Insurance Expense records this month's expired protection. Purchase and consumption remain different events even within one month."
+        },
+        "counter_account": {
+          "hint": "Which recorded benefit has been partly consumed without another payment?",
+          "explanation": "Prepaid Insurance decreases for the expired portion. Cash was already credited at purchase and future coverage remains an asset."
+        },
+        "balanced_entry": {
+          "hint": "What part of the recorded policy expired after its earlier same-month purchase?",
+          "explanation": "Debit Insurance Expense ${amount_dollars} and Credit Prepaid Insurance ${amount_dollars}. Do not repeat the cash payment or expense the still-unused remainder."
+        },
+        "equation_effect": {
+          "hint": "Does recognizing expired protection require paying the premium a second time?",
+          "explanation": "Assets decrease through Prepaid Insurance and equity decreases through Insurance Expense by ${amount_dollars}. Cash and liabilities are unchanged; future coverage remains."
+        }
+      }
+    }
+  ]
+}

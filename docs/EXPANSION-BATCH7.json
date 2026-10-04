@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_rent_before_opening",
+      "version": 1,
+      "family_id": "cash_rent",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today for rented workspace used during the current month to prepare for opening. It has served no customers yet, but this month's occupancy has been used. The payment covers no future months and buys no building or equipment. No amount was previously recorded as owed or prepaid. Record only this current-month rent payment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_expense",
+        "rent_expense_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "rent_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:30:08Z",
+        "source": "Expansion batch 7; continuing user-delegated review; complete rendered teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, prior-capital checks, and representative full/faded offline terminal review; see docs/EXPANSION-BATCH7-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Was this month's use of space consumed even though customer work has not started?",
+          "explanation": "Rent Expense records current workspace use. Having no revenue yet does not preserve occupancy already used as a future asset. This event buys neither equipment nor future occupancy."
+        },
+        "counter_account": {
+          "hint": "Was the landlord paid today or left waiting for payment?",
+          "explanation": "Cash decreases because the landlord was paid today. No unpaid obligation remains and no prepaid balance is being used."
+        },
+        "balanced_entry": {
+          "hint": "Space was used this month and paid for today. What cost arose before the company opened?",
+          "explanation": "Debit Rent Expense ${amount_dollars} and Credit Cash ${amount_dollars}. Current occupancy is an expense even before the first customer sale. An asset debit would retain a benefit already consumed."
+        },
+        "equation_effect": {
+          "hint": "Does a lack of customer revenue prevent current occupancy from reducing the owners' equity?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases by ${amount_dollars} through Rent Expense. Liabilities are unchanged. The current cost affects income even with no revenue yet."
+        }
+      }
+    },
+    {
+      "id": "cash_rent_stockholder_landlord",
+      "version": 1,
+      "family_id": "cash_rent",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation pays ${amount_dollars} cash today to a landlord who also owns shares in the corporation. The payment is solely the agreed rent for workspace used during the current month, not a distribution for share ownership or a loan repayment. It covers no future months and acquires no building. No rent was previously recorded as owed or prepaid. Record only this rent payment from the corporation's perspective.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_expense",
+        "rent_expense_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "rent_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:30:08Z",
+        "source": "Expansion batch 7; continuing user-delegated review; complete rendered teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, prior-capital checks, and representative full/faded offline terminal review; see docs/EXPANSION-BATCH7-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Was this payment made for using space or solely because the recipient owns shares?",
+          "explanation": "Rent Expense records current workspace use. The landlord's ownership of shares does not turn payment for occupancy into Dividends. Classify the economic purpose, not just the recipient."
+        },
+        "counter_account": {
+          "hint": "What company resource was transferred to pay the rent today?",
+          "explanation": "Cash decreases and is credited. The landlord received payment now; no payable remains and no loan principal was settled."
+        },
+        "balanced_entry": {
+          "hint": "The shareholder is being paid as landlord. What current cost and payment should the corporation record?",
+          "explanation": "Debit Rent Expense ${amount_dollars} and Credit Cash ${amount_dollars}. Dividends would describe a distribution for ownership rather than payment for workspace use. A note debit would incorrectly settle a loan."
+        },
+        "equation_effect": {
+          "hint": "Does paying a shareholder for current occupancy affect income or only record an owner distribution?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases through Rent Expense. Liabilities are unchanged. This expense reduces income; a dividend has the same total equation decrease but does not reduce income."
+        }
+      }
+    },
+    {
+      "id": "issue_shares_customer_investor",
+      "version": 1,
+      "family_id": "issue_shares",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation receives ${amount_dollars} cash today from an existing customer in exchange for newly issued common shares. This payment buys ownership only; it is not payment for completed or future services, and it settles no customer invoice. No repayment is promised. The full receipt is recorded as share capital; ignore par-value splits and fees. Record only today's share issuance.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "common_stock_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "common_stock",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:30:08Z",
+        "source": "Expansion batch 7; continuing user-delegated review; complete rendered teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, prior-capital checks, and representative full/faded offline terminal review; see docs/EXPANSION-BATCH7-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource did the corporation receive from the customer acting as an investor?",
+          "explanation": "Cash records the money received today. Being an existing customer does not make every receipt payment for work or collection of an invoice."
+        },
+        "direction": {
+          "hint": "Did the corporation receive additional money or pay any out in this issuance?",
+          "explanation": "Cash increases by the investor receipt. No customer invoice is settled and no company payment occurs."
+        },
+        "counter_account": {
+          "hint": "What did the payer receive in exchange: services, repayment rights, or ownership?",
+          "explanation": "Common Stock records the newly issued ownership shares. Service Revenue would imply earned work; Unearned Revenue would imply future work owed; Notes Payable would imply a repayment obligation. None describes this ownership purchase."
+        },
+        "balanced_entry": {
+          "hint": "The customer bought new ownership shares rather than services. What resource and capital contribution arose?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Common Stock ${amount_dollars}. Customer identity does not justify revenue or an advance liability. No receivable was settled and no loan was received."
+        },
+        "equation_effect": {
+          "hint": "Does selling ownership to a customer create income from services?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and equity increases by ${amount_dollars} through Common Stock. Liabilities and net income are unchanged. This is contributed capital, not earnings."
+        }
+      }
+    },
+    {
+      "id": "issue_shares_separate_private_sale",
+      "version": 1,
+      "family_id": "issue_shares",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation issues new common shares today and receives ${amount_dollars} cash directly from an investor for those new shares. Separately, two existing stockholders trade old shares between themselves using their own money; the corporation receives or pays nothing in that private trade. Neither event involves customer services or a loan. Record only the corporation's receipt for newly issued shares, with the full amount as share capital; ignore par-value splits and fees.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "common_stock_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "common_stock",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:30:08Z",
+        "source": "Expansion batch 7; continuing user-delegated review; complete rendered teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, prior-capital checks, and representative full/faded offline terminal review; see docs/EXPANSION-BATCH7-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Which share transaction actually brings money into the corporation?",
+          "explanation": "Cash records the corporation's receipt for its new shares. Money exchanged privately between stockholders belongs to them and does not change the corporation's cash."
+        },
+        "direction": {
+          "hint": "Does the private trade cancel the money the corporation received for new shares?",
+          "explanation": "Cash increases by the stated new-share receipt. The separate private trade creates no company cash movement and does not reverse the issuance."
+        },
+        "counter_account": {
+          "hint": "Did the corporation issue new ownership interests for the money it received?",
+          "explanation": "Common Stock increases for the corporation's new issuance. A private resale does not create additional company capital. The receipt is neither customer revenue nor repayable financing."
+        },
+        "balanced_entry": {
+          "hint": "Record the company's own issuance only. What resource and ownership contribution arose?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Common Stock ${amount_dollars}. No entry for the private trade belongs in the corporation's books. Recording nothing would omit the actual new issuance; revenue would misclassify contributed capital."
+        },
+        "equation_effect": {
+          "hint": "Which transaction changes the corporation's resources and contributed capital?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and equity increases by ${amount_dollars} (Common Stock) for the new issuance. Liabilities and income are unchanged. The private stockholder trade has no company equation effect."
+        }
+      }
+    },
+    {
+      "id": "borrow_cash_prior_investment",
+      "version": 1,
+      "family_id": "borrow_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation receives ${amount_dollars} cash today from a stockholder under a newly signed promissory note requiring repayment. The stockholder also bought newly issued shares last month, and that separate investment was already recorded then. No shares are issued today and no customer services are involved. Record only today's new loan; ignore interest.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "notes_payable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:30:08Z",
+        "source": "Expansion batch 7; continuing user-delegated review; complete rendered teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, prior-capital checks, and representative full/faded offline terminal review; see docs/EXPANSION-BATCH7-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived today separately from the investment already recorded last month?",
+          "explanation": "Cash records today's new loan proceeds. The prior investment remains recorded and is not recorded a second time."
+        },
+        "counter_account": {
+          "hint": "Does today's agreement require repayment or issue more ownership?",
+          "explanation": "Notes Payable records the new repayment obligation. Common Stock relates to last month's already recorded share issuance; being a stockholder does not make this new loan another capital contribution."
+        },
+        "balanced_entry": {
+          "hint": "Today's receipt requires repayment and issues no shares. What resource and obligation arose?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Notes Payable ${amount_dollars}. Do not repeat last month's share contribution. Revenue would treat borrowing as earning; a stock credit would ignore the new note."
+        },
+        "equation_effect": {
+          "hint": "Does an earlier investment remove the repayment obligation under today's note?",
+          "explanation": "Assets increase by ${amount_dollars} (Cash) and liabilities increase by ${amount_dollars} (Notes Payable). Equity and income are unchanged. The previously recorded share capital remains unchanged."
+        }
+      }
+    }
+  ]
+}

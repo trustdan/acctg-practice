@@ -198,6 +198,9 @@ func (m *Model) renderDrill(contentWidth int) string {
 	var sections []string
 
 	sections = append(sections, m.renderHeader(contentWidth))
+	if m.CurrentInstance != nil && m.CurrentInstance.Pedagogy.Remediation {
+		sections = append(sections, m.Styles.PromptBox.Width(contentWidth).Render("Compare this event with the previous one. This guided comparison does not count as independent retrieval."))
+	}
 
 	if m.CurrentInstance != nil {
 		scenarioText := m.Styles.ScenarioBox.
@@ -526,7 +529,7 @@ func (m *Model) renderMastery(contentWidth int) string {
 
 	// Table header
 	header := fmt.Sprintf("%-28s %-10s %-8s %-9s %-9s %-12s",
-		"Concept", "Successes", "Retent", "Delayed", "Scaffold", "Status")
+		"Concept", "Successes", "Retent", "Transfer", "Scaffold", "Status")
 	sections = append(sections, m.Styles.JournalHeader.Render(header))
 
 	// All concept IDs
@@ -558,17 +561,17 @@ func (m *Model) renderMastery(contentWidth int) string {
 		} else {
 			indep := fmt.Sprintf("%d / %d", stats.IndependentSuccesses, stats.IndependentAttempts)
 			ret := fmt.Sprintf("%.0f%%", stats.RetentionFactor(now)*100.0)
-			delayedStr := fmt.Sprintf("%d", stats.DelayedSuccesses)
-			if stats.HasDelayedRetrieval {
+			delayedStr := fmt.Sprintf("%d/%d", stats.TransferDelayedSuccesses, stats.SuccessfulSettings)
+			if stats.TransferDelayedSuccesses > 0 && stats.SuccessfulSettings >= 2 {
 				delayedStr += " ✓"
 			}
 			scaffStr := stats.ScaffoldLevel.String()
 
 			status := "Learning"
-			if stats.EffectiveScore(now) >= 0.80 && stats.HasDelayedRetrieval {
+			if stats.EffectiveScore(now) >= 0.80 && stats.TransferDelayedSuccesses > 0 && stats.SuccessfulSettings >= 2 {
 				status = "Mastered"
-			} else if stats.EffectiveScore(now) >= 0.80 && !stats.HasDelayedRetrieval {
-				status = "Needs Spacing"
+			} else if stats.EffectiveScore(now) >= 0.80 && (stats.TransferDelayedSuccesses == 0 || stats.SuccessfulSettings < 2) {
+				status = "Needs Transfer"
 			} else if stats.EffectiveScore(now) < 0.50 {
 				status = "Needs Review"
 			}
@@ -579,6 +582,7 @@ func (m *Model) renderMastery(contentWidth int) string {
 		}
 	}
 
+	sections = append(sections, "Transfer: spaced independent successes / different reasoning contexts. Guided comparisons are assisted practice.")
 	// Session summary stats & Settings
 	accPct := 0.0
 	if m.SessionAttempts > 0 {
@@ -1476,6 +1480,9 @@ func (m *Model) renderExamSummary(contentWidth int) string {
 
 func (m *Model) renderExamResumePrompt(contentWidth int) string {
 	var sections []string
+	if m.ExamNotice != "" {
+		sections = append(sections, m.Styles.ExamWarningBox.Render(m.ExamNotice))
+	}
 
 	sections = append(sections, m.Styles.CardTitle.Render("⚠️  INTERRUPTED EXAM SESSION DETECTED"))
 

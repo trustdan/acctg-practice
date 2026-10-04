@@ -1,0 +1,769 @@
+{
+  "schema_version": 1,
+  "policy_version": 2,
+  "review": {
+    "reviewer": "Codex (review delegated by trustdan)",
+    "approved_at": "2026-10-04T02:17:25Z",
+    "source": "Reviewed amount interpretation and contextual account options; see docs/QUALITY-REVIEW90.md"
+  },
+  "questions": [
+    {
+      "question_id": "cash_service_basic",
+      "question_version": 4,
+      "setting_group": "cash_service.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "customer_advance_basic",
+      "question_version": 3,
+      "setting_group": "customer_advance.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "service_on_credit_basic",
+      "question_version": 3,
+      "setting_group": "service_on_credit.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_basic",
+      "question_version": 3,
+      "setting_group": "collect_receivable.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "earn_advance_basic",
+      "question_version": 4,
+      "setting_group": "earn_advance.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_rent_basic",
+      "question_version": 3,
+      "setting_group": "cash_rent.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "borrow_cash_basic",
+      "question_version": 2,
+      "setting_group": "borrow_cash.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_shares_basic",
+      "question_version": 2,
+      "setting_group": "issue_shares.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_insurance_retail",
+      "question_version": 2,
+      "setting_group": "prepaid_purchase.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_consumption_retail",
+      "question_version": 2,
+      "setting_group": "prepaid_consumption.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "equipment_cash_rental",
+      "question_version": 2,
+      "setting_group": "equipment_purchase_cash.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "repay_principal_logistics",
+      "question_version": 2,
+      "setting_group": "repay_note_principal.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "dividend_cash_retail",
+      "question_version": 3,
+      "setting_group": "dividend_cash.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_service_webdev",
+      "question_version": 3,
+      "setting_group": "cash_service.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "service_credit_consulting",
+      "question_version": 3,
+      "setting_group": "service_on_credit.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_consulting",
+      "question_version": 3,
+      "setting_group": "collect_receivable.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "customer_advance_logistics",
+      "question_version": 3,
+      "setting_group": "customer_advance.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "earn_advance_logistics",
+      "question_version": 4,
+      "setting_group": "earn_advance.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_service_training",
+      "question_version": 1,
+      "setting_group": "cash_service.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "customer_advance_training",
+      "question_version": 1,
+      "setting_group": "customer_advance.baseline",
+      "contrasts": [
+        {
+          "question_id": "cash_service_unpaid_booking",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "earn_advance_training",
+      "question_version": 1,
+      "setting_group": "earn_advance.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "service_on_credit_repairs",
+      "question_version": 1,
+      "setting_group": "service_on_credit.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_repairs",
+      "question_version": 1,
+      "setting_group": "collect_receivable.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "borrow_cash_future_payroll",
+      "question_version": 1,
+      "setting_group": "borrow_cash.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_purchase_clinic",
+      "question_version": 1,
+      "setting_group": "prepaid_purchase.baseline",
+      "contrasts": [
+        {
+          "question_id": "prepaid_consumption_clinic",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_consumption_clinic",
+      "question_version": 1,
+      "setting_group": "prepaid_consumption.baseline",
+      "contrasts": [
+        {
+          "question_id": "prepaid_purchase_clinic",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_rent_clinic",
+      "question_version": 1,
+      "setting_group": "cash_rent.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_shares_studio",
+      "question_version": 1,
+      "setting_group": "issue_shares.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "repay_principal_studio",
+      "question_version": 1,
+      "setting_group": "repay_note_principal.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "dividend_cash_studio",
+      "question_version": 1,
+      "setting_group": "dividend_cash.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "equipment_purchase_workshop",
+      "question_version": 1,
+      "setting_group": "equipment_purchase_cash.baseline",
+      "contrasts": [
+        {
+          "question_id": "prepaid_purchase_machine_cover",
+          "question_version": 1
+        },
+        {
+          "question_id": "cash_rent_before_opening",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "equipment_purchase_replacement",
+      "question_version": 1,
+      "setting_group": "equipment_purchase_cash.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_rent_workshop",
+      "question_version": 1,
+      "setting_group": "cash_rent.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "borrow_cash_future_equipment",
+      "question_version": 1,
+      "setting_group": "borrow_cash.benefit_boundary",
+      "contrasts": [
+        {
+          "question_id": "issue_shares_future_equipment",
+          "question_version": 1
+        },
+        {
+          "question_id": "repay_principal_equipment_loan",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_shares_future_equipment",
+      "question_version": 1,
+      "setting_group": "issue_shares.benefit_boundary",
+      "contrasts": [
+        {
+          "question_id": "borrow_cash_future_equipment",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_purchase_renewal",
+      "question_version": 1,
+      "setting_group": "prepaid_purchase.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_consumption_partial_policy",
+      "question_version": 1,
+      "setting_group": "prepaid_consumption.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_prepaid_consumption_partial_policy"
+    },
+    {
+      "question_id": "repay_principal_equipment_loan",
+      "question_version": 1,
+      "setting_group": "repay_note_principal.benefit_boundary",
+      "contrasts": [
+        {
+          "question_id": "borrow_cash_future_equipment",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "dividend_cash_working_owners",
+      "question_version": 1,
+      "setting_group": "dividend_cash.counterparty_role",
+      "contrasts": [
+        {
+          "question_id": "cash_rent_stockholder_landlord",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "borrow_cash_stockholder_note",
+      "question_version": 1,
+      "setting_group": "borrow_cash.counterparty_role",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_service_separate_job",
+      "question_version": 1,
+      "setting_group": "cash_service.separate_event",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "service_on_credit_new_client",
+      "question_version": 1,
+      "setting_group": "service_on_credit.separate_event",
+      "contrasts": [
+        {
+          "question_id": "earn_advance_separate_unpaid_job",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_installment",
+      "question_version": 1,
+      "setting_group": "collect_receivable.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_collect_receivable_installment"
+    },
+    {
+      "question_id": "customer_advance_additional_receipt",
+      "question_version": 1,
+      "setting_group": "customer_advance.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_customer_advance_additional_receipt"
+    },
+    {
+      "question_id": "earn_advance_completed_session",
+      "question_version": 1,
+      "setting_group": "earn_advance.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_earn_advance_completed_session"
+    },
+    {
+      "question_id": "equipment_cash_existing_note",
+      "question_version": 1,
+      "setting_group": "equipment_purchase_cash.separate_event",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_purchase_machine_cover",
+      "question_version": 1,
+      "setting_group": "prepaid_purchase.benefit_boundary",
+      "contrasts": [
+        {
+          "question_id": "equipment_purchase_workshop",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_consumption_no_claim",
+      "question_version": 1,
+      "setting_group": "prepaid_consumption.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "repay_principal_final_payment",
+      "question_version": 1,
+      "setting_group": "repay_note_principal.partial_final",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "dividend_cash_prior_earnings",
+      "question_version": 1,
+      "setting_group": "dividend_cash.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_rent_before_opening",
+      "question_version": 1,
+      "setting_group": "cash_rent.performance_timing",
+      "contrasts": [
+        {
+          "question_id": "equipment_purchase_workshop",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_rent_stockholder_landlord",
+      "question_version": 1,
+      "setting_group": "cash_rent.counterparty_role",
+      "contrasts": [
+        {
+          "question_id": "dividend_cash_working_owners",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_shares_customer_investor",
+      "question_version": 1,
+      "setting_group": "issue_shares.counterparty_role",
+      "contrasts": [
+        {
+          "question_id": "cash_service_stockholder_customer",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_shares_separate_private_sale",
+      "question_version": 1,
+      "setting_group": "issue_shares.separate_event",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "borrow_cash_prior_investment",
+      "question_version": 1,
+      "setting_group": "borrow_cash.separate_event",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_service_unpaid_booking",
+      "question_version": 1,
+      "setting_group": "cash_service.performance_timing",
+      "contrasts": [
+        {
+          "question_id": "customer_advance_training",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "service_on_credit_due_today",
+      "question_version": 1,
+      "setting_group": "service_on_credit.paperwork_deadline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_overdue",
+      "question_version": 1,
+      "setting_group": "collect_receivable.paperwork_deadline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "customer_advance_same_day",
+      "question_version": 1,
+      "setting_group": "customer_advance.performance_timing",
+      "contrasts": [
+        {
+          "question_id": "earn_advance_same_day",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "earn_advance_same_day",
+      "question_version": 1,
+      "setting_group": "earn_advance.performance_timing",
+      "contrasts": [
+        {
+          "question_id": "customer_advance_same_day",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_purchase_discounted_policy",
+      "question_version": 1,
+      "setting_group": "prepaid_purchase.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": "amount_prepaid_purchase_discounted_policy"
+    },
+    {
+      "question_id": "prepaid_consumption_closed_month",
+      "question_version": 1,
+      "setting_group": "prepaid_consumption.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "equipment_cash_secondhand",
+      "question_version": 1,
+      "setting_group": "equipment_purchase_cash.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "repay_principal_early_partial",
+      "question_version": 1,
+      "setting_group": "repay_note_principal.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_repay_principal_early_partial"
+    },
+    {
+      "question_id": "dividend_cash_total_distribution",
+      "question_version": 1,
+      "setting_group": "dividend_cash.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_dividend_cash_total_distribution"
+    },
+    {
+      "question_id": "cash_service_third_party",
+      "question_version": 1,
+      "setting_group": "cash_service.counterparty_role",
+      "contrasts": [
+        {
+          "question_id": "collect_receivable_third_party",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "service_on_credit_invoice_later",
+      "question_version": 1,
+      "setting_group": "service_on_credit.paperwork_deadline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_third_party",
+      "question_version": 1,
+      "setting_group": "collect_receivable.counterparty_role",
+      "contrasts": [
+        {
+          "question_id": "cash_service_third_party",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "customer_advance_full_price",
+      "question_version": 1,
+      "setting_group": "customer_advance.label",
+      "contrasts": [
+        {
+          "question_id": "collect_receivable_before_due",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "earn_advance_paperwork_later",
+      "question_version": 1,
+      "setting_group": "earn_advance.paperwork_deadline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "cash_rent_separate_insurance",
+      "question_version": 1,
+      "setting_group": "cash_rent.separate_event",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "borrow_cash_collateral",
+      "question_version": 1,
+      "setting_group": "borrow_cash.benefit_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_shares_existing_lender",
+      "question_version": 1,
+      "setting_group": "issue_shares.separate_event",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_purchase_budget_label",
+      "question_version": 1,
+      "setting_group": "prepaid_purchase.label",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_consumption_recent_payment",
+      "question_version": 1,
+      "setting_group": "prepaid_consumption.performance_timing",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "equipment_cash_additional_machine",
+      "question_version": 1,
+      "setting_group": "equipment_purchase_cash.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_equipment_cash_additional_machine"
+    },
+    {
+      "question_id": "repay_principal_bank_landlord",
+      "question_version": 1,
+      "setting_group": "repay_note_principal.counterparty_role",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "dividend_cash_service_provider",
+      "question_version": 1,
+      "setting_group": "dividend_cash.separate_event",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_purchase_broker_own_policy",
+      "question_version": 1,
+      "setting_group": "prepaid_purchase.entity_boundary",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "prepaid_consumption_final_remaining",
+      "question_version": 1,
+      "setting_group": "prepaid_consumption.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_prepaid_consumption_final_remaining"
+    },
+    {
+      "question_id": "cash_service_stockholder_customer",
+      "question_version": 1,
+      "setting_group": "cash_service.counterparty_role",
+      "contrasts": [
+        {
+          "question_id": "issue_shares_customer_investor",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "service_vs_capital"
+    },
+    {
+      "question_id": "service_on_credit_customer_withdrawal",
+      "question_version": 1,
+      "setting_group": "service_on_credit.entity_boundary",
+      "contrasts": [
+        {
+          "question_id": "cash_service_undeposited_notes",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_future_booking",
+      "question_version": 1,
+      "setting_group": "collect_receivable.separate_event",
+      "contrasts": [],
+      "distractor_profile": "collection_vs_advance"
+    },
+    {
+      "question_id": "customer_advance_internal_setup",
+      "question_version": 1,
+      "setting_group": "customer_advance.performance_timing",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "earn_advance_final_remaining",
+      "question_version": 1,
+      "setting_group": "earn_advance.partial_final",
+      "contrasts": [],
+      "distractor_profile": "amount_earn_advance_final_remaining"
+    },
+    {
+      "question_id": "cash_service_undeposited_notes",
+      "question_version": 1,
+      "setting_group": "cash_service.entity_boundary",
+      "contrasts": [
+        {
+          "question_id": "service_on_credit_customer_withdrawal",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "held_cash_vs_no_entry"
+    },
+    {
+      "question_id": "service_on_credit_cash_sale_label",
+      "question_version": 1,
+      "setting_group": "service_on_credit.label",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "collect_receivable_before_due",
+      "question_version": 1,
+      "setting_group": "collect_receivable.paperwork_deadline",
+      "contrasts": [
+        {
+          "question_id": "customer_advance_full_price",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "collection_vs_advance"
+    },
+    {
+      "question_id": "customer_advance_customer_books",
+      "question_version": 1,
+      "setting_group": "customer_advance.entity_boundary",
+      "contrasts": [],
+      "distractor_profile": "seller_receipt_vs_no_entry"
+    },
+    {
+      "question_id": "earn_advance_separate_unpaid_job",
+      "question_version": 1,
+      "setting_group": "earn_advance.separate_event",
+      "contrasts": [
+        {
+          "question_id": "service_on_credit_new_client",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "earned_advance_vs_receivable"
+    }
+  ]
+}

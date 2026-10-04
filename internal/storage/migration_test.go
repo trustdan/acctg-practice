@@ -39,16 +39,16 @@ func TestFreshDatabaseAppliesAllMigrations(t *testing.T) {
 	if err := rawDB.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatalf("failed to query schema_migrations: %v", err)
 	}
-	if count != 8 {
-		t.Fatalf("expected 8 migrations, got %d", count)
+	if count != 9 {
+		t.Fatalf("expected 9 migrations, got %d", count)
 	}
 
 	var maxVer int
 	if err := rawDB.QueryRow("SELECT MAX(version) FROM schema_migrations").Scan(&maxVer); err != nil {
 		t.Fatalf("failed to query max version: %v", err)
 	}
-	if maxVer != 8 {
-		t.Fatalf("expected max version 8, got %d", maxVer)
+	if maxVer != 9 {
+		t.Fatalf("expected max version 9, got %d", maxVer)
 	}
 
 	// Verify all expected tables exist
@@ -304,12 +304,12 @@ func TestMigrationsIdempotent(t *testing.T) {
 		t.Fatalf("re-applying migrations failed: %v", err)
 	}
 
-	// Verify exactly 8 migration rows exist without duplicates
+	// Verify exactly 9 migration rows exist without duplicates
 	var count int
 	if err := rawDB.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatalf("failed counting migrations: %v", err)
 	}
-	if count != 8 {
-		t.Fatalf("expected 8 migration records, got %d", count)
+	if count != 9 {
+		t.Fatalf("expected 9 migration records, got %d", count)
 	}
 }

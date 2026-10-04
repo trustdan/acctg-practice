@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "prepaid_purchase_discounted_policy",
+      "version": 1,
+      "family_id": "prepaid_purchase",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today for an insurance policy covering next month only. The stated amount is the entire agreed premium after an upfront price reduction; the insurer's higher advertised price was never recorded or owed. No coverage has begun or been used today, no amount was previously recorded as owed, and there are no fees or separate rebates. Record only the purchase at the price actually paid.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "prepaid_insurance_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "prepaid_insurance",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:56:16Z",
+        "source": "Expansion batch 9; continuing delegated review; full teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, remaining balances/total-distribution ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH9-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does the lower agreed price change whether the purchased protection is still available for the future?",
+          "explanation": "Prepaid Insurance records the unused protection at its actual purchase cost. A price reduction does not make future coverage an expense today or create a separate earning from the insurer's advertised price."
+        },
+        "counter_account": {
+          "hint": "How much money actually left today, apart from a higher price that was never owed?",
+          "explanation": "Cash decreases by the stated agreed premium. No payable or separate refund exists: the insurer was paid in full at the reduced purchase price."
+        },
+        "balanced_entry": {
+          "hint": "Unused protection was fully purchased at the agreed price. What benefit arrived and what money left?",
+          "explanation": "Debit Prepaid Insurance ${amount_dollars} and Credit Cash ${amount_dollars}. Record the actual premium, not an unaccepted advertised price or separate discount income. None of the purchased coverage is an expense yet."
+        },
+        "equation_effect": {
+          "hint": "Does a never-recorded advertised price represent an additional resource or obligation in this purchase?",
+          "explanation": "Prepaid Insurance increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. The upfront price reduction sets cost; it is not a separate revenue or debt-settlement event."
+        }
+      }
+    },
+    {
+      "id": "prepaid_consumption_closed_month",
+      "version": 1,
+      "family_id": "prepaid_consumption",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At month-end, a company records ${amount_dollars} of insurance protection that expired during this month from a policy paid for and recorded as a prepaid asset earlier. The business was temporarily closed for the month and served no customers, but its policy remained in force throughout the month. The stated amount is this month's used protection and has not previously been expensed. Additional coverage remains for future months. No cash is paid today. Record only the expired portion.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "prepaid_vs_expense",
+        "insurance_expense_classification",
+        "prepaid_insurance_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "insurance_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "prepaid_insurance",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:56:16Z",
+        "source": "Expansion batch 9; continuing delegated review; full teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, remaining balances/total-distribution ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH9-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Did the policy protect the business during the month even while no customers were served?",
+          "explanation": "Insurance Expense records protection consumed during the elapsed month. Being temporarily closed does not preserve that month's protection as a future asset or make its cost depend on customer revenue."
+        },
+        "counter_account": {
+          "hint": "Can a future-benefit balance still include protection for the month that has already ended?",
+          "explanation": "Prepaid Insurance decreases by the expired portion. Future months remain prepaid. Cash was paid earlier and must not be credited again merely because the business was closed."
+        },
+        "balanced_entry": {
+          "hint": "The month's protection expired while the business was closed. What cost arose and what prepaid portion was used?",
+          "explanation": "Debit Insurance Expense ${amount_dollars} and Credit Prepaid Insurance ${amount_dollars}. No entry would keep expired protection as an asset. Do not write off the entire policy or repeat its earlier cash payment; future coverage remains."
+        },
+        "equation_effect": {
+          "hint": "Does having no customer revenue keep the elapsed month's insurance protection available for future use?",
+          "explanation": "Assets decrease by ${amount_dollars} (Prepaid Insurance) and equity decreases through Insurance Expense. Cash and liabilities are unchanged. Only the expired portion is consumed; remaining future protection stays an asset."
+        }
+      }
+    },
+    {
+      "id": "equipment_cash_secondhand",
+      "version": 1,
+      "family_id": "equipment_purchase_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today to buy and take delivery and ownership of a secondhand machine from a dealer. The machine was used by its previous owner, but it is expected to serve this company for several future years. It is bought for business use, not resale, and is not a repair service. No amount was previously recorded as owed, no trade-in occurs, and the dealer is paid in full. Record only this purchase, with no depreciation or additional costs.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "capex_vs_expense",
+        "equipment_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "equipment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:56:16Z",
+        "source": "Expansion batch 9; continuing delegated review; full teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, remaining balances/total-distribution ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH9-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does another owner's earlier use eliminate the machine's several years of future usefulness to this company?",
+          "explanation": "Equipment records the acquired machine at its purchase cost. Secondhand does not mean its benefit is already consumed by this buyer. The machine is held for use rather than resale, and no repair service is purchased."
+        },
+        "direction": {
+          "hint": "Did this company acquire a machine it did not previously own?",
+          "explanation": "Equipment increases by the purchase cost. The dealer's or prior owner's earlier records are not this company's equipment balance. No company machine is sold or traded in."
+        },
+        "counter_account": {
+          "hint": "Did this company pay the dealer now or leave any purchase price unpaid?",
+          "explanation": "Cash decreases because the dealer was paid in full today. No trade payable, new loan, or share issuance arises from this paid purchase."
+        },
+        "balanced_entry": {
+          "hint": "The bought machine still has years of future use for this company. What resource arrives and what resource leaves?",
+          "explanation": "Debit Equipment ${amount_dollars} and Credit Cash ${amount_dollars}. Buying secondhand equipment is not immediate consumption of its entire future benefit. Use this company's purchase cost rather than the prior owner's cost or history."
+        },
+        "equation_effect": {
+          "hint": "After paying the dealer, does this company own a resource useful in future years?",
+          "explanation": "Equipment increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Total assets, liabilities, and equity are unchanged. Secondhand condition does not turn the whole purchase into a current expense; no depreciation is recorded here."
+        }
+      }
+    },
+    {
+      "id": "repay_principal_early_partial",
+      "version": 1,
+      "family_id": "repay_note_principal",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A company pays ${amount_dollars} cash today to its bank as a voluntary early repayment of part of the principal on a previously recorded promissory note. The bank accepts the payment before its scheduled due date. The principal balance before payment is larger than today's payment, so some principal remains owed. This payment contains no interest, fee, or penalty, and no new borrowing occurs; ignore interest. Record only today's principal payment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "principal_repayment_vs_expense",
+        "notes_payable_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "notes_payable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:56:16Z",
+        "source": "Expansion batch 9; continuing delegated review; full teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, remaining balances/total-distribution ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH9-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does paying before the scheduled due date still settle part of an existing repayment obligation?",
+          "explanation": "Notes Payable records the principal obligation being reduced. The payment date does not make principal a current expense or postpone recording an actual accepted repayment."
+        },
+        "direction": {
+          "hint": "After the accepted partial payment, is less principal owed even though the note is not fully settled?",
+          "explanation": "Notes Payable decreases by the stated payment. The unpaid remainder stays a liability; neither the entire original balance nor zero is the new balance."
+        },
+        "counter_account": {
+          "hint": "What resource left when the bank accepted the early payment?",
+          "explanation": "Cash decreases today. A later scheduled due date does not leave money already transferred in Cash. The payment creates no new note or trade payable."
+        },
+        "balanced_entry": {
+          "hint": "The bank accepted only part of the existing principal early. What obligation became smaller and what resource left?",
+          "explanation": "Debit Notes Payable ${amount_dollars} and Credit Cash ${amount_dollars}. Record the actual payment now, not at the later due date. Do not debit an expense or clear the full note; unpaid principal remains."
+        },
+        "equation_effect": {
+          "hint": "Does an early principal payment create a cost, or remove part of a recorded obligation?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and liabilities decrease by ${amount_dollars} (Notes Payable). Equity is unchanged. No interest, fee, or penalty affects income, and the remaining principal stays owed."
+        }
+      }
+    },
+    {
+      "id": "dividend_cash_total_distribution",
+      "version": 1,
+      "family_id": "dividend_cash",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A corporation's board declares and pays a total cash dividend of ${amount_dollars} today, divided among several stockholders according to their share ownership. The stated amount is the corporation's entire distribution to all recipients together, not an amount for each stockholder. No dividend was declared or recorded as owed earlier. No shares are repurchased, no loan is repaid, and no payment is for work. Record only this total declaration and payment.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "dividend_vs_expense",
+        "dividends_classification",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "dividends",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-03T23:56:16Z",
+        "source": "Expansion batch 9; continuing delegated review; full teaching/options/hints, supported semantics, all amounts/scaffolds, contrasts, remaining balances/total-distribution ledger checks, representative full/faded offline terminal review; see docs/EXPANSION-BATCH9-REVIEW.md"
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Are these payments for the owners' work or distributions because they hold shares?",
+          "explanation": "Dividends records the total newly declared ownership distribution. Splitting it among several stockholders does not create an operating expense, buy back shares, or repay a note."
+        },
+        "direction": {
+          "hint": "Does dividing the distribution among owners remove the distribution already declared today?",
+          "explanation": "Dividends increases by the total stated amount. The number of recipients does not multiply that total. This account records distributions rather than an increase in ownership capital."
+        },
+        "counter_account": {
+          "hint": "How much company money leaves in total, regardless of how it is split among recipients?",
+          "explanation": "Cash decreases by the entire stated distribution once. It is not that amount per stockholder. No unpaid dividend remains after today's payment."
+        },
+        "balanced_entry": {
+          "hint": "Record the company's total distribution, not a per-owner amount. What distribution and payment arose?",
+          "explanation": "Debit Dividends ${amount_dollars} and Credit Cash ${amount_dollars}. The sum paid to all stockholders is the stated amount. Do not multiply it by the number of owners or debit Common Stock: no shares were repurchased."
+        },
+        "equation_effect": {
+          "hint": "Does splitting a fixed total among several recipients change the corporation's total outflow?",
+          "explanation": "Assets decrease by ${amount_dollars} (Cash) and equity decreases by ${amount_dollars} through Dividends. Liabilities and net income are unchanged. Record the total once; owner allocations do not increase the company's distribution."
+        }
+      }
+    }
+  ]
+}

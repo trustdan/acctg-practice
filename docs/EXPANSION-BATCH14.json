@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "cash_service_undeposited_notes",
+      "version": 1,
+      "family_id": "cash_service",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair company completes a repair today and receives ${amount_dollars} in physical currency from the customer today. The notes are in the company's locked cash box; the company will deposit them in its bank account tomorrow. This is full payment for the completed repair. No earlier payment, invoice, or accounting entry exists, and no work remains. Record today's completed repair and receipt before the bank deposit.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does money already held in the company's cash box belong to it before a bank deposit?",
+          "explanation": "Cash includes currency already held by the company. Depositing these same notes tomorrow does not postpone today's receipt."
+        },
+        "direction": {
+          "hint": "Does the company hold more currency after the customer hands over the notes?",
+          "explanation": "Cash increases by the currency received today, even while the notes remain in the cash box."
+        },
+        "counter_account": {
+          "hint": "Was the promised repair finished when the company received the notes?",
+          "explanation": "Service Revenue records the completed repair. A later bank deposit does not make the completed service unearned."
+        },
+        "balanced_entry": {
+          "hint": "Have both the company's money and its completed earning changed before the deposit?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Service Revenue ${amount_dollars}. The company already holds the payment; no customer claim or future performance remains."
+        },
+        "equation_effect": {
+          "hint": "What resource and earning exist today while the bank balance has not yet changed?",
+          "explanation": "Assets increase through Cash and equity increases through Service Revenue by ${amount_dollars}. Physical currency is a company asset even before deposit; liabilities are unchanged."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:27:02Z",
+        "source": "Expansion batch 14; continuing delegated review; complete rendered teaching/options/stored hints, amount/scaffold/contrast and ledger regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH14-REVIEW.md"
+      }
+    },
+    {
+      "id": "service_on_credit_cash_sale_label",
+      "version": 1,
+      "family_id": "service_on_credit",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A repair company completes a repair for a new customer today for an agreed price of ${amount_dollars}. The office mistakenly marks its job ticket cash sale, but the customer has made no payment and the company has an enforceable claim for the entire price. The company invoices the customer today. No deposit, prior accounting entry, or remaining work exists. Record the completed unpaid repair using the actual facts, regardless of the ticket label.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "accounts_receivable_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What does the company actually hold: customer money or an unpaid right to collect?",
+          "explanation": "Accounts Receivable records the enforceable unpaid claim. The mistaken cash-sale label cannot create money the company did not receive."
+        },
+        "direction": {
+          "hint": "Does completing unpaid work create or settle the company's claim?",
+          "explanation": "Accounts Receivable increases by the agreed repair price. No cash was received despite the job-ticket label."
+        },
+        "counter_account": {
+          "hint": "Did the repair get completed even though the payment label is mistaken?",
+          "explanation": "Service Revenue records the completed repair. Earning depends on performance here, while the unpaid price remains a receivable."
+        },
+        "balanced_entry": {
+          "hint": "Which entry follows the unpaid claim and completed work rather than the ticket label?",
+          "explanation": "Debit Accounts Receivable ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Debiting Cash would invent a receipt; deferring earning would ignore the completed repair."
+        },
+        "equation_effect": {
+          "hint": "What resource did the company gain without receiving any money?",
+          "explanation": "Assets increase through Accounts Receivable and equity increases through Service Revenue by ${amount_dollars}. Cash and liabilities are unchanged regardless of the mistaken label."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:27:02Z",
+        "source": "Expansion batch 14; continuing delegated review; complete rendered teaching/options/stored hints, amount/scaffold/contrast and ledger regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH14-REVIEW.md"
+      }
+    },
+    {
+      "id": "collect_receivable_before_due",
+      "version": 1,
+      "family_id": "collect_receivable",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A consulting company receives ${amount_dollars} cash today to settle a recorded invoice in full, two weeks before its due date. All the invoiced work was completed last month, when the company recorded the full earning and unpaid customer amount. The receipt equals the invoice balance; no discount, fee, interest, or write-off applies. No new work is performed today. Record only collection of this existing invoice, even though payment arrived before the deadline.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "collection_vs_earning",
+        "cash_classification",
+        "accounts_receivable_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource arrived when the customer settled the existing invoice early?",
+          "explanation": "Cash records the money received today. Early payment changes the collection date, not the already completed work."
+        },
+        "counter_account": {
+          "hint": "Did this payment settle an existing claim or pay for work still owed?",
+          "explanation": "Accounts Receivable decreases as the recorded invoice is settled. An early due-date payment is not an advance for future work when the work was already completed and recorded."
+        },
+        "balanced_entry": {
+          "hint": "Which recorded customer balance disappears when the early payment arrives?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Accounts Receivable ${amount_dollars}. The old earning stays recorded once; neither new revenue nor a future-service obligation arises."
+        },
+        "equation_effect": {
+          "hint": "Does replacing an unpaid claim with money add a new total asset or new earning?",
+          "explanation": "Cash rises and Accounts Receivable falls by ${amount_dollars}, leaving total assets, liabilities and equity unchanged. Paying before the due date does not create a second earning."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:27:02Z",
+        "source": "Expansion batch 14; continuing delegated review; complete rendered teaching/options/stored hints, amount/scaffold/contrast and ledger regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH14-REVIEW.md"
+      }
+    },
+    {
+      "id": "customer_advance_customer_books",
+      "version": 1,
+      "family_id": "customer_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A tutoring company receives ${amount_dollars} cash today from a business customer in advance for a lesson next month. The customer has entered the payment in its own books, but that does not record any entry for the tutoring company. No instruction or other promised service has been provided, and the tutoring company still owes the full lesson. This is the full price, with no earlier receipt or related entry in the tutoring company's books. Record only the tutoring company's receipt and remaining promise.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "cash_vs_revenue",
+        "cash_classification",
+        "unearned_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What resource entered the tutoring company, regardless of the customer's own bookkeeping?",
+          "explanation": "Cash records the tutoring company's receipt. The customer's separate books do not record the seller's entry."
+        },
+        "counter_account": {
+          "hint": "What does the tutoring company still owe after receiving payment for next month?",
+          "explanation": "Unearned Revenue records the tutoring company's obligation to provide the lesson. The customer's own entry does not deliver any instruction or earn the seller's revenue."
+        },
+        "balanced_entry": {
+          "hint": "Which two changes belong in the seller's books when money arrives before its lesson?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Unearned Revenue ${amount_dollars}. Record the tutoring company's money and promise, using its own perspective rather than the customer's books."
+        },
+        "equation_effect": {
+          "hint": "What resource and remaining obligation belong to the tutoring company today?",
+          "explanation": "Assets and liabilities each increase by ${amount_dollars}. Equity is unchanged because no lesson has been delivered. The customer's separate accounting does not change the seller's performance."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:27:02Z",
+        "source": "Expansion batch 14; continuing delegated review; complete rendered teaching/options/stored hints, amount/scaffold/contrast and ledger regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH14-REVIEW.md"
+      }
+    },
+    {
+      "id": "earn_advance_separate_unpaid_job",
+      "version": 1,
+      "family_id": "earn_advance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "A consulting company completes an entire prepaid job today. The client paid ${amount_dollars} earlier, and the company already recorded that receipt and its obligation to perform this job. The full amount remains recorded as owed service immediately before completion; none of this job's earning was previously recorded and no work remains afterward. The client also owes a separate, already recorded invoice for a different completed job, which stays unpaid today. No cash changes hands today. Record only completion of the prepaid job; leave the unrelated invoice unchanged.",
+      "parameters": {
+        "amount_minor_units": [
+          5000,
+          10000,
+          20000
+        ]
+      },
+      "concepts": [
+        "earned_vs_unearned",
+        "unearned_revenue_classification",
+        "service_revenue_classification",
+        "debit_credit_translation"
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Which recorded promise was satisfied today while the separate invoice stayed unpaid?",
+          "explanation": "Unearned Revenue tracks the prepaid job's remaining obligation. Completing this job removes that obligation; the unrelated receivable remains unchanged."
+        },
+        "direction": {
+          "hint": "Does finishing the whole prepaid job leave more or less service still owed for its payment?",
+          "explanation": "Unearned Revenue decreases by the full prepaid job price. The separate unpaid invoice does not leave a performance obligation for this completed prepaid job."
+        },
+        "counter_account": {
+          "hint": "What has the company earned by finishing this job, independent of the other unpaid invoice?",
+          "explanation": "Service Revenue records today's completed prepaid job. Neither its earlier cash receipt nor the other job's previously recorded earning is repeated."
+        },
+        "balanced_entry": {
+          "hint": "Which entry removes the completed job's promise without collecting the separate invoice?",
+          "explanation": "Debit Unearned Revenue ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Cash and Accounts Receivable stay unchanged; the separate invoice remains collectible."
+        },
+        "equation_effect": {
+          "hint": "Can completing a prepaid job change obligations and earning while an unrelated claim stays the same?",
+          "explanation": "Liabilities decrease and equity increases by ${amount_dollars}; total assets are unchanged. Cash and the separate Accounts Receivable balance do not change."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-04T01:27:02Z",
+        "source": "Expansion batch 14; continuing delegated review; complete rendered teaching/options/stored hints, amount/scaffold/contrast and ledger regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH14-REVIEW.md"
+      }
+    }
+  ]
+}

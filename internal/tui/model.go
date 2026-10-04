@@ -115,6 +115,7 @@ type Model struct {
 	CandidateNotice string
 
 	// Journal Entry Practice state (Stage 14)
+	JournalQuestionIndex  int
 	JournalScenario       string
 	JournalFamilyID       string
 	JournalEvent          engine.TransactionEvent
@@ -297,7 +298,11 @@ func NewModel(cfg Config) (*Model, error) {
 				if cfg.ResumeExam {
 					atts, err := m.DB.GetExamAttempts(interrupted.ID)
 					if err == nil {
-						resumed, err := exam.ResumeExamRunner(*interrupted, atts, m.Questions, m.Catalog, eng, gen)
+						snapshots, err := m.DB.GetExamQuestionSnapshots(interrupted.ID)
+						var resumed *exam.ExamRunner
+						if err == nil {
+							resumed, err = exam.ResumeExamSnapshots(*interrupted, atts, snapshots)
+						}
 						if err == nil {
 							m.ExamRunner = resumed
 							m.State = StateExam
@@ -741,9 +746,18 @@ func (m *Model) buildTutorRequest(st *domain.StageAnswer) tutor.Request {
 		opt := st.Options[m.SelectedOptionIndex]
 		req.SelectedOption = &opt
 		req.ErrorTag = opt.ErrorTag
+		req.MistakeHint = st.MistakeHints[opt.ID]
 	}
-	if m.LastFeedback != nil && m.LastFeedback.ErrorTag != "" {
-		req.ErrorTag = m.LastFeedback.ErrorTag
+	if m.LastFeedback != nil && !m.LastFeedback.IsCorrect && len(m.Session.Attempts) > 0 {
+		last := m.Session.Attempts[len(m.Session.Attempts)-1]
+		if last.Stage == st.Stage {
+			req.SelectedOption = &m.LastFeedback.SelectedOption
+			req.ErrorTag = m.LastFeedback.ErrorTag
+			req.MistakeHint = st.MistakeHints[m.LastFeedback.SelectedOption.ID]
+		}
+	}
+	if req.MistakeHint != "" {
+		req.CausalHint = req.MistakeHint
 	}
 	return req
 }
@@ -936,6 +950,9 @@ func (m *Model) submitSelectedAnswer() (tea.Model, tea.Cmd) {
 	}
 
 	m.LastFeedback = feedback
+	if !feedback.IsCorrect && (st.Stage == domain.StageIdentifyAccount || st.Stage == domain.StageCounterAccount || st.Stage == domain.StageBalancedEntry || st.Stage == domain.StageEquationEffect) {
+		m.Scheduler.QueueContrast(m.CurrentInstance)
+	}
 	m.SessionAttempts++
 
 	if feedback.IsCorrect {
@@ -1586,15 +1603,31 @@ func (m *Model) loadNextQuestion() error {
 		chosenAmt = amtOptions[m.RNG.Intn(len(amtOptions))]
 	}
 
+	if m.Scheduler.LastSelectionWasContrast && m.CurrentInstance != nil {
+		priorAmount := m.CurrentInstance.Parameters["amount_minor_units"]
+		for _, amount := range amtOptions {
+			if amount == priorAmount {
+				chosenAmt = priorAmount
+				break
+			}
+		}
+	}
 	seed := m.RNG.Int63()
 	params := map[string]int64{"amount_minor_units": chosenAmt}
 
 	scaffold := mastery.ComputeQuestionScaffoldLevel(*chosenQ, projections, m.Scheduler.Intensity())
+	if m.Scheduler.LastSelectionWasContrast {
+		scaffold = domain.ScaffoldFull
+	}
 	inst, err := m.Generator.GenerateInstanceWithScaffold(*chosenQ, seed, params, scaffold)
 	if err != nil {
 		return fmt.Errorf("failed generating question instance: %w", err)
 	}
 
+	if m.Scheduler.LastSelectionWasContrast {
+		inst.Pedagogy.Remediation = true
+		inst.InstanceID += "-contrast"
+	}
 	// Save instance to DB
 	if m.DB != nil {
 		_ = m.DB.SaveQuestionInstance(inst, m.SessionID)
@@ -1781,13 +1814,20 @@ func (m *Model) initJournalPractice() {
 			FamilyID:   m.CurrentInstance.FamilyID,
 			Parameters: m.CurrentInstance.Parameters,
 		}
-	} else if len(m.Questions) > 0 {
-		q := m.Questions[0]
-		m.JournalScenario = q.ScenarioTemplate
-		m.JournalFamilyID = q.FamilyID
-		m.JournalEvent = engine.TransactionEvent{
-			FamilyID:   q.FamilyID,
-			Parameters: map[string]int64{"amount_minor_units": 150000},
+		for i, q := range m.Questions {
+			if q.ID == m.CurrentInstance.QuestionID {
+				m.JournalQuestionIndex = i
+				break
+			}
+		}
+	} else {
+		for i, q := range m.Questions {
+			if bank.IsActiveForPractice(q.Status) {
+				if err := m.loadJournalTemplate(q); err == nil {
+					m.JournalQuestionIndex = i
+				}
+				break
+			}
 		}
 	}
 	if m.Engine != nil && m.JournalEvent.FamilyID != "" {
@@ -1805,6 +1845,24 @@ func (m *Model) initJournalPractice() {
 	m.JournalSide = domain.SideDebit
 	m.JournalAmountBuffer = ""
 	m.JournalNotice = "Multi-line Entry Practice: Press [a] to add a line. Balance Dr & Cr, then press [s] to submit."
+}
+
+// Instantiate journal wording and grading from the same approved template and allowed amount.
+func (m *Model) loadJournalTemplate(q bank.QuestionJSON) error {
+	amounts := q.Parameters["amount_minor_units"]
+	if len(amounts) == 0 {
+		return fmt.Errorf("scenario %s has no allowed amounts", q.ID)
+	}
+	params := map[string]int64{"amount_minor_units": amounts[m.RNG.Intn(len(amounts))]}
+	inst, err := m.Generator.GenerateInstance(q, m.RNG.Int63(), params)
+	if err != nil {
+		return err
+	}
+	m.JournalScenario = inst.PromptText
+	m.JournalFamilyID = inst.FamilyID
+	m.JournalEvent = engine.TransactionEvent{FamilyID: inst.FamilyID, Parameters: inst.Parameters}
+	m.JournalCanonicalEntry = inst.Entry
+	return nil
 }
 
 func parseAmountDollars(s string) (int64, error) {
@@ -2012,25 +2070,23 @@ func (m *Model) updateJournalPractice(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "n":
-		// Load next transaction scenario
-		if len(m.Questions) > 0 {
-			nextIdx := (m.CurrentQuestionIndex + 1) % len(m.Questions)
-			m.CurrentQuestionIndex = nextIdx
+		for offset := 1; offset <= len(m.Questions); offset++ {
+			nextIdx := (m.JournalQuestionIndex + offset) % len(m.Questions)
 			q := m.Questions[nextIdx]
-			m.JournalScenario = q.ScenarioTemplate
-			m.JournalFamilyID = q.FamilyID
-			m.JournalEvent = engine.TransactionEvent{
-				FamilyID:   q.FamilyID,
-				Parameters: map[string]int64{"amount_minor_units": 150000},
+			if !bank.IsActiveForPractice(q.Status) {
+				continue
 			}
-			if processed, err := m.Engine.ProcessEvent(m.JournalEvent); err == nil {
-				m.JournalCanonicalEntry = processed.Entry
+			if err := m.loadJournalTemplate(q); err != nil {
+				m.JournalNotice = "Could not load scenario: " + err.Error()
+				return m, nil
 			}
+			m.JournalQuestionIndex = nextIdx
 			m.JournalLines = make([]domain.Posting, 0)
 			m.JournalSelectedLine = 0
 			m.JournalFeedback = nil
 			m.JournalReconciliation = nil
 			m.JournalNotice = "Loaded next scenario. Press [a] to add a line."
+			break
 		}
 		return m, nil
 
@@ -2343,7 +2399,11 @@ func (m *Model) updateExamResumePrompt(key string) (tea.Model, tea.Cmd) {
 		if m.InterruptedExam != nil && m.DB != nil {
 			atts, err := m.DB.GetExamAttempts(m.InterruptedExam.ID)
 			if err == nil {
-				resumed, err := exam.ResumeExamRunner(*m.InterruptedExam, atts, m.Questions, m.Catalog, m.Engine, m.Generator)
+				snapshots, err := m.DB.GetExamQuestionSnapshots(m.InterruptedExam.ID)
+				var resumed *exam.ExamRunner
+				if err == nil {
+					resumed, err = exam.ResumeExamSnapshots(*m.InterruptedExam, atts, snapshots)
+				}
 				if err == nil {
 					m.ExamRunner = resumed
 					m.State = StateExam
@@ -2352,11 +2412,8 @@ func (m *Model) updateExamResumePrompt(key string) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		// If resume failed, fall through to fresh exam
-		_ = m.startNewExam(m.ExamTimeLimit)
-		m.State = StateExam
-		m.InterruptedExam = nil
-		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return examTickMsg{} })
+		m.ExamNotice = "Could not restore the original exam snapshots. The interrupted session is preserved; choose a new exam or return to practice."
+		return m, nil
 
 	case "a", "n":
 		if m.InterruptedExam != nil && m.DB != nil {

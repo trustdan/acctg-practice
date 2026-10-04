@@ -440,26 +440,148 @@ func TestQuestionCyclingForwardAndBackward(t *testing.T) {
 		t.Fatalf("expected CurrentQuestionIndex 2, got %d", m.CurrentQuestionIndex)
 	}
 
-	// Test circular wrap-around cycling:
-	// From Q3, Left goes to Q2
+	// Test circular wrap-around cycling with ctrl+arrows:
+	// From Q3, Left goes to Q2 (at Q3 Step 1 bookend)
 	sendSpecialKey(m, tea.KeyLeft)
 	if m.CurrentQuestionIndex != 1 {
 		t.Fatalf("expected Q2, got %d", m.CurrentQuestionIndex)
 	}
-	// From Q2, Left goes to Q1
-	sendSpecialKey(m, tea.KeyLeft)
+	// From Q2 (in StateRecap), ctrl+left jumps directly to Q1!
+	sendKey(m, "ctrl+left")
 	if m.CurrentQuestionIndex != 0 {
 		t.Fatalf("expected Q1, got %d", m.CurrentQuestionIndex)
 	}
-	// From Q1, Left cycles/wraps to Q3!
-	sendSpecialKey(m, tea.KeyLeft)
+	// From Q1, ctrl+left cycles/wraps to Q3!
+	sendKey(m, "ctrl+left")
 	if m.CurrentQuestionIndex != 2 {
 		t.Fatalf("expected wrap around to Q3, got %d", m.CurrentQuestionIndex)
 	}
-	// From Q3, Right cycles/wraps to Q1!
-	sendSpecialKey(m, tea.KeyRight)
+	// From Q3, ctrl+right cycles/wraps to Q1!
+	sendKey(m, "ctrl+right")
 	if m.CurrentQuestionIndex != 0 {
 		t.Fatalf("expected wrap around to Q1, got %d", m.CurrentQuestionIndex)
+	}
+}
+
+func TestSubQuestionCyclingWithinQuestion(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+	m.Width, m.Height = 120, 24
+
+	// Answer Step 1 correctly
+	st, err := m.Session.CurrentStage()
+	if err != nil {
+		t.Fatalf("error getting stage 1: %v", err)
+	}
+	for i, opt := range st.Options {
+		if opt.ID == st.CorrectOptionID {
+			m.SelectedOptionIndex = i
+			break
+		}
+	}
+	sendSpecialKey(m, tea.KeyEnter) // submit
+	sendSpecialKey(m, tea.KeyEnter) // advance from feedback
+
+	// Now on Step 2 (Session.CurrentIndex = 1, ViewingStageIndex = 1)
+	if m.ViewingStageIndex != 1 {
+		t.Fatalf("expected ViewingStageIndex 1 on Step 2, got %d", m.ViewingStageIndex)
+	}
+	if m.IsReviewingStage() {
+		t.Fatalf("expected active drill mode on Step 2, not review")
+	}
+
+	// Step back to review Step 1 with KeyLeft
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.ViewingStageIndex != 0 {
+		t.Fatalf("expected ViewingStageIndex 0 after Left, got %d", m.ViewingStageIndex)
+	}
+	if !m.IsReviewingStage() {
+		t.Fatalf("expected IsReviewingStage to be true when viewing Step 1")
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "[REVIEW: Step 1") {
+		t.Fatalf("expected [REVIEW: Step 1...] in view, got:\n%s", view)
+	}
+	if !strings.Contains(view, "✓") {
+		t.Fatalf("expected checkmark for correct answer in view, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Step Completed Correctly") {
+		t.Fatalf("expected step explanation header in view, got:\n%s", view)
+	}
+
+	// Pressing KeyRight returns to active Step 2
+	sendSpecialKey(m, tea.KeyRight)
+	if m.ViewingStageIndex != 1 {
+		t.Fatalf("expected ViewingStageIndex 1 after Right, got %d", m.ViewingStageIndex)
+	}
+	if m.IsReviewingStage() {
+		t.Fatalf("expected active drill mode when returning to Step 2")
+	}
+
+	// On active unanswered Step 2, pressing KeyRight does NOT advance to locked Step 3
+	sendSpecialKey(m, tea.KeyRight)
+	if m.ViewingStageIndex != 1 {
+		t.Fatalf("expected ViewingStageIndex to stay 1 on unanswered step, got %d", m.ViewingStageIndex)
+	}
+
+	// Step back to Step 1 again, and verify KeyEnter / Space advances back to Step 2
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.ViewingStageIndex != 0 {
+		t.Fatalf("expected ViewingStageIndex 0, got %d", m.ViewingStageIndex)
+	}
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.ViewingStageIndex != 1 {
+		t.Fatalf("expected KeyEnter in review to advance to Step 2, got %d", m.ViewingStageIndex)
+	}
+
+	// Complete remaining steps of Question 1
+	for !m.Session.IsCompleted {
+		st, _ := m.Session.CurrentStage()
+		for i, opt := range st.Options {
+			if opt.ID == st.CorrectOptionID {
+				m.SelectedOptionIndex = i
+				break
+			}
+		}
+		sendSpecialKey(m, tea.KeyEnter)
+		sendSpecialKey(m, tea.KeyEnter)
+	}
+
+	if m.State != tui.StateRecap {
+		t.Fatalf("expected StateRecap after completing question, got %d", m.State)
+	}
+
+	// From StateRecap, pressing KeyLeft steps into reviewing the final stage (Step 7)
+	sendSpecialKey(m, tea.KeyLeft)
+	if m.State != tui.StateDrill || !m.IsReviewingStage() {
+		t.Fatalf("expected StateDrill in review mode, got state %d, isReviewing %v", m.State, m.IsReviewingStage())
+	}
+	totStages := len(m.Session.StageSequence)
+	if m.ViewingStageIndex != totStages-1 {
+		t.Fatalf("expected ViewingStageIndex %d (Step 7), got %d", totStages-1, m.ViewingStageIndex)
+	}
+
+	// Cycle all the way back to Step 1 using only KeyLeft
+	for m.ViewingStageIndex > 0 {
+		prev := m.ViewingStageIndex
+		sendSpecialKey(m, tea.KeyLeft)
+		if m.ViewingStageIndex != prev-1 {
+			t.Fatalf("expected step to decrease from %d to %d, got %d", prev, prev-1, m.ViewingStageIndex)
+		}
+	}
+	if m.ViewingStageIndex != 0 {
+		t.Fatalf("expected to reach Step 1 (index 0), got %d", m.ViewingStageIndex)
+	}
+
+	// Walk forward through all steps to StateRecap using only KeyRight
+	for m.ViewingStageIndex < totStages-1 {
+		sendSpecialKey(m, tea.KeyRight)
+	}
+	// From the last step, KeyRight returns to StateRecap
+	sendSpecialKey(m, tea.KeyRight)
+	if m.State != tui.StateRecap {
+		t.Fatalf("expected to return to StateRecap, got %d", m.State)
 	}
 }
 
@@ -501,7 +623,7 @@ func TestQuestionCyclingInSessionComplete(t *testing.T) {
 		t.Fatalf("expected StateSessionComplete, got %d", m.State)
 	}
 
-	// Press Left to review previous questions
+	// Press Left to review previous questions (lands on Q2 in StateRecap)
 	sendSpecialKey(m, tea.KeyLeft)
 	if m.State != tui.StateRecap {
 		t.Fatalf("expected StateRecap when reviewing from completion, got %d", m.State)
@@ -510,8 +632,8 @@ func TestQuestionCyclingInSessionComplete(t *testing.T) {
 		t.Fatalf("expected Q2 (index 1), got %d", m.CurrentQuestionIndex)
 	}
 
-	// Press Left again to go to Q1
-	sendSpecialKey(m, tea.KeyLeft)
+	// Press ctrl+left to jump directly to Q1
+	sendKey(m, "ctrl+left")
 	if m.CurrentQuestionIndex != 0 {
 		t.Fatalf("expected Q1 (index 0), got %d", m.CurrentQuestionIndex)
 	}

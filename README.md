@@ -161,7 +161,8 @@ Keys depend on the current screen; text fields accept ordinary typing. Uppercase
 | Key | Practice action |
 |---|---|
 | `j` / `k`, up/down arrows | Move selection |
-| `←` / `→` | Go back and cycle through previous questions |
+| `←` / `→` | Cycle sub-questions (stages 1–7) & questions at bookends |
+| Ctrl+`←` / Ctrl+`→` | Jump directly between big-picture questions |
 | `1`-`4` | Select answer; `a`/`b`/`c` remain aliases for the first three |
 | Enter | Submit selection or continue |
 | Space | Continue after feedback |

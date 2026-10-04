@@ -180,7 +180,7 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 
 	leftSection := lipgloss.JoinHorizontal(lipgloss.Center, modePill, infoPill, intensityPill, streakPill)
 
-	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move [1-4] Select [←/→] Questions [u/d] Scroll [Ctrl/Cmd +/-] Zoom [?] Hint [e] Explain [V] Saved Explanations [t] Tutor [p] Review New Questions [n] New from LLM [J] Entry [h] Help [s] Mastery [A] Arcade [L] Scores [q] Quit")
+	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move [1-4] Select [←/→] Steps [Ctrl+←/→] Questions [u/d] Scroll [Ctrl/Cmd +/-] Zoom [?] Hint [e] Explain [V] Saved Explanations [t] Tutor [p] Review New Questions [n] New from LLM [J] Entry [h] Help [s] Mastery [A] Arcade [L] Scores [q] Quit")
 
 	// Calculate space between left and right sections
 	leftWidth := lipgloss.Width(leftSection)
@@ -211,6 +211,10 @@ func (m *Model) renderDrill(contentWidth int) string {
 			Width(contentWidth).
 			Render(m.CurrentInstance.PromptText)
 		sections = append(sections, scenarioText)
+	}
+
+	if m.IsReviewingStage() {
+		return m.renderStageReview(contentWidth, sections)
 	}
 
 	st, err := m.Session.CurrentStage()
@@ -298,6 +302,92 @@ func (m *Model) renderDrill(contentWidth int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
 
+func (m *Model) renderStageReview(contentWidth int, sections []string) string {
+	if m.Session == nil || m.ViewingStageIndex < 0 || m.ViewingStageIndex >= len(m.Session.StageSequence) {
+		return lipgloss.JoinVertical(lipgloss.Left, sections...)
+	}
+
+	stKey := m.Session.StageSequence[m.ViewingStageIndex]
+	st, ok := m.CurrentInstance.StageAnswers[stKey]
+	if !ok {
+		return lipgloss.JoinVertical(lipgloss.Left, sections...)
+	}
+
+	totStages := len(m.Session.StageSequence)
+	stepNum := m.ViewingStageIndex + 1
+
+	reviewBadge := m.Styles.OptionLetter.Render(fmt.Sprintf("[REVIEW: Step %d of %d]", stepNum, totStages))
+	promptText := m.Styles.PromptBox.
+		Width(contentWidth).
+		Render(fmt.Sprintf("Step %d of %d: %s  %s", stepNum, totStages, st.Prompt, reviewBadge))
+	sections = append(sections, promptText)
+
+	histItem := m.getStageHistoryItem(m.ViewingStageIndex)
+
+	// Options list with the learner's previous answer marked
+	var optionLines []string
+	for i, opt := range st.Options {
+		label := fmt.Sprintf("%d", i+1)
+		cursor := "  "
+		tag := ""
+		isUserChoice := (histItem != nil && opt.ID == histItem.SelectedOptionID)
+		isCorrectOpt := (opt.ID == st.CorrectOptionID)
+
+		if isUserChoice {
+			if histItem != nil && histItem.IsCorrect {
+				cursor = "✓ "
+				tag = "  (Your Answer - Correct)"
+			} else {
+				cursor = "✗ "
+				tag = "  (Your Answer - Incorrect)"
+			}
+		} else if histItem != nil && !histItem.IsCorrect && isCorrectOpt {
+			cursor = "✓ "
+			tag = "  (Correct Answer)"
+		}
+
+		optContent := fmt.Sprintf("%s[%s] %s%s", cursor, label, opt.Text, tag)
+
+		if isUserChoice {
+			if histItem != nil && histItem.IsCorrect {
+				optionLines = append(optionLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(optContent))
+			} else {
+				optionLines = append(optionLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(optContent))
+			}
+		} else if isCorrectOpt && histItem != nil && !histItem.IsCorrect {
+			optionLines = append(optionLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(optContent))
+		} else {
+			optionLines = append(optionLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(optContent))
+		}
+	}
+	sections = append(sections, strings.Join(optionLines, "\n"))
+
+	// Explanation box
+	explanationText := st.Explanation
+	if histItem != nil && histItem.Explanation != "" {
+		explanationText = histItem.Explanation
+	}
+
+	resultHeader := "✓ Step Completed Correctly"
+	if histItem != nil && !histItem.IsCorrect {
+		resultHeader = "✗ Step Review"
+	}
+	tutorFormatted := m.renderTutorContent(explanationText, contentWidth-4)
+	box := m.Styles.ExplanationBox.
+		Width(contentWidth).
+		Render(fmt.Sprintf("📖 %s:\n\n%s", resultHeader, tutorFormatted))
+	sections = append(sections, box)
+
+	// Step navigation instructions
+	navHelp := m.Styles.HelpText.Render("Press [←/→] to cycle sub-questions | [Enter/Space] Next step | [Ctrl+←/→] Jump questions")
+	sections = append(sections, navHelp)
+
+	// Airline Status Bar in REVIEW mode
+	sections = append(sections, m.renderStatusBar(contentWidth, "REVIEW", m.Styles.StatusModeFbk))
+
+	return lipgloss.JoinVertical(lipgloss.Left, sections...)
+}
+
 func (m *Model) renderFeedback(contentWidth int) string {
 	var sections []string
 
@@ -311,10 +401,28 @@ func (m *Model) renderFeedback(contentWidth int) string {
 	}
 
 	st, _ := m.Session.CurrentStage()
+	totStages := 0
+	stNum := m.Session.CurrentIndex + 1
+	if m.Session != nil {
+		totStages = len(m.Session.StageSequence)
+		if st == nil && len(m.Session.StageSequence) > 0 {
+			stKey := m.Session.StageSequence[len(m.Session.StageSequence)-1]
+			if ans, ok := m.CurrentInstance.StageAnswers[stKey]; ok {
+				st = &ans
+				stNum = totStages
+			}
+		} else if m.LastFeedback != nil && m.LastFeedback.AdvanceStage && m.Session.CurrentIndex > 0 {
+			stNum = m.Session.CurrentIndex
+			stKey := m.Session.StageSequence[stNum-1]
+			if ans, ok := m.CurrentInstance.StageAnswers[stKey]; ok {
+				st = &ans
+			}
+		}
+	}
 	if st != nil {
 		promptText := m.Styles.PromptBox.
 			Width(contentWidth).
-			Render(fmt.Sprintf("Step %d: %s", m.Session.CurrentIndex+1, st.Prompt))
+			Render(fmt.Sprintf("Step %d: %s", stNum, st.Prompt))
 		sections = append(sections, promptText)
 	}
 
@@ -639,7 +747,8 @@ func (m *Model) renderHelp(contentWidth int) string {
 
 	keyLegend := `[j] or [↓]      Navigate cursor down
 [k] or [↑]      Navigate cursor up
-[←] or [→]      Go back and cycle through previous questions
+[←] or [→]      Cycle sub-questions (stages 1–7) & previous questions at bookends
+[Ctrl+←] / [→]  Jump directly between big-picture questions
 [g]             Jump to first option (Vim gg)
 [G]             Jump to last option (Vim G)
 [1] – [4]       Select an answer (a/b/c also select the first three)

@@ -1,5 +1,25 @@
 # Implementation handoff
 
+## Sub-Question (Stage 1–7) Cycling & Big-Picture Question Navigation — 2026-10-04
+
+- Implemented ability to cycle between the 7 sub-questions (stages) within questions as well as jump between big-picture questions:
+  - Sub-question navigation controls: Mapped `←` (`left`) and `→` (`right`) to `cycleSubQuestion(dir)`:
+    - Stepping back (`left`): Steps back to review previously completed sub-questions within the current question. At the beginning bookend (Step 1), `left` transitions to the previous big-picture question's recap!
+    - Stepping forward (`right` / `Enter` / `Space`): Advances forward through completed steps. Once reaching the active unanswered step, future steps remain locked until answered, and normal interactive drilling re-engages.
+    - Completed question recap: In `StateRecap`, pressing `left` steps into reviewing Step 7 (and earlier steps 6..1), and pressing `right` advances back to `StateRecap` or the next question!
+  - Big-picture question jumps: Mapped `Ctrl+←` (`ctrl+left`) and `Ctrl+→` (`ctrl+right`) (with `shift+left`/`shift+right` and `alt+left`/`alt+right` aliases) to immediately jump between questions in history anywhere in the session.
+  - Read-only step review mode: `renderStageReview` in `internal/tui/view.go` displays the prompt, options with the learner's previous answer marked (`✓` or `✗`), correct answer if wrong, and full explanation box with glamour terminal markdown rendering. Non-destructive; learner attempts, grades, and mastery are never mutated.
+  - Cheat sheet & Help updates:
+    - Status bar: Advertises `[←/→] Steps` and `[Ctrl+←/→] Questions`.
+    - Help screen: Added `[←] or [→] Cycle sub-questions (stages 1–7) & previous questions at bookends` and `[Ctrl+←] / [→] Jump directly between big-picture questions`.
+    - Keyboard reference table updated in `README.md`.
+  - Testing & packaging:
+    - Added unit test `TestSubQuestionCyclingWithinQuestion` in `internal/tui/tui_test.go` covering full forward/backward sub-question review, bookend transitions, and locked future steps.
+    - `gofmt -s -d .` passed (0 diffs), `go vet ./...` passed (clean), and `go test ./...` passed (100% across all 11 packages).
+    - Executed `scripts/build_releases.ps1` to rebuild native binaries for Windows, macOS (Apple Silicon & Intel), and Linux (x64 & ARM64), regenerated all distribution `.zip` archives and `dist/checksums.sha256`, and refreshed root `acctg.exe`.
+- Files: internal/tui/model.go, internal/tui/view.go, internal/tui/tui_test.go, README.md, docs/HANDOFF.md, dist/*.
+- Next: Smoke test in terminal by answering 2+ questions, using `←`/`→` to step through sub-questions, and `Ctrl+←`/`Ctrl+→` to jump between questions.
+
 ## Multi-Platform Release Distribution Packaging (v0.24.0) — 2026-10-04
 
 - Executed `scripts/build_releases.ps1` to rebuild native binaries, distribution `.zip` archives, and recalculate SHA-256 checksums:

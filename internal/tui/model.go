@@ -44,6 +44,18 @@ const (
 	StateSavedExplanations
 )
 
+// StageHistoryItem records the learner's response and explanation for a completed stage.
+type StageHistoryItem struct {
+	StageIndex       int
+	StageKey         domain.DrillStage
+	SelectedOptionID string
+	IsCorrect        bool
+	Explanation      string
+	Hint             string
+	ErrorTag         string
+	AssistanceLevel  domain.AssistanceLevel
+}
+
 // DrillQuestionState preserves the interactive state of a question in a practice session.
 type DrillQuestionState struct {
 	Index               int
@@ -60,6 +72,8 @@ type DrillQuestionState struct {
 	TutorKind           string
 	TutorResponse       *tutor.Response
 	RecapScroll         int
+	ViewingStageIndex   int
+	StageHistory        map[int]*StageHistoryItem
 }
 
 // Model represents the Bubble Tea application state.
@@ -89,6 +103,8 @@ type Model struct {
 	renderedHintWidth    int
 	ShowHint             bool
 	QuestionHistory      []*DrillQuestionState
+	ViewingStageIndex    int
+	StageHistory         map[int]*StageHistoryItem
 
 	// Tutor integration
 	Tutor                 tutor.Tutor
@@ -785,6 +801,82 @@ func (m *Model) buildTutorRequest(st *domain.StageAnswer) tutor.Request {
 }
 
 func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
+	if m.IsReviewingStage() {
+		switch key {
+		case "q":
+			m.cancelTutor()
+			m.closeSession()
+			m.State = StateQuitting
+			return m, tea.Quit
+
+		case "s":
+			m.PreviousState = StateDrill
+			m.State = StateMastery
+			return m, nil
+
+		case "h", "f1":
+			m.PreviousState = StateDrill
+			m.State = StateHelp
+			return m, nil
+
+		case "t":
+			m.cancelTutor()
+			m.PreviousState = StateDrill
+			m.State = StateTutorConfig
+			m.TutorAuthNotice = ""
+			return m, nil
+
+		case "p":
+			m.cancelTutor()
+			m.PreviousState = StateDrill
+			m.State = StateCandidatePreview
+			m.loadCandidates()
+			return m, nil
+
+		case "n":
+			return m.requestCandidate()
+
+		case "J", "ctrl+j":
+			m.cancelTutor()
+			m.PreviousState = StateDrill
+			m.initJournalPractice()
+			m.State = StateJournalPractice
+			return m, nil
+
+		case "F", "ctrl+f":
+			m.cancelTutor()
+			m.PreviousState = StateDrill
+			if m.StatementsReport == nil {
+				c := statements.CanonicalCasePioneerConsulting()
+				m.StatementsReport, _ = statements.BuildAccountingCycleReport(c, m.Catalog, m.Engine)
+			}
+			m.StatementsScroll = 0
+			m.State = StateStatements
+			return m, nil
+
+		case "ctrl+left", "shift+left", "alt+left":
+			return m.cycleQuestion(-1)
+
+		case "ctrl+right", "shift+right", "alt+right":
+			return m.cycleQuestion(1)
+
+		case "left":
+			return m.cycleSubQuestion(-1)
+
+		case "right", "enter", " ":
+			return m.cycleSubQuestion(1)
+
+		case "esc":
+			if m.Session != nil && !m.Session.IsCompleted {
+				m.ViewingStageIndex = m.Session.CurrentIndex
+			}
+			return m, nil
+
+		default:
+			return m, nil
+		}
+	}
+
 	st, err := m.Session.CurrentStage()
 	if err != nil {
 		return m, nil
@@ -894,12 +986,19 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	// Question cycling
-	case "left":
+	// Big-picture question cycling
+	case "ctrl+left", "shift+left", "alt+left":
 		return m.cycleQuestion(-1)
 
-	case "right":
+	case "ctrl+right", "shift+right", "alt+right":
 		return m.cycleQuestion(1)
+
+	// Sub-question (stage) cycling with bookend transitions
+	case "left":
+		return m.cycleSubQuestion(-1)
+
+	case "right":
+		return m.cycleSubQuestion(1)
 
 	// Vim / Arrow navigation
 	case "up", "k":
@@ -979,6 +1078,22 @@ func (m *Model) submitSelectedAnswer() (tea.Model, tea.Cmd) {
 	}
 
 	m.LastFeedback = feedback
+	if m.StageHistory == nil {
+		m.StageHistory = make(map[int]*StageHistoryItem)
+	}
+	if feedback.AdvanceStage {
+		stIdx := m.Session.CurrentIndex - 1
+		m.StageHistory[stIdx] = &StageHistoryItem{
+			StageIndex:       stIdx,
+			StageKey:         st.Stage,
+			SelectedOptionID: chosenOpt.ID,
+			IsCorrect:        feedback.IsCorrect,
+			Explanation:      feedback.Explanation,
+			Hint:             feedback.Hint,
+			ErrorTag:         feedback.ErrorTag,
+			AssistanceLevel:  feedback.AssistanceLevel,
+		}
+	}
 	if !feedback.IsCorrect && (st.Stage == domain.StageIdentifyAccount || st.Stage == domain.StageCounterAccount || st.Stage == domain.StageBalancedEntry || st.Stage == domain.StageEquationEffect) {
 		m.Scheduler.QueueContrast(m.CurrentInstance)
 	}
@@ -1051,17 +1166,24 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "left":
+	case "ctrl+left", "shift+left", "alt+left":
 		return m.cycleQuestion(-1)
 
-	case "right":
+	case "ctrl+right", "shift+right", "alt+right":
 		return m.cycleQuestion(1)
+
+	case "left":
+		return m.cycleSubQuestion(-1)
+
+	case "right":
+		return m.cycleSubQuestion(1)
 
 	case "enter", " ", "a", "b", "c", "1", "2", "3", "4":
 		m.cancelTutor()
 		if m.LastFeedback != nil && !m.LastFeedback.AdvanceStage {
 			// Retry is available! Return to drill so learner can answer again
 			m.State = StateDrill
+			m.ViewingStageIndex = m.Session.CurrentIndex
 			m.ShowHint = true
 			m.CurrentHint = m.LastFeedback.Hint
 			if key != "enter" && key != " " {
@@ -1074,8 +1196,12 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 		if m.Session.IsCompleted {
 			m.RecapScroll = 0
 			m.State = StateRecap
+			if len(m.Session.StageSequence) > 0 {
+				m.ViewingStageIndex = len(m.Session.StageSequence) - 1
+			}
 		} else {
 			m.State = StateDrill
+			m.ViewingStageIndex = m.Session.CurrentIndex
 			m.SelectedOptionIndex = 0
 			m.ShowHint = false
 			m.LastFeedback = nil
@@ -1144,10 +1270,20 @@ func (m *Model) updateRecap(key string) (tea.Model, tea.Cmd) {
 		m.RecapScroll = 9999
 		return m, nil
 
-	case "left":
+	case "ctrl+left", "shift+left", "alt+left":
 		return m.cycleQuestion(-1)
 
+	case "ctrl+right", "shift+right", "alt+right":
+		return m.cycleQuestion(1)
+
+	case "left":
+		return m.cycleSubQuestion(-1)
+
 	case "right":
+		if m.CurrentQuestionIndex < len(m.QuestionHistory)-1 {
+			m.restoreQuestionState(m.CurrentQuestionIndex + 1)
+			return m, nil
+		}
 		return m.cycleQuestion(1)
 
 	case "enter", " ":
@@ -1272,7 +1408,7 @@ func (m *Model) updateSessionComplete(key string) (tea.Model, tea.Cmd) {
 		m.State = StateHelp
 		return m, nil
 
-	case "left":
+	case "left", "ctrl+left", "shift+left", "alt+left":
 		if len(m.QuestionHistory) > 0 {
 			m.restoreQuestionState(len(m.QuestionHistory) - 1)
 			return m, nil
@@ -1692,6 +1828,8 @@ func (m *Model) loadNextQuestion() error {
 	m.SelectedOptionIndex = 0
 	m.ShowHint = false
 	m.LastFeedback = nil
+	m.ViewingStageIndex = 0
+	m.StageHistory = make(map[int]*StageHistoryItem)
 
 	qs := &DrillQuestionState{
 		Index:               m.CurrentQuestionIndex,
@@ -1699,6 +1837,8 @@ func (m *Model) loadNextQuestion() error {
 		Session:             m.Session,
 		State:               StateDrill,
 		SelectedOptionIndex: 0,
+		ViewingStageIndex:   0,
+		StageHistory:        m.StageHistory,
 	}
 	if m.CurrentQuestionIndex < len(m.QuestionHistory) {
 		m.QuestionHistory[m.CurrentQuestionIndex] = qs
@@ -1730,6 +1870,8 @@ func (m *Model) saveCurrentQuestionState() {
 	qs.TutorKind = m.TutorKind
 	qs.TutorResponse = m.TutorResponse
 	qs.RecapScroll = m.RecapScroll
+	qs.ViewingStageIndex = m.ViewingStageIndex
+	qs.StageHistory = m.StageHistory
 }
 
 func (m *Model) restoreQuestionState(index int) {
@@ -1744,8 +1886,12 @@ func (m *Model) restoreQuestionState(index int) {
 	m.Session = qs.Session
 	if qs.Session != nil && qs.Session.IsCompleted {
 		m.State = StateRecap
+		if qs.Session.StageSequence != nil && len(qs.Session.StageSequence) > 0 {
+			m.ViewingStageIndex = len(qs.Session.StageSequence) - 1
+		}
 	} else {
 		m.State = qs.State
+		m.ViewingStageIndex = qs.ViewingStageIndex
 	}
 	m.SelectedOptionIndex = qs.SelectedOptionIndex
 	m.LastFeedback = qs.LastFeedback
@@ -1757,6 +1903,10 @@ func (m *Model) restoreQuestionState(index int) {
 	m.TutorKind = qs.TutorKind
 	m.TutorResponse = qs.TutorResponse
 	m.RecapScroll = qs.RecapScroll
+	m.StageHistory = qs.StageHistory
+	if m.StageHistory == nil {
+		m.StageHistory = make(map[int]*StageHistoryItem)
+	}
 }
 
 func (m *Model) cycleQuestion(dir int) (tea.Model, tea.Cmd) {
@@ -1771,6 +1921,163 @@ func (m *Model) cycleQuestion(dir int) (tea.Model, tea.Cmd) {
 		newIdx = 0
 	}
 	m.restoreQuestionState(newIdx)
+	return m, nil
+}
+
+func (m *Model) IsReviewingStage() bool {
+	if m.Session == nil || m.State != StateDrill {
+		return false
+	}
+	if m.Session.IsCompleted {
+		return true
+	}
+	return m.ViewingStageIndex < m.Session.CurrentIndex
+}
+
+func (m *Model) getStageHistoryItem(stageIdx int) *StageHistoryItem {
+	if m.StageHistory != nil {
+		if item, ok := m.StageHistory[stageIdx]; ok && item != nil {
+			return item
+		}
+	}
+
+	if m.Session == nil || stageIdx < 0 || stageIdx >= len(m.Session.StageSequence) {
+		return nil
+	}
+
+	stKey := m.Session.StageSequence[stageIdx]
+	stAns, ok := m.CurrentInstance.StageAnswers[stKey]
+	if !ok {
+		return nil
+	}
+
+	var matchedAttempt *domain.Attempt
+	for i := len(m.Session.Attempts) - 1; i >= 0; i-- {
+		if m.Session.Attempts[i].Stage == stKey {
+			matchedAttempt = &m.Session.Attempts[i]
+			break
+		}
+	}
+
+	selectedOptID := stAns.CorrectOptionID
+	isCorrect := true
+	errorTag := ""
+	assist := domain.AssistanceNone
+
+	if matchedAttempt != nil {
+		selectedOptID = matchedAttempt.SelectedOptionID
+		isCorrect = matchedAttempt.IsCorrect
+		errorTag = matchedAttempt.ErrorTag
+		assist = matchedAttempt.Assistance
+	}
+
+	return &StageHistoryItem{
+		StageIndex:       stageIdx,
+		StageKey:         stKey,
+		SelectedOptionID: selectedOptID,
+		IsCorrect:        isCorrect,
+		Explanation:      stAns.Explanation,
+		Hint:             stAns.HintForOption(selectedOptID),
+		ErrorTag:         errorTag,
+		AssistanceLevel:  assist,
+	}
+}
+
+func (m *Model) cycleSubQuestion(dir int) (tea.Model, tea.Cmd) {
+	if m.Session == nil {
+		return m, nil
+	}
+	m.cancelTutor()
+
+	// If in StateRecap:
+	if m.State == StateRecap {
+		if dir < 0 {
+			// Step back into the last sub-question of this completed question
+			m.State = StateDrill
+			if len(m.Session.StageSequence) > 0 {
+				m.ViewingStageIndex = len(m.Session.StageSequence) - 1
+			}
+			return m, nil
+		}
+		// If dir > 0 in Recap, advance to next question
+		if m.CurrentQuestionIndex < len(m.QuestionHistory)-1 {
+			m.restoreQuestionState(m.CurrentQuestionIndex + 1)
+			return m, nil
+		}
+		return m.cycleQuestion(1)
+	}
+
+	// If in StateFeedback:
+	if m.State == StateFeedback {
+		if dir < 0 {
+			activeStage := m.Session.CurrentIndex
+			if m.LastFeedback != nil && m.LastFeedback.AdvanceStage {
+				activeStage = m.Session.CurrentIndex - 1
+			}
+			if activeStage > 0 {
+				m.State = StateDrill
+				m.ViewingStageIndex = activeStage - 1
+				return m, nil
+			}
+			return m.cycleQuestion(-1)
+		}
+		// dir > 0: advance from feedback
+		if m.LastFeedback != nil && !m.LastFeedback.AdvanceStage {
+			m.State = StateDrill
+			m.ViewingStageIndex = m.Session.CurrentIndex
+			m.ShowHint = true
+			m.CurrentHint = m.LastFeedback.Hint
+			return m, nil
+		}
+		if m.Session.IsCompleted {
+			m.RecapScroll = 0
+			m.State = StateRecap
+			if len(m.Session.StageSequence) > 0 {
+				m.ViewingStageIndex = len(m.Session.StageSequence) - 1
+			}
+			return m, nil
+		}
+		m.State = StateDrill
+		m.ViewingStageIndex = m.Session.CurrentIndex
+		m.SelectedOptionIndex = 0
+		m.ShowHint = false
+		m.LastFeedback = nil
+		return m, nil
+	}
+
+	// If in StateDrill:
+	totStages := len(m.Session.StageSequence)
+	if dir < 0 {
+		if m.ViewingStageIndex > 0 {
+			m.ViewingStageIndex--
+			return m, nil
+		}
+		// At beginning bookend (Step 1): cycle to previous question!
+		return m.cycleQuestion(-1)
+	}
+
+	// dir > 0:
+	if m.Session.IsCompleted {
+		if m.ViewingStageIndex < totStages-1 {
+			m.ViewingStageIndex++
+			return m, nil
+		}
+		// Reached the end of stages for this completed question: return to Recap!
+		m.State = StateRecap
+		m.RecapScroll = 0
+		return m, nil
+	}
+
+	// In-progress question:
+	if m.ViewingStageIndex < m.Session.CurrentIndex {
+		m.ViewingStageIndex++
+		if m.ViewingStageIndex == m.Session.CurrentIndex {
+			m.SelectedOptionIndex = 0
+		}
+		return m, nil
+	}
+
+	// Already at the active unanswered stage: future stages are locked
 	return m, nil
 }
 

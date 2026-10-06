@@ -18,6 +18,7 @@ const (
 	ProviderAnthropic   = "anthropic"
 	ProviderGoogle      = "google"
 	ProviderOpenAI      = "openai"
+	ProviderLMStudio    = "lmstudio"
 )
 
 // OAuthToken holds OAuth credentials for ChatGPT Plus subscription plan access.
@@ -55,6 +56,11 @@ type AuthConfig struct {
 	ChatGPTPlanToken *OAuthToken       `json:"chatgpt_plan_token,omitempty"`
 	ChatGPTClientID  string            `json:"chatgpt_client_id,omitempty"`
 	SelectedModels   map[string]string `json:"selected_models,omitempty"`
+
+	// LM Studio local server settings. No key is stored; LM_API_TOKEN is read from the environment only.
+	LMStudioURL         string `json:"lmstudio_url,omitempty"`
+	LMStudioAllowRemote bool   `json:"lmstudio_allow_remote,omitempty"`
+	LMStudioMaxTokens   int    `json:"lmstudio_max_tokens,omitempty"`
 }
 
 // AuthStore provides thread-safe access to persistent tutor credentials.
@@ -182,6 +188,8 @@ func (s *AuthStore) ClearCredentials(provider string) error {
 		s.config.GoogleKey = ""
 	case ProviderOpenAI:
 		s.config.OpenAIKey = ""
+	case ProviderLMStudio:
+		s.config.LMStudioURL = ""
 	}
 
 	return s.saveLocked()
@@ -227,6 +235,9 @@ func (s *AuthStore) IsConfigured(provider string) bool {
 		return s.config.ChatGPTPlanToken != nil && s.config.ChatGPTPlanToken.AccessToken != "" && s.config.ChatGPTPlanToken.Subject != "" && hasPlanScope(s.config.ChatGPTPlanToken.Scope)
 	case ProviderAnthropic, ProviderGoogle, ProviderOpenAI:
 		return s.ResolveKey(provider) != ""
+	case ProviderLMStudio:
+		// No network probe: a server URL (default or override) is all that is required.
+		return s.ResolveLMStudioURL() != ""
 	default:
 		return false
 	}
@@ -277,6 +288,8 @@ func (s *AuthStore) ResolveModel(provider string) string {
 		return DefaultOpenAIAPIModel
 	case ProviderChatGPTPlan:
 		return DefaultChatGPTModel
+	case ProviderLMStudio:
+		return "" // First model reported by the local server.
 	default:
 		return "offline"
 	}
@@ -305,6 +318,67 @@ func (s *AuthStore) ResolveChatGPTClientID() string {
 		return token.ClientID
 	}
 	return DefaultDCRClientID
+}
+
+// SetLMStudioURL saves the LM Studio server base URL; empty restores the default.
+func (s *AuthStore) SetLMStudioURL(url string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.config.LMStudioURL = strings.TrimSpace(url)
+	return s.saveLocked()
+}
+
+// SetLMStudioAllowRemote records the explicit opt-in to a non-loopback LM Studio host.
+func (s *AuthStore) SetLMStudioAllowRemote(allow bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.config.LMStudioAllowRemote = allow
+	return s.saveLocked()
+}
+
+// SetLMStudioMaxTokens saves the completion token limit for LM Studio; 0 restores the default.
+func (s *AuthStore) SetLMStudioMaxTokens(n int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if n < 0 {
+		n = 0
+	}
+	s.config.LMStudioMaxTokens = n
+	return s.saveLocked()
+}
+
+// ResolveLMStudioURL returns LMSTUDIO_BASE_URL, then the stored URL, then the default.
+func (s *AuthStore) ResolveLMStudioURL() string {
+	if env := strings.TrimSpace(os.Getenv("LMSTUDIO_BASE_URL")); env != "" {
+		return env
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.config.LMStudioURL != "" {
+		return s.config.LMStudioURL
+	}
+	return DefaultLMStudioURL
+}
+
+// LMStudioAllowRemote reports whether a non-loopback LM Studio host is permitted
+// (stored opt-in or LMSTUDIO_ALLOW_REMOTE=1).
+func (s *AuthStore) LMStudioAllowRemote() bool {
+	if v := strings.TrimSpace(os.Getenv("LMSTUDIO_ALLOW_REMOTE")); v == "1" || strings.EqualFold(v, "true") {
+		return true
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.config.LMStudioAllowRemote
+}
+
+// ResolveLMStudioMaxTokens returns the stored LM Studio max_tokens or the local default.
+func (s *AuthStore) ResolveLMStudioMaxTokens() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.config.LMStudioMaxTokens > 0 {
+		return s.config.LMStudioMaxTokens
+	}
+	return DefaultLMStudioMaxTokens
 }
 
 func (s *AuthStore) EnsureHostID() (string, error) {

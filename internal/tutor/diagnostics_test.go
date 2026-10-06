@@ -11,6 +11,7 @@ import (
 )
 
 func TestLLMProvidersDiagnosticsOfflineOnly(t *testing.T) {
+	t.Setenv("LMSTUDIO_BASE_URL", closedServerURL())
 	tempDir, err := os.MkdirTemp("", "diag_test_*")
 	if err != nil {
 		t.Fatalf("failed creating temp dir: %v", err)
@@ -24,8 +25,11 @@ func TestLLMProvidersDiagnosticsOfflineOnly(t *testing.T) {
 	}
 
 	reports := tutor.TestLLMProviders(store, 2*time.Second)
-	if len(reports) != 5 {
-		t.Fatalf("expected 5 provider reports, got %d", len(reports))
+	if len(reports) != 6 {
+		t.Fatalf("expected 6 provider reports, got %d", len(reports))
+	}
+	if lm := reports[5]; lm.ProviderID != tutor.ProviderLMStudio || lm.Status != "NOTICE" || !strings.Contains(lm.Message, "lms server start") {
+		t.Errorf("expected LM Studio server-not-running notice, got %+v", lm)
 	}
 
 	// 1. Offline should PASS
@@ -55,6 +59,7 @@ func TestLLMProvidersDiagnosticsOfflineOnly(t *testing.T) {
 }
 
 func TestLLMProvidersDiagnosticsWithConfiguredKey(t *testing.T) {
+	t.Setenv("LMSTUDIO_BASE_URL", closedServerURL())
 	tempDir, err := os.MkdirTemp("", "diag_key_test_*")
 	if err != nil {
 		t.Fatalf("failed creating temp dir: %v", err)
@@ -89,5 +94,27 @@ func TestLLMProvidersDiagnosticsWithConfiguredKey(t *testing.T) {
 	}
 	if !strings.Contains(anthropicReport.Message, "sk-a...5678") {
 		t.Errorf("expected masked key in report, got: %s", anthropicReport.Message)
+	}
+}
+
+func TestLLMProvidersDiagnosticsLMStudio(t *testing.T) {
+	store, _ := tutor.NewAuthStore("")
+
+	t.Setenv("LMSTUDIO_BASE_URL", startFake(t, &fakeLMStudio{models: []string{"qwen3-8b"}}))
+	lm := tutor.TestLLMProviders(store, 2*time.Second)[5]
+	if lm.Status != "PASS" || !strings.Contains(lm.ActiveModel, "qwen3-8b") || !strings.Contains(lm.Message, "No API key needed") {
+		t.Errorf("expected LM Studio PASS, got %+v", lm)
+	}
+
+	t.Setenv("LMSTUDIO_BASE_URL", startFake(t, &fakeLMStudio{}))
+	lm = tutor.TestLLMProviders(store, 2*time.Second)[5]
+	if lm.Status != "NOTICE" || !strings.Contains(lm.Message, "no model is loaded") {
+		t.Errorf("expected no-model notice, got %+v", lm)
+	}
+
+	t.Setenv("LMSTUDIO_BASE_URL", "http://10.1.2.3:1234/v1")
+	lm = tutor.TestLLMProviders(store, 2*time.Second)[5]
+	if lm.Status != "ERROR" || !strings.Contains(lm.Message, "not on this machine") {
+		t.Errorf("expected remote-host rejection, got %+v", lm)
 	}
 }

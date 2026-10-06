@@ -48,6 +48,15 @@ For learners who prefer to supply their own API keys instead of a ChatGPT Plus s
 - **OpenAI**: `OpenAIAPITutor` using `OPENAI_API_KEY` (Responses or Chat Completions API).
 - Keys are loaded from standard environment variables or configured interactively in the TUI and stored securely in the local user-data path. Keys are never saved in git or plain repository files.
 
+### Option 3: Local LM Studio server (`LMStudioTutor`, Stage 29)
+For learners who run a model on their own machine (no key, account or billing):
+- Talks to LM Studio's OpenAI-compatible server (default `http://localhost:1234/v1`): `GET /models` for discovery and `POST /chat/completions` for hints and explanations. `OpenAIAPITutor` and `LMStudioTutor` share one chat-completions helper (`callChatCompletions`).
+- Base URL resolution: `LMSTUDIO_BASE_URL`, then the stored `lmstudio_url` (set with `--lmstudio-url` or `[l]` in Tutor Settings), then the default. Only loopback hosts are accepted unless the learner opts in with `--lmstudio-allow-remote`/`LMSTUDIO_ALLOW_REMOTE=1`, so learner context stays on the machine by default.
+- No Authorization header is sent unless `LM_API_TOKEN` is set (LM Studio authentication is off by default). The token is never persisted.
+- `<think>…</think>` blocks are stripped (including an unterminated block when output is truncated) and `reasoning_content` is never decoded. `max_tokens` defaults to 4096 (`--lmstudio-max-tokens`) so reasoning models are not cut off mid-thought.
+- With no model selected, the first non-embedding model reported by `/models` is used. Construction and startup make no network call. Tutor Settings `[6]` performs one asynchronous `/models` check; `--test-llm` probes the server.
+- `BuildTutor` gives LM Studio a provider timeout of at least 90 seconds for cold model loads and CPU inference. The TUI request context outlasts `FallbackTutor.Timeout()` so a slow primary falls back offline rather than surfacing an error. The app never launches or manages the LM Studio process.
+
 ### Safety and Boundaries
 - Clean fallback: If authentication fails, requests time out, or the network is unreachable, the system gracefully falls back to `OfflineTutor`.
 - No silent billing: The app will never silently switch between subscription allowance and paid API keys.

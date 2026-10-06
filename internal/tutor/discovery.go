@@ -74,6 +74,9 @@ func DefaultModels(provider string) []ModelInfo {
 			{ID: "o3-mini", DisplayName: "o3-mini (ChatGPT Plus Reasoning)", Provider: ProviderChatGPTPlan, DiscoveredAt: now},
 		}
 
+	case ProviderLMStudio:
+		return nil // Local models are only known once the server reports them.
+
 	default:
 		return []ModelInfo{
 			{ID: "offline", DisplayName: "Offline Deterministic Engine", Provider: ProviderOffline, DiscoveredAt: now},
@@ -605,6 +608,19 @@ func DiscoverProviderModels(ctx context.Context, provider string, authStore *Aut
 			return nil, err
 		}
 		return DiscoverChatGPTModels(ctx, accessToken, baseURL, client)
+
+	case ProviderLMStudio:
+		lmURL, allowRemote := DefaultLMStudioURL, false
+		if authStore != nil {
+			lmURL, allowRemote = authStore.ResolveLMStudioURL(), authStore.LMStudioAllowRemote()
+		}
+		if baseURL != "" {
+			lmURL = baseURL
+		}
+		if err := ValidateLMStudioURL(lmURL, allowRemote); err != nil {
+			return nil, err
+		}
+		return DiscoverLMStudioModels(ctx, lmURL, LMStudioToken(), client)
 
 	default:
 		return nil, fmt.Errorf("unknown provider for model discovery: %s", provider)

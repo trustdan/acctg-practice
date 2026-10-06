@@ -405,6 +405,18 @@ type modelsFetchedMsg struct {
 	Err      error
 }
 
+// lmstudioCheckMsg reports the one-shot LM Studio /v1/models check after [6].
+type lmstudioCheckMsg struct {
+	URL    string
+	Models []tutor.ModelInfo
+	Err    error
+}
+
+// ExportedLMStudioCheckMsg creates an lmstudioCheckMsg for testing.
+func ExportedLMStudioCheckMsg(url string, models []tutor.ModelInfo, err error) tea.Msg {
+	return lmstudioCheckMsg{URL: url, Models: models, Err: err}
+}
+
 // ExportedModelsFetchedMsg creates a modelsFetchedMsg for testing model discovery handlers.
 func ExportedModelsFetchedMsg(provider string, models []tutor.ModelInfo, err error) tea.Msg {
 	return modelsFetchedMsg{
@@ -551,6 +563,25 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.TutorFetchingModels = true
 			return m, m.cmdRefreshModels(tutor.ProviderChatGPTPlan)
 		}
+		return m, nil
+
+	case lmstudioCheckMsg:
+		m.TutorFetchingModels = false
+		if m.AuthStore == nil || m.AuthStore.GetConfig().ActiveProvider != tutor.ProviderLMStudio {
+			return m, nil // Learner switched away before the check finished.
+		}
+		if msg.Err != nil {
+			m.TutorAuthNotice = "LM Studio check failed: " + msg.Err.Error() + "\n" + lmstudioSetupTips
+			return m, nil
+		}
+		if m.ModelCache != nil {
+			_ = m.ModelCache.SetModels(tutor.ProviderLMStudio, msg.Models)
+		}
+		active := m.AuthStore.ResolveModel(tutor.ProviderLMStudio)
+		if active == "" {
+			active = msg.Models[0].ID + " (first available)"
+		}
+		m.TutorAuthNotice = fmt.Sprintf("✓ Connected to LM Studio at %s: %d model(s) available. Using %s; press [m] to choose another.", msg.URL, len(msg.Models), active)
 		return m, nil
 
 	case modelsFetchedMsg:
@@ -715,6 +746,28 @@ func (m *Model) pageTextEntryActive() bool {
 		m.State == StateJournalPractice && m.JournalInputActive && m.JournalInputMode == "amount"
 }
 
+// tutorRequestTimeout outlasts the provider deadline set by FallbackTutor (longer
+// for local LM Studio models) so a slow provider falls back instead of erroring.
+func (m *Model) tutorRequestTimeout() time.Duration {
+	timeout := m.TutorTimeout
+	if ft, ok := m.Tutor.(interface{ Timeout() time.Duration }); ok {
+		if t := ft.Timeout() + time.Second; t > timeout {
+			timeout = t
+		}
+	}
+	return timeout
+}
+
+func (m *Model) cmdCheckLMStudio() tea.Cmd {
+	authStore := m.AuthStore
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		models, err := tutor.DiscoverProviderModels(ctx, tutor.ProviderLMStudio, authStore, "", nil)
+		return lmstudioCheckMsg{URL: authStore.ResolveLMStudioURL(), Models: models, Err: err}
+	}
+}
+
 func (m *Model) rebuildTutor() {
 	if m.AuthStore == nil {
 		return
@@ -740,7 +793,7 @@ func (m *Model) requestTutor(kind string) (tea.Model, tea.Cmd) {
 		m.Session.RequestExplanation()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), m.TutorTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), m.tutorRequestTimeout())
 	m.TutorCancel = cancel
 	m.TutorActive = true
 	m.TutorKind = kind
@@ -1460,6 +1513,23 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 	if m.TutorInputActive {
 		switch key {
 		case "enter":
+			if m.TutorInputProvider == tutor.ProviderLMStudio && m.AuthStore != nil {
+				url := strings.TrimSpace(m.TutorInputBuffer)
+				if url != "" {
+					if err := tutor.ValidateLMStudioURL(url, m.AuthStore.LMStudioAllowRemote()); err != nil {
+						m.TutorAuthNotice = err.Error()
+						return m, nil
+					}
+				}
+				_ = m.AuthStore.SetLMStudioURL(url)
+				_ = m.AuthStore.SetActiveProvider(tutor.ProviderLMStudio)
+				m.rebuildTutor()
+				m.TutorInputActive = false
+				m.TutorInputBuffer = ""
+				m.TutorFetchingModels = true
+				m.TutorAuthNotice = fmt.Sprintf("LM Studio URL set to %s. Checking server...", m.AuthStore.ResolveLMStudioURL())
+				return m, m.cmdCheckLMStudio()
+			}
 			if len(m.TutorInputBuffer) > 0 && m.AuthStore != nil {
 				_ = m.AuthStore.SetAPIKey(m.TutorInputProvider, m.TutorInputBuffer)
 				_ = m.AuthStore.SetActiveProvider(m.TutorInputProvider)
@@ -1678,11 +1748,30 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 		m.TutorAuthNotice = ""
 		return m, nil
 
+	case "6":
+		if m.AuthStore != nil {
+			_ = m.AuthStore.SetActiveProvider(tutor.ProviderLMStudio)
+			m.rebuildTutor()
+			m.TutorFetchingModels = true
+			m.TutorAuthNotice = fmt.Sprintf("Switched to LM Studio (local). Checking %s...", m.AuthStore.ResolveLMStudioURL())
+			return m, m.cmdCheckLMStudio()
+		}
+		return m, nil
+
+	case "l":
+		if m.AuthStore != nil {
+			m.TutorInputActive = true
+			m.TutorInputProvider = tutor.ProviderLMStudio
+			m.TutorInputBuffer = m.AuthStore.ResolveLMStudioURL()
+			m.TutorAuthNotice = ""
+		}
+		return m, nil
+
 	case "m":
 		if m.AuthStore != nil {
 			activeProvider := m.AuthStore.GetConfig().ActiveProvider
 			if activeProvider == tutor.ProviderOffline {
-				m.TutorAuthNotice = "Offline tutor uses deterministic rule engine. Choose an AI provider [2-5] first, then press 'm' to select or change its model."
+				m.TutorAuthNotice = "Offline tutor uses deterministic rule engine. Choose an AI provider [2-6] first, then press 'm' to select or change its model."
 				return m, nil
 			}
 			m.TutorModelSelectActive = true

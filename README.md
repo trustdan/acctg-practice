@@ -111,7 +111,7 @@ The launchers include a Wine fallback if `acctg.exe` is present and Wine is alre
 
 ## AI tutor
 
-Offline help works without an account. Press `t` to open Tutor Settings and choose offline, ChatGPT subscription sign-in, Anthropic, Google Gemini, or OpenAI API.
+Offline help works without an account. Press `t` to open Tutor Settings and choose offline, ChatGPT subscription sign-in, Anthropic, Google Gemini, OpenAI API, or a local model through LM Studio.
 
 For ChatGPT, choose `2` to open the browser sign-in flow. Registration is automatic; no manual OAuth client ID is needed. After sign-in, choose an available model. In settings, `m` opens model selection and `r` requests a fresh provider catalog; cached models support later selection. Use `a` in settings to disconnect the saved ChatGPT connection and sign in with another account.
 
@@ -122,6 +122,38 @@ During practice, `?` requests a hint and `e` requests an explanation. Requests r
 When you leave an LLM explanation (Esc, another hotkey, a mouse click, or quit), the app asks: **Would you like to save this explanation in the database?** Press `y` to save and continue the original action, `n` to continue without saving, or Esc to keep reading. Scrolling does not trigger the prompt. Save failures keep the text available for retry. Press uppercase `V` to browse saved explanations and their original question/stage/provider; use `n`/`p` to browse and `u`/`d` to scroll. These are personal advisory notes, not approved question content or grading evidence. Offline hints and fallback explanations do not trigger this prompt.
 
 The available subscription permissions and models depend on the connected account. `--test-llm` reports local configuration diagnostics; it does not prove that live inference will succeed.
+
+### Local tutor with LM Studio
+
+[LM Studio](https://lmstudio.ai) runs a model on your own computer. Local tutoring needs no account, API key, or billing, and by default hint requests never leave the machine.
+
+1. Install LM Studio and download a chat model from its Discover tab. A small instruct model (a 3–8B model) is enough for hints.
+2. Load the model, then start the server from the Developer tab, or run `lms server start` in a terminal. The default address is `http://localhost:1234/v1`.
+3. In AccountTutor, press `t`, then `6`. The app checks the server once and reports either the number of models found or what to fix.
+4. Return to practice and use `?` or `e` as usual. To use a different model, press `m` in Tutor Settings (`r` refreshes the list from the server).
+
+To start directly with LM Studio, run `.\acctg.exe --tutor=lmstudio`.
+
+| Setting | Purpose |
+|---|---|
+| `[l]` in Tutor Settings, or `--lmstudio-url=URL` | Save a different server address (another port, for example). An empty value restores the default. |
+| `LMSTUDIO_BASE_URL` | Override the server address for this run only. |
+| `LM_API_TOKEN` | Needed only if you turned on authentication in LM Studio's server settings. It is read from the environment and never saved. |
+| `--lmstudio-max-tokens=N` | Reply length limit (default 4096; a high limit gives reasoning models room to finish). |
+| `--lmstudio-allow-remote` or `LMSTUDIO_ALLOW_REMOTE=1` | Allow a server on another computer. Off by default: only `localhost`, `127.0.0.1`, and `::1` are accepted. With this on, question context is sent over your network. |
+
+LM Studio requests get a 90-second limit (or `--tutor-timeout`, if that is longer) because a model that is not yet in memory takes time to load. The app never starts or stops LM Studio itself. Like other providers, local replies are advisory only: they cannot change answer keys, grades, or mastery.
+
+**Troubleshooting**
+
+- **"server not reachable"**: LM Studio is closed or its server is off. Start it in the Developer tab or with `lms server start`, then press `6` again. If you changed the port, update the address with `[l]`.
+- **"no model is loaded"**: the server is running but has no chat model. Load one in LM Studio, or run `lms load <model>`. Embedding models are ignored. If just-in-time loading is on, LM Studio lists downloaded models and loads one on first use.
+- **First reply is slow or falls back to the offline tutor**: the model is loading into memory, or your computer is running it on the CPU. Wait for the load to finish and ask again. A smaller model is faster.
+- **Reasoning models**: models that think before answering (`<think>` output) are supported. The thinking is removed and only the final answer is shown. If a reply comes back empty and falls back, the model used its whole token limit thinking; raise `--lmstudio-max-tokens` or choose a non-reasoning model.
+- **"rejected the request (HTTP 401)"**: authentication is on in LM Studio. Set `LM_API_TOKEN` to your LM Studio token.
+- **"not on this machine"**: the address points to another computer. Use a local address, or opt in with `--lmstudio-allow-remote`.
+
+`--test-llm` checks the LM Studio server and lists the active model. `--list-models` and `--fetch-models` include LM Studio.
 
 ## Generate and review new questions
 
@@ -172,7 +204,7 @@ Keys depend on the current screen; text fields accept ordinary typing. Uppercase
 | `h` / F1 | Help and accounting reference |
 | `s` | Mastery dashboard |
 | `V` | Read saved explanations |
-| `t` | Tutor settings |
+| `t` | Tutor settings (`1`–`6` choose a provider; `6` is local LM Studio, `l` edits its address) |
 | `p` / `n` | Review questions / request a new LLM question |
 | `J` | Journal entry practice |
 | `F` | Financial statements |
@@ -206,6 +238,8 @@ Examples use the Windows filename. On macOS or Linux, substitute your executable
 .\acctg.exe --fetch-models
 .\acctg.exe --test-llm
 .\acctg.exe --tutor=openai --tutor-model=MODEL_ID
+.\acctg.exe --tutor=lmstudio
+.\acctg.exe --tutor=lmstudio --lmstudio-url=http://localhost:5678/v1
 .\acctg.exe --generate-candidate --tutor=chatgpt-plan --candidate-family=customer_advance
 .\acctg.exe --generate-candidate --tutor=openai --candidate-family=cash_service
 .\acctg.exe --generate-candidate --weakest-concept
@@ -231,7 +265,7 @@ Use `--questions` or `--size` for session length; intensities are `standard`, `s
 
 `acctg_practice.db` stores attempts, question snapshots, local published content, exams, arcade scores, and learner-saved explanations. `tutor_auth.json` stores credentials and provider settings; `models_cache.json` stores discovered models. Credentials use local JSON file storage with restrictive permission requests, not an encrypted OS keychain. Protect that directory and exclude it from releases and commits.
 
-Schema upgrades create database backups. For a manual file backup, close the application first and copy the database along with any remaining SQLite sidecar files. JSON export provides practice history, not a complete replacement for a database backup. Optional provider requests send the context needed for the selected action; offline drills require no network.
+Schema upgrades create database backups. For a manual file backup, close the application first and copy the database along with any remaining SQLite sidecar files. JSON export provides practice history, not a complete replacement for a database backup. Optional provider requests send the context needed for the selected action; offline drills require no network. LM Studio requests go only to a server on this computer unless you opt in to a remote host; `tutor_auth.json` stores its address but never an LM Studio token.
 
 ## Accounting scope
 

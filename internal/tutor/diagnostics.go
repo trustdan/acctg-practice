@@ -2,6 +2,7 @@ package tutor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -197,7 +198,49 @@ func TestLLMProviders(authStore *AuthStore, timeout time.Duration) []ProviderHea
 		})
 	}
 
+	reports = append(reports, testLMStudio(authStore, timeout))
+
 	return reports
+}
+
+// testLMStudio probes the local LM Studio server's model list. It runs only for
+// this explicit diagnostic command, never at startup.
+func testLMStudio(authStore *AuthStore, timeout time.Duration) ProviderHealthReport {
+	report := ProviderHealthReport{
+		ProviderID: ProviderLMStudio,
+		Name:       "LM Studio (local)",
+		Configured: true,
+	}
+	baseURL, allowRemote, model := DefaultLMStudioURL, false, ""
+	if authStore != nil {
+		baseURL, allowRemote, model = authStore.ResolveLMStudioURL(), authStore.LMStudioAllowRemote(), authStore.ResolveModel(ProviderLMStudio)
+	}
+	if err := ValidateLMStudioURL(baseURL, allowRemote); err != nil {
+		report.Status = "ERROR"
+		report.Message = err.Error()
+		return report
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	start := time.Now()
+	models, err := DiscoverLMStudioModels(ctx, baseURL, LMStudioToken(), nil)
+	report.LatencyMs = time.Since(start).Milliseconds()
+	if err != nil {
+		report.Status = "NOTICE"
+		if errors.Is(err, context.DeadlineExceeded) {
+			err = fmt.Errorf("LM Studio at %s did not answer within %s", baseURL, timeout)
+		}
+		report.Message = err.Error()
+		return report
+	}
+	if model == "" {
+		model = models[0].ID + " (first available)"
+	}
+	report.Status = "PASS"
+	report.ActiveModel = model
+	report.Message = fmt.Sprintf("Server reachable at %s with %d chat model(s). No API key needed; requests stay on this machine.", baseURL, len(models))
+	return report
 }
 
 // FormatHealthReports creates a formatted terminal display of LLM connection health.
@@ -236,6 +279,8 @@ func FormatHealthReports(reports []ProviderHealthReport) string {
 	b.WriteString("ChatGPT invalid_client: reconnect through Tutor Settings [2] for dynamic registration.\n")
 	b.WriteString(" • Commercial API keys can be passed via environment variables (OPENAI_API_KEY,\n")
 	b.WriteString("   ANTHROPIC_API_KEY, GEMINI_API_KEY) or set interactively in TUI (press 't').\n")
+	b.WriteString(" • LM Studio [6] needs no key: load a model, start the server (Developer tab or\n")
+	b.WriteString("   `lms server start`), then press 't' -> [6]. URL: LMSTUDIO_BASE_URL or --lmstudio-url.\n")
 	b.WriteString("================================================================================\n")
 
 	return b.String()

@@ -43,6 +43,12 @@ func (f *FallbackTutor) Name() string {
 	return f.fallback.Name()
 }
 
+// Timeout returns the per-request deadline given to the primary provider.
+// Callers should allow at least this long so a primary timeout can fall back.
+func (f *FallbackTutor) Timeout() time.Duration {
+	return f.timeout
+}
+
 // Hint implements Tutor.
 func (f *FallbackTutor) Hint(ctx context.Context, req Request) (Response, error) {
 	if err := ctx.Err(); err != nil {

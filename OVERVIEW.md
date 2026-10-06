@@ -32,7 +32,7 @@ Likewise, a percentage displayed as mastery is a scheduling estimate, not a clin
 |---|---|
 | Go, TUI, SQLite, offline-first | Go/Bubble Tea/SQLite dependency versions and target OS |
 | Machine and creative modes; offline fallback | Course vocabulary and actual Week 1–2 scope |
-| Optional tutor: ChatGPT Plus (OAuth) or API keys (Anthropic, Google, OpenAI) | Exact professor grid and statement formats |
+| Optional tutor: ChatGPT Plus (OAuth), API keys (Anthropic, Google, OpenAI) or local LM Studio (loopback only by default) | Exact professor grid and statement formats |
 | Dynamic live model selection across providers (not frozen snapshots) | Provider model catalog API deprecations/rate limits |
 | Canonical reusable question bank | Exam rules and permitted aids |
 | Socratic progressive drills; contrast scenarios | Half-life tuning from observed performance |
@@ -42,7 +42,8 @@ Likewise, a percentage displayed as mastery is a scheduling estimate, not a clin
 Provider options for the optional AI tutor accommodate both subscription and direct-key workflows:
 1. **ChatGPT Plus / Subscription**: OpenAI's official "Sign in with ChatGPT" flow for personal/open-source apps using PKCE, local loopback callback, registered client ID configuration, and streamed Responses API (`store: false`, `stream: true`).
 2. **User API Keys**: Direct adapters for Anthropic Claude (`ANTHROPIC_API_KEY`), Google Gemini (`GEMINI_API_KEY`), or OpenAI API (`OPENAI_API_KEY`), loaded via environment variables or interactive TUI entry.
-3. **Dynamic Model Discovery**: Live queries to provider model catalog endpoints (`/v1/models` and `/v1beta/models`) with local disk caching and offline fallbacks, allowing learners to select current model releases over time.
+3. **Local model (LM Studio)**: An OpenAI-compatible adapter for a model running in LM Studio on the learner's own machine. No key, account or billing; only loopback hosts are accepted unless the learner explicitly opts in to a remote server.
+4. **Dynamic Model Discovery**: Live queries to provider model catalog endpoints (`/v1/models` and `/v1beta/models`) with local disk caching and offline fallbacks, allowing learners to select current model releases over time.
 
 All credentials and tokens reside securely in local user-data storage and are never committed to git. Machine-mode drills remain strictly offline, and the application will never silently switch between subscription allowance and paid API billing.
 

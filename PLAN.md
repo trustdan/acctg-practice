@@ -318,6 +318,45 @@ Preserve arcade performance across sessions in the local SQLite database with re
 
 Gate: PASSED. Migration 6 applies cleanly on fresh and upgraded databases; high scores persist in SQLite; player is only prompted for initials when setting a new all-time high score; top score renders on arcade HUD; unit tests verify storage operations and initials entry state machine.
 
+## Stage 29 — Local-first LM Studio tutor provider (Complete; live check open)
+
+Add an optional local tutor provider backed by LM Studio's OpenAI-compatible server (default `http://localhost:1234/v1`; `GET /v1/models`, `POST /v1/chat/completions`). Offline mode remains the default and startup never contacts the server. Verify current [LM Studio OpenAI-compatibility docs](https://lmstudio.ai/docs/developer/openai-compat) before implementation.
+
+- **Shared chat-completions client**: Extract the request/decode body of `OpenAIAPITutor.call` in `internal/tutor/apikey.go` into one helper used by both the OpenAI and new `LMStudioTutor` adapters. Add `ProviderLMStudio = "lmstudio"`.
+- **No key required**: Send a placeholder bearer token, or `LM_API_TOKEN` when the learner has enabled LM Studio token authentication.
+- **Local-model output hygiene**: Strip `<think>…</think>` blocks and ignore `reasoning_content` before `CleanLaTeXMath`. Make `max_tokens` configurable with a higher local default so reasoning models are not truncated mid-thought.
+- **Configuration and privacy**: `LMStudioURL` in `AuthConfig`, overridable by `LMSTUDIO_BASE_URL` and `--lmstudio-url`. Accept loopback hosts only (`localhost`, `127.0.0.1`, `::1`) unless the learner explicitly opts in to a remote host, so local-first tutoring keeps learner context on the machine. `IsConfigured` checks only that a URL is set; no network probe.
+- **Factory and timeouts**: `BuildTutor` wraps `LMStudioTutor` in `FallbackTutor` with a longer provider default (about 90s) to cover cold model loads and CPU inference. Existing cancellation and offline fallback are unchanged.
+- **Model discovery**: `DiscoverLMStudioModels` lists loaded models from `/v1/models` without the OpenAI name filter, hides embedding models, defaults to the first loaded model and reports "no model loaded" clearly. Existing `[m]`/`[r]`/`[c]` selector keys work unchanged.
+- **TUI**: Tutor Settings gains `[6] LM Studio (local)` showing URL, active model and a no-key badge, plus URL editing via the existing input buffer. Selecting it performs one asynchronous `/v1/models` check and shows either a connected/model count notice or actionable guidance (start the server in LM Studio's Developer tab or with `lms server start`). The TUI does not launch or manage the LM Studio process.
+- **Diagnostics**: Include `lmstudio` in `--test-llm`, `--list-models` and `--fetch-models`, with server-not-running and no-model-loaded messages instead of auth guidance.
+- **Documentation and in-app help** (shipped with this stage, not deferred):
+  - README `## AI tutor`: an LM Studio setup walkthrough (install, download and load a model, start the server, press `t` then `6`), `LMSTUDIO_BASE_URL`/`LM_API_TOKEN`/`--lmstudio-url`, the loopback-only default and remote opt-in, troubleshooting (server not running, no model loaded, slow first reply from a cold load, reasoning-model output) and a note that local tutoring needs no account or billing. Update the CLI flag list and keyboard reference.
+  - Help screen (`renderHelp` in `internal/tui/view.go`): list the LM Studio option beside `[t]` and mention local tutoring in the getting-started text. Tutor Settings modal shows short inline setup guidance when the server is unreachable.
+  - OVERVIEW provider options and settled table, `config/example.toml` (`provider = "lmstudio"`, base URL, timeout, max tokens), RELEASE-NOTES unreleased entry, ARCHITECTURE provider list if it enumerates providers, and HANDOFF.
+- **Unchanged invariants**: Responses remain untrusted advisory prose with no path to grades, answer keys, bank approval or mastery; chat-only tutoring earns no evidence.
+
+Gate: `httptest` coverage for success, think-tag stripping, no required Authorization header, connection-refused fallback, timeout, cancellation, model-list parsing (including none loaded) and non-loopback rejection; TUI update test for `[6]`; help-screen test asserts the LM Studio option is advertised; startup path makes no network call; gofmt, go vet ./... and go test ./... pass; all documentation above updated and its local links resolve. One manual run against a real LM Studio server with a loaded model is recorded as performed or remains an open live-provider check.
+
+Gate status (2026-10-05): PASSED for automated coverage. httptest, TUI update and help-screen tests pass; gofmt, go vet ./... and go test ./... are clean; documentation is updated and its local links resolve. One deviation from the plan: no placeholder bearer token is sent. The Authorization header is sent only when `LM_API_TOKEN` is set. The manual run against a real LM Studio server remains an open live-provider check.
+
+## Stage 30 — Streamed tutor replies (Planned; after Stage 29)
+
+Show hint and explanation text incrementally as it is generated. This mainly benefits slower local models but applies to all network providers. Verify each provider's current streaming documentation before implementation.
+
+- **Optional streaming contract**: Add a `StreamingTutor` interface (e.g. `HintStream`/`ExplainStream` emitting text deltas and a final `Response`) alongside the existing `Tutor` interface. Providers without streaming keep working through the non-streamed path.
+- **Adapters**: Server-sent-event parsing for OpenAI-format chat completions (`stream: true`, `data:` lines, `[DONE]`; shared by OpenAI and LM Studio), Anthropic Messages streaming and Gemini `streamGenerateContent?alt=sse`. The ChatGPT plan adapter already requests `stream: true`; surface its deltas instead of buffering.
+- **Nonblocking TUI delivery**: Deliver deltas through a self-reissuing `tea.Cmd` reading from a channel, never blocking the event loop. Throttle re-rendering (glamour markdown, `CleanLaTeXMath` on accumulated text) to a fixed interval rather than every token. Show a "thinking…" indicator while a `<think>` block is open; never display its contents.
+- **Timeouts, limits and cancellation**: Replace total-request timeout with first-token and idle timeouts for streams. Enforce `ErrResponseTooLarge` on accumulated size during the stream. Esc/cancel closes the response body promptly.
+- **Failure semantics**: Error before the first delta falls back to `OfflineTutor` as today. Error mid-stream keeps the partial text visibly marked incomplete and does not save it as an explanation; only completed responses are persisted. Budget usage is recorded once per completed or aborted request.
+- **Documentation and in-app help** (shipped with this stage, not deferred):
+  - README `## AI tutor`: what streaming looks like, which providers stream, how to cancel a reply in progress, what an "incomplete" reply means and that it is not saved, and any new flag or setting (e.g. turning streaming off). Update the keyboard reference if cancel/stop keys change.
+  - Help screen and status bar (`renderHelp`, `renderStatusBar` in `internal/tui/view.go`): advertise the cancel key while a reply is streaming and explain the "thinking…" and incomplete markers.
+  - ARCHITECTURE tutor contract (optional `StreamingTutor`, delivery path, timeout semantics), `config/example.toml`, RELEASE-NOTES unreleased entry and HANDOFF.
+- **Unchanged invariants**: Streaming changes presentation only; no path to grades, answer keys, bank approval or mastery.
+
+Gate: fake SSE server tests for chunk parsing per provider, split/partial lines, `[DONE]`, think-block suppression across chunk boundaries, first-token/idle timeouts, mid-stream error, size limit and cancellation; TUI update tests showing key input stays responsive during a slow stream and partial replies are not saved; help-screen/status-bar test asserts the streaming cancel key is advertised; gofmt, go vet ./... and go test ./... pass; all documentation above updated and its local links resolve. Manual streamed run against at least one real provider is recorded or remains an open live-provider check.
+
 ## Implementation roadmap allocation
 
 - Stages 00–07: Core offline machine drill, accounting engine, SQLite persistence, and Bubble Tea TUI (Complete).
@@ -335,6 +374,8 @@ Gate: PASSED. Migration 6 applies cleanly on fresh and upgraded databases; high 
 - Stage 26: Dynamic Flight Acceleration & Dual Audit Hit Points (Internal Audit Shields & External Audit Integrity) (Complete).
 - Stage 27: Heavy Accounting Hazards — Multi-Hit Fraud & Insider Trading Asteroids with Fragmentation Debris (Complete).
 - Stage 28: Persistent Arcade High Scores & Old-School 3-Initials Hall of Fame (SQLite Schema Migration & TUI Entry) (Complete).
+- Stage 29: Local-first LM Studio tutor provider (Complete; live LM Studio run open).
+- Stage 30: Streamed tutor replies across providers (Planned; after Stage 29).
 
 ## Current quality gate at 90 - October 3, 2026
 

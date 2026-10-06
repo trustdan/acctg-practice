@@ -404,76 +404,14 @@ func (o *OpenAIAPITutor) call(ctx context.Context, req Request, isHint bool) (Re
 		return Response{}, errors.New("openai api key not configured (set OPENAI_API_KEY or configure via 't')")
 	}
 
-	endpoint := strings.TrimSuffix(o.cfg.BaseURL, "/") + "/chat/completions"
-
-	payload := map[string]interface{}{
-		"model":      o.cfg.Model,
-		"max_tokens": 800,
-		"messages": []map[string]string{
-			{"role": "system", "content": SystemPrompt},
-			{"role": "user", "content": FormatUserPrompt(req, isHint)},
-		},
-	}
-
-	jsonBytes, err := json.Marshal(payload)
-	if err != nil {
-		return Response{}, fmt.Errorf("failed encoding request: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(jsonBytes))
-	if err != nil {
-		return Response{}, err
-	}
-	httpReq.Header.Set("Authorization", "Bearer "+key)
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	httpResp, err := o.cfg.HTTPClient.Do(httpReq)
-	if err != nil {
-		return Response{}, fmt.Errorf("openai api request failed: %w", err)
-	}
-	defer httpResp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return Response{}, fmt.Errorf("failed reading response: %w", err)
-	}
-
-	if httpResp.StatusCode != http.StatusOK {
-		return Response{}, fmt.Errorf("openai api error (%d): %s", httpResp.StatusCode, string(bodyBytes))
-	}
-
-	var chatResp struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-		Usage struct {
-			CompletionTokens int `json:"completion_tokens"`
-		} `json:"usage"`
-	}
-	if err := json.Unmarshal(bodyBytes, &chatResp); err != nil {
-		return Response{}, fmt.Errorf("failed decoding openai response: %w", err)
-	}
-
-	if len(chatResp.Choices) == 0 {
-		return Response{}, errors.New("empty choices received from openai api")
-	}
-
-	text := strings.TrimSpace(CleanLaTeXMath(chatResp.Choices[0].Message.Content))
-	tokens := chatResp.Usage.CompletionTokens
-	if tokens <= 0 {
-		tokens = (len(text) + 3) / 4
-	}
-	if o.cfg.Budget != nil {
-		_ = o.cfg.Budget.RecordUsage(tokens)
-	}
-
-	return Response{
-		Text:        text,
-		Provider:    "openai",
-		TokensUsed:  tokens,
-		Fallback:    false,
-		GeneratedAt: time.Now().UTC(),
-	}, nil
+	return callChatCompletions(ctx, chatCompletionsCall{
+		BaseURL:    o.cfg.BaseURL,
+		Token:      key,
+		Model:      o.cfg.Model,
+		MaxTokens:  800,
+		HTTPClient: o.cfg.HTTPClient,
+		Budget:     o.cfg.Budget,
+		Label:      "openai api",
+		Provider:   "openai",
+	}, req, isHint)
 }

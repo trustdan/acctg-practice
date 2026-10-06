@@ -6,7 +6,7 @@ import (
 
 // FactoryOptions configures tutor creation.
 type FactoryOptions struct {
-	Provider       string        // "offline", "chatgpt_plan", "anthropic", "google", "openai"
+	Provider       string        // "offline", "chatgpt_plan", "anthropic", "google", "openai", "lmstudio"
 	Model          string        // Model override (e.g. "gpt-4o", "claude-3-5-sonnet-20241022")
 	Timeout        time.Duration // Default 5s
 	Budget         *Budget       // Optional session limiter
@@ -16,6 +16,7 @@ type FactoryOptions struct {
 	OpenAIURL      string        // Optional override
 	ChatGPTAuthURL string        // Optional override
 	ChatGPTAPIURL  string        // Optional override
+	LMStudioURL    string        // Optional override (otherwise AuthStore / LMSTUDIO_BASE_URL / default)
 }
 
 // BuildTutor creates the configured Tutor, wrapping any network provider in FallbackTutor.
@@ -76,6 +77,18 @@ func BuildTutor(opts FactoryOptions) Tutor {
 			Budget:    opts.Budget,
 		})
 		return NewFallbackTutor(openai, offline, timeout)
+
+	case ProviderLMStudio:
+		lmstudio := NewLMStudioTutor(LMStudioConfig{
+			AuthStore: opts.AuthStore,
+			BaseURL:   opts.LMStudioURL,
+			Model:     model,
+			Budget:    opts.Budget,
+		})
+		if timeout < DefaultLMStudioTimeout {
+			timeout = DefaultLMStudioTimeout
+		}
+		return NewFallbackTutor(lmstudio, offline, timeout)
 
 	default: // ProviderOffline
 		return offline

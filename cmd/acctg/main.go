@@ -37,10 +37,13 @@ func main() {
 		intensityFlag         = flag.String("intensity", "standard", "practice intensity: standard, spaced, intensive, transfer")
 		seedFlag              = flag.Int64("seed", 0, "deterministic random seed (default: current time)")
 		providerFlag          = flag.String("provider", "", "alias for --tutor")
-		tutorFlag             = flag.String("tutor", "offline", "tutor provider: offline, chatgpt-plan, anthropic, google, openai, simulated, simulated-slow, simulated-error")
+		tutorFlag             = flag.String("tutor", "offline", "tutor provider: offline, chatgpt-plan, anthropic, google, openai, lmstudio, simulated, simulated-slow, simulated-error")
 		tutorModelFlag        = flag.String("tutor-model", "", "select active AI tutor model (e.g. gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-flash)")
 		tutorTimeoutFlag      = flag.Duration("tutor-timeout", 60*time.Second, "tutor request timeout")
 		tutorBudgetFlag       = flag.Int("tutor-budget", 20, "max tutor requests per session (0 = unlimited)")
+		lmstudioURLFlag       = flag.String("lmstudio-url", "", "save the LM Studio server URL (default "+tutor.DefaultLMStudioURL+"; empty value restores it)")
+		lmstudioRemoteFlag    = flag.Bool("lmstudio-allow-remote", false, "allow a non-loopback LM Studio host (learner context leaves this machine)")
+		lmstudioTokensFlag    = flag.Int("lmstudio-max-tokens", 0, fmt.Sprintf("save max_tokens for LM Studio replies (default %d)", tutor.DefaultLMStudioMaxTokens))
 		listModelsFlag        = flag.Bool("list-models", false, "display discovered and default AI models for configured providers and exit")
 		fetchModelsFlag       = flag.Bool("fetch-models", false, "discover live models from configured provider APIs and save to local cache")
 		refreshModelsFlag     = flag.Bool("refresh-models", false, "alias for --fetch-models")
@@ -140,6 +143,34 @@ func main() {
 		fmt.Fprintf(os.Stderr, "warning: could not load model cache: %v\n", err)
 	}
 
+	// Persist LM Studio settings only when explicitly passed.
+	if authStore != nil {
+		var lmErr error
+		flag.Visit(func(f *flag.Flag) {
+			switch f.Name {
+			case "lmstudio-allow-remote":
+				lmErr = errors.Join(lmErr, authStore.SetLMStudioAllowRemote(*lmstudioRemoteFlag))
+			case "lmstudio-max-tokens":
+				lmErr = errors.Join(lmErr, authStore.SetLMStudioMaxTokens(*lmstudioTokensFlag))
+			}
+		})
+		flag.Visit(func(f *flag.Flag) {
+			if f.Name != "lmstudio-url" {
+				return
+			}
+			if *lmstudioURLFlag != "" {
+				if err := tutor.ValidateLMStudioURL(*lmstudioURLFlag, authStore.LMStudioAllowRemote()); err != nil {
+					fmt.Fprintf(os.Stderr, "error: %v\n", err)
+					os.Exit(1)
+				}
+			}
+			lmErr = errors.Join(lmErr, authStore.SetLMStudioURL(*lmstudioURLFlag))
+		})
+		if lmErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not save LM Studio settings: %v\n", lmErr)
+		}
+	}
+
 	// Handle --provider standalone switch
 	if *providerFlag != "" && authStore != nil {
 		_ = authStore.SetActiveProvider(*providerFlag)
@@ -205,7 +236,7 @@ func main() {
 		fmt.Println("==================================================================================")
 		fmt.Println("DISCOVERING LIVE MODELS ACROSS CONFIGURED AI PROVIDERS")
 		fmt.Println("==================================================================================")
-		providers := []string{tutor.ProviderAnthropic, tutor.ProviderGoogle, tutor.ProviderOpenAI, tutor.ProviderChatGPTPlan}
+		providers := []string{tutor.ProviderAnthropic, tutor.ProviderGoogle, tutor.ProviderOpenAI, tutor.ProviderChatGPTPlan, tutor.ProviderLMStudio}
 		discoveredCount := 0
 		for _, p := range providers {
 			isConfigured := authStore != nil && authStore.IsConfigured(p)
@@ -249,6 +280,7 @@ func main() {
 			{tutor.ProviderGoogle, "Google Gemini (Gemini API)"},
 			{tutor.ProviderOpenAI, "OpenAI API (Chat Completions)"},
 			{tutor.ProviderChatGPTPlan, "ChatGPT Plus Plan (OpenAI OAuth)"},
+			{tutor.ProviderLMStudio, "LM Studio local server (no key)"},
 		}
 
 		for _, p := range providers {
@@ -270,6 +302,9 @@ func main() {
 			fmt.Printf("Description: %s\n", p.label)
 			if p.id == tutor.ProviderChatGPTPlan && authStore != nil {
 				fmt.Printf("OAuth Client ID: %s\n", authStore.ResolveChatGPTClientID())
+			}
+			if p.id == tutor.ProviderLMStudio && authStore != nil {
+				fmt.Printf("Server URL: %s\n", authStore.ResolveLMStudioURL())
 			}
 			lastFetched := modelCache.GetLastFetched(p.id)
 			if !lastFetched.IsZero() {
@@ -754,6 +789,8 @@ func main() {
 				tut = tutor.BuildTutor(tutor.FactoryOptions{Provider: tutor.ProviderOpenAI, Timeout: *tutorTimeoutFlag, Budget: budget, AuthStore: authStore})
 			case "chatgpt-plan", "chatgpt_plan":
 				tut = tutor.BuildTutor(tutor.FactoryOptions{Provider: tutor.ProviderChatGPTPlan, Timeout: *tutorTimeoutFlag, Budget: budget, AuthStore: authStore})
+			case "lmstudio", "lm-studio":
+				tut = tutor.BuildTutor(tutor.FactoryOptions{Provider: tutor.ProviderLMStudio, Timeout: *tutorTimeoutFlag, Budget: budget, AuthStore: authStore})
 			default:
 				tut = tutor.NewOfflineTutor()
 			}
@@ -1004,6 +1041,14 @@ func main() {
 	case "openai":
 		tutorProvider = tutor.BuildTutor(tutor.FactoryOptions{
 			Provider:  tutor.ProviderOpenAI,
+			Model:     *tutorModelFlag,
+			Timeout:   *tutorTimeoutFlag,
+			Budget:    budget,
+			AuthStore: authStore,
+		})
+	case "lmstudio", "lm-studio":
+		tutorProvider = tutor.BuildTutor(tutor.FactoryOptions{
+			Provider:  tutor.ProviderLMStudio,
 			Model:     *tutorModelFlag,
 			Timeout:   *tutorTimeoutFlag,
 			Budget:    budget,

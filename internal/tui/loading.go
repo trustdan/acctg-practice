@@ -53,7 +53,7 @@ func (m *Model) requestCandidate() (tea.Model, tea.Cmd) {
 	if len(m.CurrentInstance.Concepts) > 0 {
 		concept = m.CurrentInstance.Concepts[0]
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), m.TutorTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), m.tutorRequestTimeout())
 	m.CandidateCancel = cancel
 	m.CandidateActive = true
 	m.CandidateRequestID++

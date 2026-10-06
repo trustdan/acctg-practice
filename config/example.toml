@@ -10,7 +10,7 @@ half_life_days = 3.0
 minimum_selection_weight = 0.05
 
 [tutor]
-# Supported providers: "offline" (default), "chatgpt_plan", "anthropic", "google", or "openai"
+# Supported providers: "offline" (default), "chatgpt_plan", "anthropic", "google", "openai", or "lmstudio"
 provider = "offline"
 network_enabled = false
 timeout_seconds = 20
@@ -24,3 +24,12 @@ max_requests_per_session = 5
 # - "chatgpt_plan": managed via TUI browser login (OAuth PKCE) and saved in local user data dir.
 # - "anthropic", "google", "openai": read from ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY env vars,
 #   or entered via TUI and stored securely in local user data dir. Never store secrets in tracked files or git.
+# - "lmstudio": no key. Optional LM_API_TOKEN env var only if LM Studio authentication is enabled (never stored).
+#
+# Local LM Studio server (provider = "lmstudio"). Effective settings come from flags/env/TUI:
+# [tutor.lmstudio]
+# base_url = "http://localhost:1234/v1"   # LMSTUDIO_BASE_URL, --lmstudio-url, or [l] in Tutor Settings
+# allow_remote = false                    # loopback hosts only unless --lmstudio-allow-remote / LMSTUDIO_ALLOW_REMOTE=1
+# timeout_seconds = 90                    # minimum for LM Studio (cold model loads, CPU inference)
+# max_tokens = 4096                       # --lmstudio-max-tokens; room for reasoning models to finish
+# model = ""                              # empty = first model the server reports; choose with [m] in Tutor Settings

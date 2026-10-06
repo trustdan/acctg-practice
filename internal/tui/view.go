@@ -758,6 +758,7 @@ func (m *Model) renderHelp(contentWidth int) string {
 [e]             Request a conceptual explanation; save prompt appears when leaving
 [V]             Read saved explanations (personal notes, not answer keys)
 [t]             Configure / connect the AI tutor
+[t] then [6]    Use a local LM Studio model as the tutor (no key or account)
 [p]             Review new questions before adding them to practice
 [n]             Request a new question from the connected AI tutor
 [u] / [d]       Scroll up / down half a screen (also Page Up / Page Down)
@@ -800,8 +801,9 @@ Only approval adds it to practice. The accounting engine supplies the answer key
 [Esc]           Cancel an active retrieval; otherwise return to practice
 [p]             Return to practice
 
-To get started: connect a tutor with [t] from practice, press [n], read the
-proposal and all teaching text, then press [a] only if you approve it.`
+To get started: connect a tutor with [t] from practice ([6] runs one locally
+through LM Studio), press [n], read the proposal and all teaching text, then
+press [a] only if you approve it.`
 	sections = append(sections, m.Styles.HelpGridBox.Render(reviewControls))
 
 	sections = append(sections, m.Styles.HelpText.Render("Press [h], [Esc], or [Enter] to return to practice..."))
@@ -848,6 +850,12 @@ func (m *Model) renderSessionComplete(contentWidth int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
 
+// lmstudioSetupTips is shown in Tutor Settings when the LM Studio check fails.
+const lmstudioSetupTips = `Setup: 1) Open LM Studio and download a chat model.
+       2) Load it, then start the server in the Developer tab (or run: lms server start).
+       3) Press [6] again. Different port or host? Press [l] to edit the URL.
+The drill keeps working offline meanwhile; hints fall back to the offline tutor.`
+
 func (m *Model) renderTutorConfig(contentWidth int) string {
 	var sections []string
 
@@ -862,7 +870,8 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	intro := m.Styles.ScenarioBox.Width(contentWidth).Render(
 		"Choose how Socratic hints and conceptual explanations are powered.\n" +
 			"Default is 100% offline machine mode (zero network). You can also connect\n" +
-			"your ChatGPT Plus subscription or enter your own commercial API key.",
+			"your ChatGPT Plus subscription, enter your own commercial API key, or run\n" +
+			"a model locally with LM Studio [6] (no key; stays on this machine).",
 	)
 	sections = append(sections, intro)
 
@@ -990,6 +999,24 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov5+"\n"+prov5Desc))
 	}
 
+	// 6. LM Studio (local)
+	lmURL := tutor.DefaultLMStudioURL
+	lmModel := ""
+	if m.AuthStore != nil {
+		lmURL = m.AuthStore.ResolveLMStudioURL()
+		lmModel = m.AuthStore.ResolveModel(tutor.ProviderLMStudio)
+	}
+	if lmModel == "" {
+		lmModel = "first available model"
+	}
+	prov6 := formatStatus(tutor.ProviderLMStudio, true, "[6] LM Studio (local) • No key needed")
+	prov6Desc := fmt.Sprintf("    Model: %s • Server: %s\n    Runs on this machine with no account or billing. [l] Edit server URL.", lmModel, lmURL)
+	if activeProvider == tutor.ProviderLMStudio {
+		providerLines = append(providerLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(prov6+"\n"+prov6Desc))
+	} else {
+		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov6+"\n"+prov6Desc))
+	}
+
 	if !m.TutorModelSelectActive && !m.TutorInputActive {
 		sections = append(sections, strings.Join(providerLines, "\n"))
 	} else {
@@ -1050,7 +1077,13 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	}
 
 	// Key input box if active
-	if m.TutorInputActive {
+	if m.TutorInputActive && m.TutorInputProvider == tutor.ProviderLMStudio {
+		inputBox := m.Styles.HintBox.Width(contentWidth).Render(
+			fmt.Sprintf("🖥  Enter LM Studio server URL (blank = %s):\n> %s_\n\nOnly localhost, 127.0.0.1 and ::1 are accepted unless remote hosts are enabled.\n[Press Enter to Save, Esc to Cancel]",
+				tutor.DefaultLMStudioURL, m.TutorInputBuffer),
+		)
+		sections = append(sections, inputBox)
+	} else if m.TutorInputActive {
 		masked := strings.Repeat("•", len(m.TutorInputBuffer))
 		if len(m.TutorInputBuffer) > 6 {
 			masked = m.TutorInputBuffer[:3] + strings.Repeat("•", len(m.TutorInputBuffer)-6) + m.TutorInputBuffer[len(m.TutorInputBuffer)-3:]
@@ -1063,7 +1096,7 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	}
 
 	// Controls footer
-	footer := m.Styles.HelpText.Render("[1-5] Choose Provider  [m] Select Model  [r] Discover Models  [a] Disconnect/Change ChatGPT Account  [x] Clear  [Esc/t] Return")
+	footer := m.Styles.HelpText.Render("[1-6] Choose Provider  [l] LM Studio URL  [m] Select Model  [r] Discover Models  [a] Disconnect/Change ChatGPT Account  [x] Clear  [Esc/t] Return")
 	sections = append(sections, footer)
 
 	// Airline Status Bar in TUTOR mode

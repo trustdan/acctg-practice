@@ -1,3 +1,15 @@
+# Unreleased - Local LM Studio tutor (October 5, 2026)
+
+- New Tutor Settings option `[6] LM Studio (local)`: hints and explanations from a model running on your own computer through LM Studio's OpenAI-compatible server. No key, account or billing. One server check on selection reports the models found or how to start the server or load a model; `[l]` edits the server address.
+- Loopback hosts only by default (`--lmstudio-allow-remote` / `LMSTUDIO_ALLOW_REMOTE=1` to opt in). Optional `LM_API_TOKEN` when LM Studio authentication is on; never stored.
+- Reasoning-model `<think>` output is removed. Replies get a 4096-token default (`--lmstudio-max-tokens`) and at least a 90-second limit for cold model loads; failures fall back to the offline tutor as before.
+- New flags `--tutor=lmstudio`, `--lmstudio-url`, `--lmstudio-max-tokens`, `--lmstudio-allow-remote`. `--test-llm`, `--list-models` and `--fetch-models` include LM Studio. The help screen and README describe setup and troubleshooting.
+- TUI tutor requests now allow slightly longer than the provider deadline, so a timed-out provider falls back to offline help instead of showing an error.
+
+Not yet checked against a live LM Studio server; automated tests use a fake server.
+
+---
+
 # Unreleased - Quality closeout at 90 (October 3, 2026)
 
 - Expanded reviewed seed coverage to 90 active scenarios across 13 existing families, with one retired record.

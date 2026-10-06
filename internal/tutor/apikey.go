@@ -355,7 +355,9 @@ func NewOpenAIAPITutor(cfg APIKeyConfig) *OpenAIAPITutor {
 		cfg.Model = DefaultOpenAIAPIModel
 	}
 	if cfg.HTTPClient == nil {
-		cfg.HTTPClient = &http.Client{Timeout: 30 * time.Second}
+		// Deadlines come from the caller's context (FallbackTutor); a fixed client
+		// timeout would also cut off a streamed reply that is still arriving.
+		cfg.HTTPClient = &http.Client{}
 	}
 	return &OpenAIAPITutor{cfg: cfg}
 }
@@ -392,19 +394,43 @@ func (o *OpenAIAPITutor) getKey() string {
 	return ""
 }
 
+func (o *OpenAIAPITutor) HintStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return o.stream(ctx, req, true, onUpdate)
+}
+
+func (o *OpenAIAPITutor) ExplainStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return o.stream(ctx, req, false, onUpdate)
+}
+
 func (o *OpenAIAPITutor) call(ctx context.Context, req Request, isHint bool) (Response, error) {
+	c, err := o.prepare()
+	if err != nil {
+		return Response{}, err
+	}
+	return callChatCompletions(ctx, c, req, isHint)
+}
+
+func (o *OpenAIAPITutor) stream(ctx context.Context, req Request, isHint bool, onUpdate func(StreamUpdate)) (Response, error) {
+	c, err := o.prepare()
+	if err != nil {
+		return Response{}, err
+	}
+	return streamChatCompletions(ctx, c, req, isHint, onUpdate)
+}
+
+func (o *OpenAIAPITutor) prepare() (chatCompletionsCall, error) {
 	if o.cfg.Budget != nil {
 		if err := o.cfg.Budget.Check(); err != nil {
-			return Response{}, err
+			return chatCompletionsCall{}, err
 		}
 	}
 
 	key := o.getKey()
 	if key == "" {
-		return Response{}, errors.New("openai api key not configured (set OPENAI_API_KEY or configure via 't')")
+		return chatCompletionsCall{}, errors.New("openai api key not configured (set OPENAI_API_KEY or configure via 't')")
 	}
 
-	return callChatCompletions(ctx, chatCompletionsCall{
+	return chatCompletionsCall{
 		BaseURL:    o.cfg.BaseURL,
 		Token:      key,
 		Model:      o.cfg.Model,
@@ -413,5 +439,5 @@ func (o *OpenAIAPITutor) call(ctx context.Context, req Request, isHint bool) (Re
 		Budget:     o.cfg.Budget,
 		Label:      "openai api",
 		Provider:   "openai",
-	}, req, isHint)
+	}, nil
 }

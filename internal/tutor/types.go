@@ -58,5 +58,23 @@ type Response struct {
 	TokensUsed     int
 	FallbackReason string
 	Fallback       bool
+	Incomplete     bool // A streamed reply stopped early; show it marked and never save it.
 	GeneratedAt    time.Time
+}
+
+// StreamUpdate is the visible state of a reply while it streams in.
+type StreamUpdate struct {
+	Text     string // Visible text so far, with reasoning removed.
+	Thinking bool   // The model is reasoning and no visible text is being produced.
+	Provider string // Response.Provider of the streaming provider.
+}
+
+// StreamingTutor is optionally implemented by tutors that can stream replies.
+// onUpdate is called synchronously from the calling goroutine and never after
+// the method returns. On a mid-stream error, the returned Response carries the
+// partial visible text and provider alongside the error.
+type StreamingTutor interface {
+	Tutor
+	HintStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error)
+	ExplainStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error)
 }

@@ -1,3 +1,14 @@
+# Unreleased - Streamed tutor replies (October 5, 2026)
+
+- Hints and explanations from the OpenAI API and LM Studio now appear as they are written instead of all at once. Anthropic, Gemini and ChatGPT plan replies still arrive whole; streaming for them is planned.
+- "thinking…" shows while a reasoning model works; its reasoning is never displayed.
+- Esc stops a reply in progress and keeps the text so far, marked "incomplete, not saved". Incomplete replies are never offered for saving.
+- Streams have no overall time limit: the first text must arrive within the provider timeout, then a reply stops only after 30 seconds without new text. A failure before any text still falls back to the offline tutor.
+- The OpenAI API adapter no longer has its own fixed 30-second HTTP limit; the tutor timeout (or the streaming limits above) bounds requests instead.
+- The help screen and status bar show the Esc stop key while a reply streams. Checked live against LM Studio with `google/gemma-4-e4b`.
+
+---
+
 # Unreleased - Local LM Studio tutor (October 5, 2026)
 
 - New Tutor Settings option `[6] LM Studio (local)`: hints and explanations from a model running on your own computer through LM Studio's OpenAI-compatible server. No key, account or billing. One server check on selection reports the models found or how to start the server or load a model; `[l]` edits the server address.
@@ -6,7 +17,7 @@
 - New flags `--tutor=lmstudio`, `--lmstudio-url`, `--lmstudio-max-tokens`, `--lmstudio-allow-remote`. `--test-llm`, `--list-models` and `--fetch-models` include LM Studio. The help screen and README describe setup and troubleshooting.
 - TUI tutor requests now allow slightly longer than the provider deadline, so a timed-out provider falls back to offline help instead of showing an error.
 
-Not yet checked against a live LM Studio server; automated tests use a fake server.
+Checked live on October 5, 2026 against LM Studio with `google/gemma-4-e4b` (`--test-llm`, `--fetch-models`, a hint, an explanation, and offline fallback for a stopped server).
 
 ---
 

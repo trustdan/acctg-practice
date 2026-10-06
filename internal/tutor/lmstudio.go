@@ -127,13 +127,37 @@ func (l *LMStudioTutor) Explain(ctx context.Context, req Request) (Response, err
 	return l.call(ctx, req, false)
 }
 
+func (l *LMStudioTutor) HintStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return l.stream(ctx, req, true, onUpdate)
+}
+
+func (l *LMStudioTutor) ExplainStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return l.stream(ctx, req, false, onUpdate)
+}
+
 func (l *LMStudioTutor) call(ctx context.Context, req Request, isHint bool) (Response, error) {
-	if err := ValidateLMStudioURL(l.cfg.BaseURL, l.cfg.AllowRemote); err != nil {
+	c, err := l.prepare(ctx)
+	if err != nil {
 		return Response{}, err
+	}
+	return callChatCompletions(ctx, c, req, isHint)
+}
+
+func (l *LMStudioTutor) stream(ctx context.Context, req Request, isHint bool, onUpdate func(StreamUpdate)) (Response, error) {
+	c, err := l.prepare(ctx)
+	if err != nil {
+		return Response{}, err
+	}
+	return streamChatCompletions(ctx, c, req, isHint, onUpdate)
+}
+
+func (l *LMStudioTutor) prepare(ctx context.Context) (chatCompletionsCall, error) {
+	if err := ValidateLMStudioURL(l.cfg.BaseURL, l.cfg.AllowRemote); err != nil {
+		return chatCompletionsCall{}, err
 	}
 	if l.cfg.Budget != nil {
 		if err := l.cfg.Budget.Check(); err != nil {
-			return Response{}, err
+			return chatCompletionsCall{}, err
 		}
 	}
 
@@ -141,13 +165,13 @@ func (l *LMStudioTutor) call(ctx context.Context, req Request, isHint bool) (Res
 	if model == "" {
 		models, err := DiscoverLMStudioModels(ctx, l.cfg.BaseURL, l.cfg.Token, l.cfg.HTTPClient)
 		if err != nil {
-			return Response{}, err
+			return chatCompletionsCall{}, err
 		}
 		model = models[0].ID
 		l.SetModel(model)
 	}
 
-	return callChatCompletions(ctx, chatCompletionsCall{
+	return chatCompletionsCall{
 		BaseURL:    l.cfg.BaseURL,
 		Token:      l.cfg.Token,
 		Model:      model,
@@ -156,7 +180,7 @@ func (l *LMStudioTutor) call(ctx context.Context, req Request, isHint bool) (Res
 		Budget:     l.cfg.Budget,
 		Label:      "lm studio",
 		Provider:   ProviderLMStudio,
-	}, req, isHint)
+	}, nil
 }
 
 // DiscoverLMStudioModels lists chat models from LM Studio's GET /v1/models.

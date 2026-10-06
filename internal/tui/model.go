@@ -124,6 +124,9 @@ type Model struct {
 	TutorError            string
 	LoadingFrame          int
 	TutorRequestID        int
+	TutorStreamText       string // Visible text of a reply still streaming in.
+	TutorStreamProvider   string
+	TutorThinking         bool // A streaming model is reasoning; its reasoning is never shown.
 	CandidateActive       bool
 	CandidateCancel       context.CancelFunc
 	CandidateRequestID    int
@@ -392,6 +395,29 @@ type tutorResponseMsg struct {
 	Err  error
 }
 
+// tutorStreamMsg carries the latest visible text of a streaming tutor reply.
+type tutorStreamMsg struct {
+	ID      int
+	Update  tutor.StreamUpdate
+	Updates <-chan tutor.StreamUpdate
+}
+
+// streamRenderInterval throttles re-rendering of a streaming reply.
+const streamRenderInterval = 100 * time.Millisecond
+
+// waitTutorStream delivers the next stream update. It runs as a tea.Cmd, so the
+// wait never blocks the event loop; it returns nil once the stream closes.
+func waitTutorStream(id int, updates <-chan tutor.StreamUpdate) tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(streamRenderInterval)
+		u, ok := <-updates
+		if !ok {
+			return nil
+		}
+		return tutorStreamMsg{ID: id, Update: u, Updates: updates}
+	}
+}
+
 // oauthCompleteMsg represents completion of OAuth browser authorization.
 type oauthCompleteMsg struct {
 	Token *tutor.OAuthToken
@@ -524,10 +550,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case tutorStreamMsg:
+		if msg.ID != m.TutorRequestID || !m.TutorActive {
+			return m, nil
+		}
+		m.TutorStreamText = msg.Update.Text
+		m.TutorStreamProvider = msg.Update.Provider
+		m.TutorThinking = msg.Update.Thinking
+		return m, waitTutorStream(msg.ID, msg.Updates)
+
 	case tutorResponseMsg:
 		if msg.ID != m.TutorRequestID || !m.TutorActive {
 			return m, nil
 		}
+		m.clearTutorStream()
 		if m.TutorCancel != nil {
 			m.TutorCancel()
 			m.TutorCancel = nil
@@ -546,7 +582,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ShowHint = true
 		m.TutorError = msg.Resp.FallbackReason
 		m.PendingExplanation = nil
-		if msg.Kind == "explain" && msg.Resp.Text != "" && !msg.Resp.Fallback && msg.Resp.Provider != "OfflineTutor" && msg.Resp.Provider != tutor.ProviderOffline {
+		if msg.Kind == "explain" && msg.Resp.Text != "" && !msg.Resp.Fallback && !msg.Resp.Incomplete && msg.Resp.Provider != "OfflineTutor" && msg.Resp.Provider != tutor.ProviderOffline {
 			m.captureExplanation(msg.Resp)
 		}
 		return m, nil
@@ -738,6 +774,28 @@ func (m *Model) cancelTutor() {
 		m.TutorCancel = nil
 	}
 	m.TutorActive = false
+	m.clearTutorStream()
+}
+
+// stopTutor cancels the request in progress. Text that already streamed in stays
+// visible, marked incomplete; it is never offered for saving.
+func (m *Model) stopTutor() {
+	partial, provider := m.TutorStreamText, m.TutorStreamProvider
+	m.cancelTutor()
+	if partial == "" {
+		return
+	}
+	m.TutorResponse = &tutor.Response{Text: partial, Provider: provider, Incomplete: true, GeneratedAt: time.Now().UTC()}
+	m.CurrentHint = partial
+	m.ShowHint = true
+	m.PendingExplanation = nil
+	m.TutorError = "Reply stopped; this partial reply is not saved."
+}
+
+func (m *Model) clearTutorStream() {
+	m.TutorStreamText = ""
+	m.TutorStreamProvider = ""
+	m.TutorThinking = false
 }
 
 // Only free-form text entry consumes the page scrolling letters.
@@ -778,6 +836,12 @@ func (m *Model) rebuildTutor() {
 	})
 }
 
+// streamingTutor is a tutor that streams when its provider supports it.
+type streamingTutor interface {
+	tutor.StreamingTutor
+	CanStream() bool
+}
+
 func (m *Model) requestTutor(kind string) (tea.Model, tea.Cmd) {
 	m.cancelTutor()
 
@@ -793,8 +857,6 @@ func (m *Model) requestTutor(kind string) (tea.Model, tea.Cmd) {
 		m.Session.RequestExplanation()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), m.tutorRequestTimeout())
-	m.TutorCancel = cancel
 	m.TutorActive = true
 	m.TutorKind = kind
 	m.TutorError = ""
@@ -802,6 +864,37 @@ func (m *Model) requestTutor(kind string) (tea.Model, tea.Cmd) {
 	req := m.buildTutorRequest(st)
 	id := m.TutorRequestID
 	tut := m.Tutor
+
+	if stut, ok := tut.(streamingTutor); ok && stut.CanStream() {
+		// Streams have first-chunk and idle deadlines inside FallbackTutor
+		// instead of one total deadline, so a long reply is not cut off.
+		ctx, cancel := context.WithCancel(context.Background())
+		m.TutorCancel = cancel
+		updates := make(chan tutor.StreamUpdate, 1)
+		run := func() tea.Msg {
+			defer close(updates)
+			onUpdate := func(u tutor.StreamUpdate) {
+				// Keep only the newest update; each one carries the full visible text.
+				select {
+				case <-updates:
+				default:
+				}
+				updates <- u
+			}
+			var resp tutor.Response
+			var err error
+			if kind == "hint" {
+				resp, err = stut.HintStream(ctx, req, onUpdate)
+			} else {
+				resp, err = stut.ExplainStream(ctx, req, onUpdate)
+			}
+			return tutorResponseMsg{ID: id, Kind: kind, Resp: resp, Err: err}
+		}
+		return m, tea.Batch(run, waitTutorStream(id, updates), loadingTick())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), m.tutorRequestTimeout())
+	m.TutorCancel = cancel
 
 	cmd := func() tea.Msg {
 		var resp tutor.Response
@@ -1030,7 +1123,7 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		if m.TutorActive {
-			m.cancelTutor()
+			m.stopTutor()
 			return m, nil
 		}
 		if m.ShowHint {
@@ -1210,7 +1303,7 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		if m.TutorActive {
-			m.cancelTutor()
+			m.stopTutor()
 			return m, nil
 		}
 		if m.ShowHint {

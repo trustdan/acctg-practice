@@ -121,6 +121,16 @@ During practice, `?` requests a hint and `e` requests an explanation. Requests r
 
 When you leave an LLM explanation (Esc, another hotkey, a mouse click, or quit), the app asks: **Would you like to save this explanation in the database?** Press `y` to save and continue the original action, `n` to continue without saving, or Esc to keep reading. Scrolling does not trigger the prompt. Save failures keep the text available for retry. Press uppercase `V` to browse saved explanations and their original question/stage/provider; use `n`/`p` to browse and `u`/`d` to scroll. These are personal advisory notes, not approved question content or grading evidence. Offline hints and fallback explanations do not trigger this prompt.
 
+### Streamed replies
+
+With the OpenAI API (`5`) and LM Studio (`6`), hints and explanations appear word by word as the model writes them, instead of all at once at the end. Other providers still show the whole reply when it is finished; streaming for them is planned.
+
+- **"thinking…"** means the model is reasoning before it answers. Its reasoning is never shown, only the answer that follows.
+- **Esc stops a reply in progress.** Text that has already arrived stays on screen, marked **incomplete, not saved**. Press Esc again to dismiss it.
+- **Incomplete replies are never saved.** If a reply stops early (you pressed Esc, the connection dropped, or the model went quiet for 30 seconds), you will not be asked to save it. Ask again with `?` or `e` for a full reply.
+- If a streamed reply fails before any text arrives, the offline tutor answers instead, as before.
+- Streamed replies have no overall time limit. The first text must arrive within the provider timeout (90 seconds for LM Studio), and after that the reply stops only if no new text arrives for 30 seconds.
+
 The available subscription permissions and models depend on the connected account. `--test-llm` reports local configuration diagnostics; it does not prove that live inference will succeed.
 
 ### Local tutor with LM Studio
@@ -149,7 +159,7 @@ LM Studio requests get a 90-second limit (or `--tutor-timeout`, if that is longe
 - **"server not reachable"**: LM Studio is closed or its server is off. Start it in the Developer tab or with `lms server start`, then press `6` again. If you changed the port, update the address with `[l]`.
 - **"no model is loaded"**: the server is running but has no chat model. Load one in LM Studio, or run `lms load <model>`. Embedding models are ignored. If just-in-time loading is on, LM Studio lists downloaded models and loads one on first use.
 - **First reply is slow or falls back to the offline tutor**: the model is loading into memory, or your computer is running it on the CPU. Wait for the load to finish and ask again. A smaller model is faster.
-- **Reasoning models**: models that think before answering (`<think>` output) are supported. The thinking is removed and only the final answer is shown. If a reply comes back empty and falls back, the model used its whole token limit thinking; raise `--lmstudio-max-tokens` or choose a non-reasoning model.
+- **Reasoning models**: models that think before answering (`<think>` output or separate reasoning text) are supported. While they think, the reply shows "thinking…"; the thinking is removed and only the final answer is shown. If a reply comes back empty and falls back, the model used its whole token limit thinking; raise `--lmstudio-max-tokens` or choose a non-reasoning model.
 - **"rejected the request (HTTP 401)"**: authentication is on in LM Studio. Set `LM_API_TOKEN` to your LM Studio token.
 - **"not on this machine"**: the address points to another computer. Use a local address, or opt in with `--lmstudio-allow-remote`.
 
@@ -212,7 +222,7 @@ Keys depend on the current screen; text fields accept ordinary typing. Uppercase
 | `[` / `]` | Adjust session size |
 | `i` | Cycle practice intensity |
 | `A` / `L` | Arcade / high scores |
-| Esc | Cancel request or dismiss current screen |
+| Esc | Cancel request or dismiss current screen; stops a streaming reply and keeps the partial text (marked incomplete, not saved) |
 | `q` / Ctrl+C | Quit |
 
 Recaps and statement views also support `j`/`k`, arrows, and `g`/`G` scrolling. In journal practice, use uppercase `D` for debit so lowercase `d` remains available for scrolling. Opening a reference or requesting help is tracked as assistance; exams suppress these aids.

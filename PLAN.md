@@ -318,7 +318,7 @@ Preserve arcade performance across sessions in the local SQLite database with re
 
 Gate: PASSED. Migration 6 applies cleanly on fresh and upgraded databases; high scores persist in SQLite; player is only prompted for initials when setting a new all-time high score; top score renders on arcade HUD; unit tests verify storage operations and initials entry state machine.
 
-## Stage 29 — Local-first LM Studio tutor provider (Complete; live check open)
+## Stage 29 — Local-first LM Studio tutor provider (Complete)
 
 Add an optional local tutor provider backed by LM Studio's OpenAI-compatible server (default `http://localhost:1234/v1`; `GET /v1/models`, `POST /v1/chat/completions`). Offline mode remains the default and startup never contacts the server. Verify current [LM Studio OpenAI-compatibility docs](https://lmstudio.ai/docs/developer/openai-compat) before implementation.
 
@@ -338,9 +338,9 @@ Add an optional local tutor provider backed by LM Studio's OpenAI-compatible ser
 
 Gate: `httptest` coverage for success, think-tag stripping, no required Authorization header, connection-refused fallback, timeout, cancellation, model-list parsing (including none loaded) and non-loopback rejection; TUI update test for `[6]`; help-screen test asserts the LM Studio option is advertised; startup path makes no network call; gofmt, go vet ./... and go test ./... pass; all documentation above updated and its local links resolve. One manual run against a real LM Studio server with a loaded model is recorded as performed or remains an open live-provider check.
 
-Gate status (2026-10-05): PASSED for automated coverage. httptest, TUI update and help-screen tests pass; gofmt, go vet ./... and go test ./... are clean; documentation is updated and its local links resolve. One deviation from the plan: no placeholder bearer token is sent. The Authorization header is sent only when `LM_API_TOKEN` is set. The manual run against a real LM Studio server remains an open live-provider check.
+Gate status (2026-10-05): PASSED for automated coverage. httptest, TUI update and help-screen tests pass; gofmt, go vet ./... and go test ./... are clean; documentation is updated and its local links resolve. One deviation from the plan: no placeholder bearer token is sent. The Authorization header is sent only when `LM_API_TOKEN` is set. Live check performed 2026-10-05 against LM Studio with `google/gemma-4-e4b` (`--test-llm`, `--fetch-models`, hint, explanation, offline fallback for a stopped server); see HANDOFF.
 
-## Stage 30 — Streamed tutor replies (Planned; after Stage 29)
+## Stage 30 — Streamed tutor replies (30a complete; 30b planned)
 
 Show hint and explanation text incrementally as it is generated. This mainly benefits slower local models but applies to all network providers. Verify each provider's current streaming documentation before implementation.
 
@@ -355,7 +355,11 @@ Show hint and explanation text incrementally as it is generated. This mainly ben
   - ARCHITECTURE tutor contract (optional `StreamingTutor`, delivery path, timeout semantics), `config/example.toml`, RELEASE-NOTES unreleased entry and HANDOFF.
 - **Unchanged invariants**: Streaming changes presentation only; no path to grades, answer keys, bank approval or mastery.
 
+Split for reviewable work (2026-10-05): **Stage 30a** delivers the `StreamingTutor` contract, the shared OpenAI-format SSE adapter (OpenAI API and LM Studio), `FallbackTutor` first-token/idle timeouts and failure semantics, nonblocking TUI delivery, and the documentation. **Stage 30b** adds Anthropic Messages streaming, Gemini `streamGenerateContent?alt=sse`, and surfacing ChatGPT plan deltas; until then those providers use the non-streamed path. No streaming on/off setting was added: nothing needs turning off, since non-streaming providers already fall back to the existing path.
+
 Gate: fake SSE server tests for chunk parsing per provider, split/partial lines, `[DONE]`, think-block suppression across chunk boundaries, first-token/idle timeouts, mid-stream error, size limit and cancellation; TUI update tests showing key input stays responsive during a slow stream and partial replies are not saved; help-screen/status-bar test asserts the streaming cancel key is advertised; gofmt, go vet ./... and go test ./... pass; all documentation above updated and its local links resolve. Manual streamed run against at least one real provider is recorded or remains an open live-provider check.
+
+Gate status, Stage 30a (2026-10-05): PASSED for the OpenAI-format adapter. Fake SSE tests cover split/partial lines, `[DONE]`, usage, think-block suppression across chunk boundaries, `reasoning_content` as thinking only, thinking-only fallback, first-token and idle timeouts, steady slow streams, mid-stream disconnect, the size limit, cancellation closing the body, and budget recording on abort. TUI update tests show keys stay responsive during an open stream, Esc keeps a partial reply marked incomplete, failed and stopped replies are never offered for saving, and completed ones are. The help screen and status bar advertise the stop key. gofmt, go vet ./... and go test ./... pass. A manual streamed run against LM Studio (`google/gemma-4-e4b`) is recorded in HANDOFF. Per-provider SSE tests for Anthropic and Gemini belong to Stage 30b.
 
 ## Implementation roadmap allocation
 
@@ -374,8 +378,9 @@ Gate: fake SSE server tests for chunk parsing per provider, split/partial lines,
 - Stage 26: Dynamic Flight Acceleration & Dual Audit Hit Points (Internal Audit Shields & External Audit Integrity) (Complete).
 - Stage 27: Heavy Accounting Hazards — Multi-Hit Fraud & Insider Trading Asteroids with Fragmentation Debris (Complete).
 - Stage 28: Persistent Arcade High Scores & Old-School 3-Initials Hall of Fame (SQLite Schema Migration & TUI Entry) (Complete).
-- Stage 29: Local-first LM Studio tutor provider (Complete; live LM Studio run open).
-- Stage 30: Streamed tutor replies across providers (Planned; after Stage 29).
+- Stage 29: Local-first LM Studio tutor provider (Complete).
+- Stage 30a: Streamed tutor replies for OpenAI-format providers (OpenAI API, LM Studio) (Complete).
+- Stage 30b: Streamed replies for Anthropic, Gemini and ChatGPT plan (Planned).
 
 ## Current quality gate at 90 - October 3, 2026
 

@@ -180,8 +180,16 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 
 	leftSection := lipgloss.JoinHorizontal(lipgloss.Center, modePill, infoPill, intensityPill, streakPill)
 
+	if m.TutorActive {
+		keyHints := m.Styles.StatusKeyHints.Render("[Esc] Stop reply (partial reply kept, not saved) [u/d] Scroll [h] Help")
+		return m.renderStatusLine(contentWidth, leftSection, keyHints)
+	}
 	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move [1-4] Select [←/→] Steps [Ctrl+←/→] Questions [u/d] Scroll [Ctrl/Cmd +/-] Zoom [?] Hint [e] Explain [V] Saved Explanations [t] Tutor [p] Review New Questions [n] New from LLM [J] Entry [h] Help [s] Mastery [A] Arcade [L] Scores [q] Quit")
 
+	return m.renderStatusLine(contentWidth, leftSection, keyHints)
+}
+
+func (m *Model) renderStatusLine(contentWidth int, leftSection, keyHints string) string {
 	// Calculate space between left and right sections
 	leftWidth := lipgloss.Width(leftSection)
 	rightWidth := lipgloss.Width(keyHints)
@@ -196,6 +204,48 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 		statusStyle = statusStyle.MarginTop(0)
 	}
 	return statusStyle.Width(contentWidth).Render(lipgloss.JoinHorizontal(lipgloss.Center, leftSection, spacer, keyHints))
+}
+
+// renderTutorInFlight shows a tutor request in progress: a loading line, a
+// "thinking" line while a model reasons, or the reply streamed in so far.
+func (m *Model) renderTutorInFlight(contentWidth int, action string) string {
+	if m.TutorStreamText == "" {
+		tutName := "Tutor"
+		if m.Tutor != nil {
+			tutName = m.Tutor.Name()
+		}
+		if m.TutorThinking {
+			action = "thinking… (the model's reasoning is not shown)"
+		}
+		return m.Styles.TutorLoading.Width(contentWidth).
+			Render(fmt.Sprintf("⏳ %s: %s  [Press Esc to cancel]", tutName, action))
+	}
+
+	text := m.renderTutorContent(m.TutorStreamText, contentWidth-4)
+	footer := "[Streaming… Esc stops; the partial reply stays visible but is not saved]"
+	if m.TutorThinking {
+		footer = "[Thinking… Esc stops; the partial reply stays visible but is not saved]"
+	}
+	if m.TutorKind == "explain" {
+		return m.Styles.ExplanationBox.Width(contentWidth).
+			Render(fmt.Sprintf("📖 Conceptual Explanation [%s · streaming]:\n\n%s\n\n%s", m.TutorStreamProvider, text, footer))
+	}
+	return m.Styles.HintBox.Width(contentWidth).
+		Render(fmt.Sprintf("💡 Socratic Hint: %s\n\n[%s · streaming] %s", text, m.TutorStreamProvider, footer))
+}
+
+// tutorProviderLabel names who wrote the visible hint or explanation.
+func (m *Model) tutorProviderLabel() string {
+	if m.TutorResponse == nil {
+		return "Offline Tutor"
+	}
+	switch {
+	case m.TutorResponse.Incomplete:
+		return m.TutorResponse.Provider + " · ⚠ incomplete, not saved"
+	case m.TutorResponse.Fallback:
+		return fmt.Sprintf("%s (Fallback)", m.TutorResponse.Provider)
+	}
+	return m.TutorResponse.Provider
 }
 
 func (m *Model) renderDrill(contentWidth int) string {
@@ -249,19 +299,13 @@ func (m *Model) renderDrill(contentWidth int) string {
 	}
 	sections = append(sections, strings.Join(optionLines, "\n"))
 
-	// Tutor In-flight Loading indicator
+	// Tutor In-flight Loading indicator or streaming reply
 	if m.TutorActive {
 		action := "Thinking..."
 		if m.TutorKind == "explain" {
 			action = "Formulating conceptual explanation..."
 		}
-		tutName := "Tutor"
-		if m.Tutor != nil {
-			tutName = m.Tutor.Name()
-		}
-		loading := m.Styles.TutorLoading.Width(contentWidth).
-			Render(fmt.Sprintf("⏳ %s: %s  [Press Esc to cancel]", tutName, action))
-		sections = append(sections, loading)
+		sections = append(sections, m.renderTutorInFlight(contentWidth, action))
 	}
 
 	// Tutor Notice if any
@@ -272,15 +316,8 @@ func (m *Model) renderDrill(contentWidth int) string {
 	}
 
 	// Socratic Hint or Conceptual Explanation box
-	if m.ShowHint && m.CurrentHint != "" {
-		provLabel := "Offline Tutor"
-		if m.TutorResponse != nil {
-			if m.TutorResponse.Fallback {
-				provLabel = fmt.Sprintf("%s (Fallback)", m.TutorResponse.Provider)
-			} else {
-				provLabel = m.TutorResponse.Provider
-			}
-		}
+	if m.ShowHint && m.CurrentHint != "" && m.TutorStreamText == "" {
+		provLabel := m.tutorProviderLabel()
 
 		tutorText := m.renderTutorContent(m.CurrentHint, contentWidth-4)
 		if m.TutorKind == "explain" {
@@ -457,24 +494,15 @@ func (m *Model) renderFeedback(contentWidth int) string {
 
 	// Tutor in-flight loading or explanation in feedback mode
 	if m.TutorActive {
-		tutName := "Tutor"
-		if m.Tutor != nil {
-			tutName = m.Tutor.Name()
-		}
-		loading := m.Styles.TutorLoading.Width(contentWidth).
-			Render(fmt.Sprintf("⏳ %s: Formulating conceptual explanation...  [Press Esc to cancel]", tutName))
-		sections = append(sections, loading)
+		sections = append(sections, m.renderTutorInFlight(contentWidth, "Formulating conceptual explanation..."))
 	}
 	if m.TutorError != "" {
 		notice := m.Styles.IncorrectBox.Width(contentWidth).
 			Render(fmt.Sprintf("⚠️ Tutor Notice: %s", m.TutorError))
 		sections = append(sections, notice)
 	}
-	if m.ShowHint && m.CurrentHint != "" && m.TutorKind == "explain" {
-		provLabel := "Offline Tutor"
-		if m.TutorResponse != nil {
-			provLabel = m.TutorResponse.Provider
-		}
+	if m.ShowHint && m.CurrentHint != "" && m.TutorKind == "explain" && m.TutorStreamText == "" {
+		provLabel := m.tutorProviderLabel()
 		tutorText := m.renderTutorContent(m.CurrentHint, contentWidth-4)
 		box := m.Styles.ExplanationBox.
 			Width(contentWidth).
@@ -755,6 +783,9 @@ func (m *Model) renderHelp(contentWidth int) string {
 [Enter]         Submit answer / Continue from feedback
 [Space]         Continue to next stage / question
 [?]             Request targeted Socratic hint
+[Esc]           Stop a reply while it streams in (the partial reply is marked
+                incomplete and is not saved); "thinking…" means the model is
+                reasoning before it answers
 [e]             Request a conceptual explanation; save prompt appears when leaving
 [V]             Read saved explanations (personal notes, not answer keys)
 [t]             Configure / connect the AI tutor

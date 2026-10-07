@@ -340,7 +340,7 @@ Gate: `httptest` coverage for success, think-tag stripping, no required Authoriz
 
 Gate status (2026-10-05): PASSED for automated coverage. httptest, TUI update and help-screen tests pass; gofmt, go vet ./... and go test ./... are clean; documentation is updated and its local links resolve. One deviation from the plan: no placeholder bearer token is sent. The Authorization header is sent only when `LM_API_TOKEN` is set. Live check performed 2026-10-05 against LM Studio with `google/gemma-4-e4b` (`--test-llm`, `--fetch-models`, hint, explanation, offline fallback for a stopped server); see HANDOFF.
 
-## Stage 30 — Streamed tutor replies (30a complete; 30b planned)
+## Stage 30 — Streamed tutor replies (Complete)
 
 Show hint and explanation text incrementally as it is generated. This mainly benefits slower local models but applies to all network providers. Verify each provider's current streaming documentation before implementation.
 
@@ -361,6 +361,8 @@ Gate: fake SSE server tests for chunk parsing per provider, split/partial lines,
 
 Gate status, Stage 30a (2026-10-05): PASSED for the OpenAI-format adapter. Fake SSE tests cover split/partial lines, `[DONE]`, usage, think-block suppression across chunk boundaries, `reasoning_content` as thinking only, thinking-only fallback, first-token and idle timeouts, steady slow streams, mid-stream disconnect, the size limit, cancellation closing the body, and budget recording on abort. TUI update tests show keys stay responsive during an open stream, Esc keeps a partial reply marked incomplete, failed and stopped replies are never offered for saving, and completed ones are. The help screen and status bar advertise the stop key. gofmt, go vet ./... and go test ./... pass. A manual streamed run against LM Studio (`google/gemma-4-e4b`) is recorded in HANDOFF. Per-provider SSE tests for Anthropic and Gemini belong to Stage 30b.
 
+Gate status, Stage 30b (2026-10-07): PASSED with the live-provider check open. Anthropic, Gemini and ChatGPT plan implement `StreamingTutor` through the shared `readSSE`/`streamReply` helpers (internal/tutor/sse.go), which the OpenAI-format adapter now also uses. Event formats were checked against the current Anthropic streaming and Gemini `streamGenerateContent` documentation; for the OpenAI Responses API only a summarized reference page was reachable, which confirmed `response.completed` with `usage.output_tokens`, `response.failed`, `response.incomplete` and `error`; reasoning delta event names were not confirmed, so any `response.reasoning…delta` event is treated as thinking only. Fake SSE tests per provider cover text and thinking deltas (thinking never shown), cumulative usage, completion markers, error events before text (offline fallback) and after text (incomplete partial), and end of stream without a completion marker; Anthropic also covers mid-line splits, the size limit and budget recording on abort, and Gemini covers cancellation closing the body. Every network provider built by `BuildTutor` reports `CanStream()`. gofmt, go vet ./... and go test ./... pass. No streamed run against a real Anthropic, Gemini or ChatGPT plan account was made; that remains an open live-provider check.
+
 ## Implementation roadmap allocation
 
 - Stages 00–07: Core offline machine drill, accounting engine, SQLite persistence, and Bubble Tea TUI (Complete).
@@ -380,7 +382,7 @@ Gate status, Stage 30a (2026-10-05): PASSED for the OpenAI-format adapter. Fake 
 - Stage 28: Persistent Arcade High Scores & Old-School 3-Initials Hall of Fame (SQLite Schema Migration & TUI Entry) (Complete).
 - Stage 29: Local-first LM Studio tutor provider (Complete).
 - Stage 30a: Streamed tutor replies for OpenAI-format providers (OpenAI API, LM Studio) (Complete).
-- Stage 30b: Streamed replies for Anthropic, Gemini and ChatGPT plan (Planned).
+- Stage 30b: Streamed replies for Anthropic, Gemini and ChatGPT plan (Complete; live check open).
 
 ## Current quality gate at 90 - October 3, 2026
 

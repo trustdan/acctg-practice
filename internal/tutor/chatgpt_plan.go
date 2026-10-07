@@ -1,7 +1,6 @@
 package tutor
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -132,12 +131,22 @@ func (t *OpenAIChatGPTPlanTutor) Name() string {
 
 // Hint implements Tutor.
 func (t *OpenAIChatGPTPlanTutor) Hint(ctx context.Context, req Request) (Response, error) {
-	return t.callResponsesAPI(ctx, req, true)
+	return t.callResponsesAPI(ctx, req, true, nil)
 }
 
 // Explain implements Tutor.
 func (t *OpenAIChatGPTPlanTutor) Explain(ctx context.Context, req Request) (Response, error) {
-	return t.callResponsesAPI(ctx, req, false)
+	return t.callResponsesAPI(ctx, req, false, nil)
+}
+
+// HintStream implements StreamingTutor.
+func (t *OpenAIChatGPTPlanTutor) HintStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return t.callResponsesAPI(ctx, req, true, onUpdate)
+}
+
+// ExplainStream implements StreamingTutor.
+func (t *OpenAIChatGPTPlanTutor) ExplainStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return t.callResponsesAPI(ctx, req, false, onUpdate)
 }
 
 // PKCEParams holds OAuth PKCE code challenge and verifier.
@@ -540,11 +549,13 @@ func (t *OpenAIChatGPTPlanTutor) getValidAccessToken(ctx context.Context) (strin
 }
 
 // callResponsesAPI executes a streaming request to the OpenAI Responses API.
+// Text deltas are reported to onUpdate when it is non-nil; reasoning events
+// only mark the reply as thinking.
 //
 // Strictly enforces subscription preview limitations:
 // - store: false
 // - stream: true
-func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Request, isHint bool) (Response, error) {
+func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Request, isHint bool, onUpdate func(StreamUpdate)) (Response, error) {
 	if t.budget != nil {
 		if err := t.budget.Check(); err != nil {
 			return Response{}, err
@@ -560,7 +571,7 @@ func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Reque
 
 	// Prepare payload enforcing store=false and stream=true
 	payload := map[string]interface{}{
-		"model":  t.model,
+		"model":  t.GetModel(),
 		"store":  false, // STRICT INVARIANT: Subscription preview requirement
 		"stream": true,  // STRICT INVARIANT: Subscription preview requirement
 		"input": []map[string]string{
@@ -582,42 +593,30 @@ func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Reque
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream")
 
-	httpResp, err := t.httpClient.Do(httpReq)
+	client := t.httpClient
+	if onUpdate != nil {
+		client = streamingClient(client)
+	}
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
 		return Response{}, fmt.Errorf("chatgpt api request failed: %w", err)
 	}
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
-		errBytes, _ := io.ReadAll(httpResp.Body)
-		return Response{}, fmt.Errorf("chatgpt api error (%d): %s", httpResp.StatusCode, string(errBytes))
+		return Response{}, fmt.Errorf("chatgpt api error (%d): %s", httpResp.StatusCode, httpErrorBody(httpResp))
 	}
 
-	// Stream reader for SSE
-	var accumulated strings.Builder
+	reply := &streamReply{label: "chatgpt responses api", provider: "chatgpt_plan", budget: t.budget, onUpdate: onUpdate}
+	defer reply.recordBudget()
 	completed := false
-	scanner := bufio.NewScanner(httpResp.Body)
-	scanner.Buffer(make([]byte, 4096), 1<<20)
-	for scanner.Scan() {
-		select {
-		case <-ctx.Done():
-			return Response{}, ctx.Err()
-		default:
-		}
-
-		line := scanner.Text()
-		if !strings.HasPrefix(line, "data: ") {
-			continue
-		}
-		data := strings.TrimPrefix(line, "data: ")
+	err = readSSE(httpResp.Body, "ChatGPT", &completed, func(data string) (bool, error) {
 		if data == "[DONE]" {
-			break
+			return true, nil
 		}
-
 		var event struct {
 			Type  string `json:"type"`
 			Delta string `json:"delta"`
-			Text  string `json:"text"`
 			Code  string `json:"code"`
 			Error struct {
 				Code    string `json:"code"`
@@ -628,55 +627,35 @@ func (t *OpenAIChatGPTPlanTutor) callResponsesAPI(ctx context.Context, req Reque
 					Code    string `json:"code"`
 					Message string `json:"message"`
 				} `json:"error"`
-				Output []struct {
-					Content []struct {
-						Text string `json:"text"`
-					} `json:"content"`
-				} `json:"output"`
+				Usage struct {
+					OutputTokens int `json:"output_tokens"`
+				} `json:"usage"`
 			} `json:"response"`
 		}
 		if err := json.Unmarshal([]byte(data), &event); err != nil {
-			return Response{}, errors.New("invalid Responses stream event")
+			return false, errors.New("invalid Responses stream event")
 		}
-		switch event.Type {
-		case "response.output_text.delta":
-			accumulated.WriteString(event.Delta)
-		case "response.completed":
+		switch {
+		case event.Type == "response.output_text.delta":
+			if event.Delta != "" {
+				reply.add(event.Delta, false)
+			}
+		case strings.HasPrefix(event.Type, "response.reasoning") && strings.HasSuffix(event.Type, ".delta"):
+			reply.add("", true)
+		case event.Type == "response.completed":
 			completed = true
-		case "error", "response.failed", "response.incomplete":
-			return Response{}, fmt.Errorf("ChatGPT response failed or incomplete: %s %s %s", event.Code, event.Error.Code, event.Response.Error.Code)
+			reply.usage = event.Response.Usage.OutputTokens
+			return true, nil
+		case event.Type == "error", event.Type == "response.failed", event.Type == "response.incomplete":
+			return false, fmt.Errorf("ChatGPT response failed or incomplete: %s %s %s", event.Code, event.Error.Code, event.Response.Error.Code)
 		}
-		if completed {
-			break
-		}
-		if accumulated.Len() > 1<<20 {
-			return Response{}, errors.New("ChatGPT response exceeds size limit")
-		}
-
+		return false, nil
+	})
+	if err != nil {
+		return reply.partial(err)
 	}
-
-	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
-		return Response{}, fmt.Errorf("error reading streamed response: %w", err)
-	}
-
 	if !completed {
-		return Response{}, errors.New("ChatGPT stream ended before response.completed")
+		return reply.partial(errors.New("ChatGPT stream ended before response.completed"))
 	}
-	resultText := strings.TrimSpace(CleanLaTeXMath(accumulated.String()))
-	if resultText == "" {
-		return Response{}, errors.New("empty response received from chatgpt responses api")
-	}
-
-	tokens := (len(resultText) + 3) / 4
-	if t.budget != nil {
-		_ = t.budget.RecordUsage(tokens)
-	}
-
-	return Response{
-		Text:        resultText,
-		Provider:    "chatgpt_plan",
-		TokensUsed:  tokens,
-		Fallback:    false,
-		GeneratedAt: time.Now().UTC(),
-	}, nil
+	return reply.result()
 }

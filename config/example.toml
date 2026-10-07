@@ -33,7 +33,7 @@ max_requests_per_session = 5
 # timeout_seconds = 90                    # minimum for LM Studio (cold model loads, CPU inference)
 # max_tokens = 4096                       # --lmstudio-max-tokens; room for reasoning models to finish
 #
-# Streamed replies (OpenAI API and LM Studio): timeout_seconds limits the wait for
+# Streamed replies (all AI providers): timeout_seconds limits the wait for
 # the first text only; after that a reply stops if no text arrives for 30 seconds.
 # There is no streaming setting to change.
 # model = ""                              # empty = first model the server reports; choose with [m] in Tutor Settings

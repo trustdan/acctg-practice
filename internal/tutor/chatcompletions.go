@@ -1,7 +1,6 @@
 package tutor
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -155,108 +154,55 @@ func streamChatCompletions(ctx context.Context, c chatCompletionsCall, req Reque
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 4096))
-		return Response{}, fmt.Errorf("%s error (%d): %s", c.Label, httpResp.StatusCode, string(body))
+		return Response{}, fmt.Errorf("%s error (%d): %s", c.Label, httpResp.StatusCode, httpErrorBody(httpResp))
 	}
 
-	var raw strings.Builder
-	usageTokens, read := 0, 0
+	reply := &streamReply{label: c.Label, provider: c.Provider, budget: c.Budget, onUpdate: onUpdate}
+	defer reply.recordBudget()
 	finished := false
-	// Budget usage is recorded once, whether the stream completes or is aborted.
-	defer func() {
-		if c.Budget == nil {
-			return
+	err = readSSE(httpResp.Body, c.Label, &finished, func(data string) (bool, error) {
+		if data == "[DONE]" {
+			return true, nil
 		}
-		tokens := usageTokens
-		if tokens <= 0 {
-			tokens = (raw.Len() + 3) / 4
+		var chunk struct {
+			Choices []struct {
+				Delta struct {
+					Content          string `json:"content"`
+					ReasoningContent string `json:"reasoning_content"`
+				} `json:"delta"`
+				FinishReason string `json:"finish_reason"`
+			} `json:"choices"`
+			Usage *struct {
+				CompletionTokens int `json:"completion_tokens"`
+			} `json:"usage"`
+			Error *struct {
+				Message string `json:"message"`
+			} `json:"error"`
 		}
-		_ = c.Budget.RecordUsage(tokens)
-	}()
-	partial := func(err error) (Response, error) {
-		return Response{Text: streamVisibleText(raw.String()), Provider: c.Provider, Incomplete: true}, err
-	}
-
-	reader := bufio.NewReader(io.LimitReader(httpResp.Body, maxChatResponseBytes+1))
-	for {
-		line, readErr := reader.ReadString('\n')
-		read += len(line)
-		if read > maxChatResponseBytes {
-			return partial(ErrResponseTooLarge)
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			return false, fmt.Errorf("failed decoding %s stream: %w", c.Label, err)
 		}
-		line = strings.TrimSpace(line)
-		if data, ok := strings.CutPrefix(line, "data:"); ok {
-			data = strings.TrimSpace(data)
-			if data == "[DONE]" {
+		if chunk.Error != nil {
+			return false, fmt.Errorf("%s stream error: %s", c.Label, chunk.Error.Message)
+		}
+		if chunk.Usage != nil {
+			reply.usage = chunk.Usage.CompletionTokens
+		}
+		if len(chunk.Choices) > 0 {
+			delta := chunk.Choices[0].Delta
+			if chunk.Choices[0].FinishReason != "" {
 				finished = true
-				break
 			}
-			var chunk struct {
-				Choices []struct {
-					Delta struct {
-						Content          string `json:"content"`
-						ReasoningContent string `json:"reasoning_content"`
-					} `json:"delta"`
-					FinishReason string `json:"finish_reason"`
-				} `json:"choices"`
-				Usage *struct {
-					CompletionTokens int `json:"completion_tokens"`
-				} `json:"usage"`
-				Error *struct {
-					Message string `json:"message"`
-				} `json:"error"`
-			}
-			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-				return partial(fmt.Errorf("failed decoding %s stream: %w", c.Label, err))
-			}
-			if chunk.Error != nil {
-				return partial(fmt.Errorf("%s stream error: %s", c.Label, chunk.Error.Message))
-			}
-			if chunk.Usage != nil {
-				usageTokens = chunk.Usage.CompletionTokens
-			}
-			if len(chunk.Choices) > 0 {
-				delta := chunk.Choices[0].Delta
-				if chunk.Choices[0].FinishReason != "" {
-					finished = true
-				}
-				if delta.Content != "" || delta.ReasoningContent != "" {
-					raw.WriteString(delta.Content)
-					// Every chunk is reported, even when the visible text is
-					// unchanged, so a long reasoning phase still counts as activity.
-					onUpdate(StreamUpdate{
-						Text:     streamVisibleText(raw.String()),
-						Thinking: (delta.ReasoningContent != "" && delta.Content == "") || thinkBlockOpen(raw.String()),
-						Provider: c.Provider,
-					})
-				}
+			if delta.Content != "" || delta.ReasoningContent != "" {
+				reply.add(delta.Content, delta.ReasoningContent != "")
 			}
 		}
-		if readErr != nil {
-			if readErr == io.EOF && finished {
-				break
-			}
-			if readErr == io.EOF {
-				readErr = io.ErrUnexpectedEOF
-			}
-			return partial(fmt.Errorf("%s stream interrupted: %w", c.Label, readErr))
-		}
+		return false, nil
+	})
+	if err != nil {
+		return reply.partial(err)
 	}
-
-	text := streamVisibleText(raw.String())
-	if text == "" {
-		return Response{}, fmt.Errorf("empty text response from %s (a reasoning model may have spent max_tokens thinking)", c.Label)
-	}
-	tokens := usageTokens
-	if tokens <= 0 {
-		tokens = (len(text) + 3) / 4
-	}
-	return Response{
-		Text:        text,
-		Provider:    c.Provider,
-		TokensUsed:  tokens,
-		GeneratedAt: time.Now().UTC(),
-	}, nil
+	return reply.result()
 }
 
 // streamVisibleText removes reasoning from accumulated stream text, including a

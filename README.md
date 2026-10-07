@@ -123,13 +123,13 @@ When you leave an LLM explanation (Esc, another hotkey, a mouse click, or quit),
 
 ### Streamed replies
 
-With the OpenAI API (`5`) and LM Studio (`6`), hints and explanations appear word by word as the model writes them, instead of all at once at the end. Other providers still show the whole reply when it is finished; streaming for them is planned.
+With every AI provider (ChatGPT plan, Anthropic, Gemini, the OpenAI API and LM Studio), hints and explanations appear word by word as the model writes them, instead of all at once at the end. The offline tutor answers instantly and does not stream.
 
 - **"thinking…"** means the model is reasoning before it answers. Its reasoning is never shown, only the answer that follows.
 - **Esc stops a reply in progress.** Text that has already arrived stays on screen, marked **incomplete, not saved**. Press Esc again to dismiss it.
 - **Incomplete replies are never saved.** If a reply stops early (you pressed Esc, the connection dropped, or the model went quiet for 30 seconds), you will not be asked to save it. Ask again with `?` or `e` for a full reply.
 - If a streamed reply fails before any text arrives, the offline tutor answers instead, as before.
-- Streamed replies have no overall time limit. The first text must arrive within the provider timeout (90 seconds for LM Studio), and after that the reply stops only if no new text arrives for 30 seconds.
+- Streamed replies have no overall time limit. The first text must arrive within the provider timeout (`--tutor-timeout`, 60 seconds by default; at least 90 seconds for LM Studio), and after that the reply stops only if no new text arrives for 30 seconds.
 
 The available subscription permissions and models depend on the connected account. `--test-llm` reports local configuration diagnostics; it does not prove that live inference will succeed.
 

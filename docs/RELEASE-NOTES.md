@@ -1,6 +1,7 @@
 # Unreleased - Streamed tutor replies (October 5, 2026)
 
-- Hints and explanations from the OpenAI API and LM Studio now appear as they are written instead of all at once. Anthropic, Gemini and ChatGPT plan replies still arrive whole; streaming for them is planned.
+- Hints and explanations from every AI provider (ChatGPT plan, Anthropic, Gemini, OpenAI API, LM Studio) now appear as they are written instead of all at once.
+- Gemini streamed requests send the API key in a request header rather than the URL.
 - "thinking…" shows while a reasoning model works; its reasoning is never displayed.
 - Esc stops a reply in progress and keeps the text so far, marked "incomplete, not saved". Incomplete replies are never offered for saving.
 - Streams have no overall time limit: the first text must arrive within the provider timeout, then a reply stops only after 30 seconds without new text. A failure before any text still falls back to the offline tutor.

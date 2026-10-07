@@ -89,16 +89,25 @@ func (a *AnthropicTutor) getKey() string {
 	return ""
 }
 
-func (a *AnthropicTutor) call(ctx context.Context, req Request, isHint bool) (Response, error) {
+func (a *AnthropicTutor) HintStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return a.stream(ctx, req, true, onUpdate)
+}
+
+func (a *AnthropicTutor) ExplainStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return a.stream(ctx, req, false, onUpdate)
+}
+
+// newRequest checks the budget and key and builds the POST /messages request.
+func (a *AnthropicTutor) newRequest(ctx context.Context, req Request, isHint, stream bool) (*http.Request, error) {
 	if a.cfg.Budget != nil {
 		if err := a.cfg.Budget.Check(); err != nil {
-			return Response{}, err
+			return nil, err
 		}
 	}
 
 	key := a.getKey()
 	if key == "" {
-		return Response{}, errors.New("anthropic api key not configured (set ANTHROPIC_API_KEY or configure via 't')")
+		return nil, errors.New("anthropic api key not configured (set ANTHROPIC_API_KEY or configure via 't')")
 	}
 
 	endpoint := strings.TrimSuffix(a.cfg.BaseURL, "/") + "/messages"
@@ -111,19 +120,102 @@ func (a *AnthropicTutor) call(ctx context.Context, req Request, isHint bool) (Re
 			{"role": "user", "content": FormatUserPrompt(req, isHint)},
 		},
 	}
+	if stream {
+		payload["stream"] = true
+	}
 
 	jsonBytes, err := json.Marshal(payload)
 	if err != nil {
-		return Response{}, fmt.Errorf("failed encoding request: %w", err)
+		return nil, fmt.Errorf("failed encoding request: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(jsonBytes))
 	if err != nil {
-		return Response{}, err
+		return nil, err
 	}
 	httpReq.Header.Set("x-api-key", key)
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 	httpReq.Header.Set("content-type", "application/json")
+	if stream {
+		httpReq.Header.Set("accept", "text/event-stream")
+	}
+	return httpReq, nil
+}
+
+// stream sends a streamed Messages request. text_delta events are shown;
+// thinking_delta events only mark the reply as thinking.
+func (a *AnthropicTutor) stream(ctx context.Context, req Request, isHint bool, onUpdate func(StreamUpdate)) (Response, error) {
+	httpReq, err := a.newRequest(ctx, req, isHint, true)
+	if err != nil {
+		return Response{}, err
+	}
+
+	httpResp, err := streamingClient(a.cfg.HTTPClient).Do(httpReq)
+	if err != nil {
+		return Response{}, fmt.Errorf("anthropic api request failed: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		return Response{}, fmt.Errorf("anthropic api error (%d): %s", httpResp.StatusCode, httpErrorBody(httpResp))
+	}
+
+	reply := &streamReply{label: "anthropic", provider: "anthropic", budget: a.cfg.Budget, onUpdate: onUpdate}
+	defer reply.recordBudget()
+	finished := false
+	err = readSSE(httpResp.Body, "anthropic", &finished, func(data string) (bool, error) {
+		var event struct {
+			Type  string `json:"type"`
+			Delta struct {
+				Type     string `json:"type"`
+				Text     string `json:"text"`
+				Thinking string `json:"thinking"`
+			} `json:"delta"`
+			Usage *struct {
+				OutputTokens int `json:"output_tokens"`
+			} `json:"usage"`
+			Error struct {
+				Type    string `json:"type"`
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if err := json.Unmarshal([]byte(data), &event); err != nil {
+			return false, fmt.Errorf("failed decoding anthropic stream: %w", err)
+		}
+		switch event.Type {
+		case "content_block_delta":
+			switch event.Delta.Type {
+			case "text_delta":
+				if event.Delta.Text != "" {
+					reply.add(event.Delta.Text, false)
+				}
+			case "thinking_delta":
+				reply.add("", true)
+			}
+		case "message_delta":
+			// message_delta usage is cumulative.
+			if event.Usage != nil {
+				reply.usage = event.Usage.OutputTokens
+			}
+		case "message_stop":
+			finished = true
+			return true, nil
+		case "error":
+			return false, fmt.Errorf("anthropic stream error: %s: %s", event.Error.Type, event.Error.Message)
+		}
+		return false, nil
+	})
+	if err != nil {
+		return reply.partial(err)
+	}
+	return reply.result()
+}
+
+func (a *AnthropicTutor) call(ctx context.Context, req Request, isHint bool) (Response, error) {
+	httpReq, err := a.newRequest(ctx, req, isHint, false)
+	if err != nil {
+		return Response{}, err
+	}
 
 	httpResp, err := a.cfg.HTTPClient.Do(httpReq)
 	if err != nil {
@@ -239,20 +331,35 @@ func (g *GeminiTutor) getKey() string {
 	return ""
 }
 
-func (g *GeminiTutor) call(ctx context.Context, req Request, isHint bool) (Response, error) {
+func (g *GeminiTutor) HintStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return g.stream(ctx, req, true, onUpdate)
+}
+
+func (g *GeminiTutor) ExplainStream(ctx context.Context, req Request, onUpdate func(StreamUpdate)) (Response, error) {
+	return g.stream(ctx, req, false, onUpdate)
+}
+
+// newRequest checks the budget and key and builds a generateContent request,
+// or a streamGenerateContent?alt=sse request when stream is set.
+func (g *GeminiTutor) newRequest(ctx context.Context, req Request, isHint, stream bool) (*http.Request, error) {
 	if g.cfg.Budget != nil {
 		if err := g.cfg.Budget.Check(); err != nil {
-			return Response{}, err
+			return nil, err
 		}
 	}
 
 	key := g.getKey()
 	if key == "" {
-		return Response{}, errors.New("gemini api key not configured (set GEMINI_API_KEY or configure via 't')")
+		return nil, errors.New("gemini api key not configured (set GEMINI_API_KEY or configure via 't')")
 	}
 
-	endpoint := fmt.Sprintf("%s/models/%s:generateContent?key=%s",
-		strings.TrimSuffix(g.cfg.BaseURL, "/"), g.cfg.Model, key)
+	base := strings.TrimSuffix(g.cfg.BaseURL, "/")
+	endpoint := fmt.Sprintf("%s/models/%s:generateContent?key=%s", base, g.cfg.Model, key)
+	if stream {
+		// The key goes in a header so it cannot appear in a transport error,
+		// which may be shown as a fallback reason.
+		endpoint = fmt.Sprintf("%s/models/%s:streamGenerateContent?alt=sse", base, g.cfg.Model)
+	}
 
 	payload := map[string]interface{}{
 		"systemInstruction": map[string]interface{}{
@@ -272,14 +379,98 @@ func (g *GeminiTutor) call(ctx context.Context, req Request, isHint bool) (Respo
 
 	jsonBytes, err := json.Marshal(payload)
 	if err != nil {
-		return Response{}, fmt.Errorf("failed encoding request: %w", err)
+		return nil, fmt.Errorf("failed encoding request: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(jsonBytes))
 	if err != nil {
-		return Response{}, err
+		return nil, err
 	}
 	httpReq.Header.Set("content-type", "application/json")
+	if stream {
+		httpReq.Header.Set("x-goog-api-key", key)
+		httpReq.Header.Set("accept", "text/event-stream")
+	}
+	return httpReq, nil
+}
+
+// stream sends a streamGenerateContent request. Each SSE chunk is a full
+// GenerateContentResponse; parts marked thought only mark the reply as
+// thinking, and a finishReason marks the stream complete.
+func (g *GeminiTutor) stream(ctx context.Context, req Request, isHint bool, onUpdate func(StreamUpdate)) (Response, error) {
+	httpReq, err := g.newRequest(ctx, req, isHint, true)
+	if err != nil {
+		return Response{}, err
+	}
+
+	httpResp, err := streamingClient(g.cfg.HTTPClient).Do(httpReq)
+	if err != nil {
+		return Response{}, fmt.Errorf("gemini api request failed: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		return Response{}, fmt.Errorf("gemini api error (%d): %s", httpResp.StatusCode, httpErrorBody(httpResp))
+	}
+
+	reply := &streamReply{label: "gemini", provider: "google", budget: g.cfg.Budget, onUpdate: onUpdate}
+	defer reply.recordBudget()
+	finished := false
+	err = readSSE(httpResp.Body, "gemini", &finished, func(data string) (bool, error) {
+		var chunk struct {
+			Candidates []struct {
+				Content struct {
+					Parts []struct {
+						Text    string `json:"text"`
+						Thought bool   `json:"thought"`
+					} `json:"parts"`
+				} `json:"content"`
+				FinishReason string `json:"finishReason"`
+			} `json:"candidates"`
+			UsageMetadata *struct {
+				CandidatesTokenCount int `json:"candidatesTokenCount"`
+			} `json:"usageMetadata"`
+			Error *struct {
+				Status  string `json:"status"`
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			return false, fmt.Errorf("failed decoding gemini stream: %w", err)
+		}
+		if chunk.Error != nil {
+			return false, fmt.Errorf("gemini stream error: %s: %s", chunk.Error.Status, chunk.Error.Message)
+		}
+		// candidatesTokenCount is cumulative across chunks.
+		if chunk.UsageMetadata != nil && chunk.UsageMetadata.CandidatesTokenCount > 0 {
+			reply.usage = chunk.UsageMetadata.CandidatesTokenCount
+		}
+		if len(chunk.Candidates) > 0 {
+			cand := chunk.Candidates[0]
+			for _, part := range cand.Content.Parts {
+				if part.Thought {
+					reply.add("", true)
+				} else if part.Text != "" {
+					reply.add(part.Text, false)
+				}
+			}
+			if cand.FinishReason != "" {
+				finished = true
+			}
+		}
+		return false, nil
+	})
+	if err != nil {
+		return reply.partial(err)
+	}
+	return reply.result()
+}
+
+func (g *GeminiTutor) call(ctx context.Context, req Request, isHint bool) (Response, error) {
+	httpReq, err := g.newRequest(ctx, req, isHint, false)
+	if err != nil {
+		return Response{}, err
+	}
 
 	httpResp, err := g.cfg.HTTPClient.Do(httpReq)
 	if err != nil {

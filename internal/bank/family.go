@@ -2,45 +2,45 @@ package bank
 
 // Supported semantic event family IDs.
 const (
-	FamilyCashService           = "cash_service"
-	FamilyCustomerAdvance       = "customer_advance"
-	FamilyServiceOnCredit       = "service_on_credit"
-	FamilyCollectReceivable     = "collect_receivable"
-	FamilyEarnAdvance           = "earn_advance"
-	FamilyCashRent              = "cash_rent"
-	FamilyBorrowCash            = "borrow_cash"
-	FamilyIssueShares           = "issue_shares"
-	FamilyCashExpense           = "cash_expense"
-	FamilyPrepaidPurchase       = "prepaid_purchase"
-	FamilyPrepaidConsumption    = "prepaid_consumption"
-	FamilyEquipmentPurchaseCash = "equipment_purchase_cash"
-	FamilyRepayNotePrincipal    = "repay_note_principal"
-	FamilyDividendCash          = "dividend_cash"
-	FamilyDeclareDividend       = "declare_dividend"
-	FamilyPayDividendPayable    = "pay_dividend_payable"
-	FamilyBadDebtAllowance      = "bad_debt_allowance"
-	FamilyWriteOffReceivable    = "write_off_receivable"
-	FamilyIssueBondsPar         = "issue_bonds_par"
-	FamilyIssueBondsDiscount    = "issue_bonds_discount"
-	FamilyIssueBondsPremium     = "issue_bonds_premium"
-	FamilyPayBondInterest       = "pay_bond_interest"
-	FamilyAcquireGoodwill       = "acquire_goodwill"
-	FamilyRepurchaseTreasuryStock = "repurchase_treasury_stock"
+	FamilyCashService                   = "cash_service"
+	FamilyCustomerAdvance               = "customer_advance"
+	FamilyServiceOnCredit               = "service_on_credit"
+	FamilyCollectReceivable             = "collect_receivable"
+	FamilyEarnAdvance                   = "earn_advance"
+	FamilyCashRent                      = "cash_rent"
+	FamilyBorrowCash                    = "borrow_cash"
+	FamilyIssueShares                   = "issue_shares"
+	FamilyCashExpense                   = "cash_expense"
+	FamilyPrepaidPurchase               = "prepaid_purchase"
+	FamilyPrepaidConsumption            = "prepaid_consumption"
+	FamilyEquipmentPurchaseCash         = "equipment_purchase_cash"
+	FamilyRepayNotePrincipal            = "repay_note_principal"
+	FamilyDividendCash                  = "dividend_cash"
+	FamilyDeclareDividend               = "declare_dividend"
+	FamilyPayDividendPayable            = "pay_dividend_payable"
+	FamilyBadDebtAllowance              = "bad_debt_allowance"
+	FamilyWriteOffReceivable            = "write_off_receivable"
+	FamilyIssueBondsPar                 = "issue_bonds_par"
+	FamilyIssueBondsDiscount            = "issue_bonds_discount"
+	FamilyIssueBondsPremium             = "issue_bonds_premium"
+	FamilyPayBondInterest               = "pay_bond_interest"
+	FamilyAcquireGoodwill               = "acquire_goodwill"
+	FamilyRepurchaseTreasuryStock       = "repurchase_treasury_stock"
 	FamilyCapitalizeSoftwareFeasibility = "capitalize_software_feasibility"
-	FamilyCreditSalesCashFlow   = "credit_sales_cash_flow"
-	FamilyCurrentRatioAnalysis  = "current_ratio_analysis"
-	FamilyRepo105Analysis       = "repo105_analysis"
-	FamilyAppleMultiElementRevenue = "apple_multielement_revenue"
-	FamilyGoodwillImpairment    = "goodwill_impairment"
-	FamilyDigitalAssetAccounting = "digital_asset_accounting"
-	FamilyReportingPolicyChoice = "reporting_policy_choice"
-	FamilyFinancialForecasting  = "financial_forecasting"
+	FamilyCreditSalesCashFlow           = "credit_sales_cash_flow"
+	FamilyCurrentRatioAnalysis          = "current_ratio_analysis"
+	FamilyRepo105Analysis               = "repo105_analysis"
+	FamilyAppleMultiElementRevenue      = "apple_multielement_revenue"
+	FamilyGoodwillImpairment            = "goodwill_impairment"
+	FamilyDigitalAssetAccounting        = "digital_asset_accounting"
+	FamilyReportingPolicyChoice         = "reporting_policy_choice"
+	FamilyFinancialForecasting          = "financial_forecasting"
 
 	// Wave 1: Stream-M03 (Cash Flows & Statement Analysis)
-	FamilyM03OCFAccountsPayableIncrease   = "m03_ocf_ap_increase"
-	FamilyM03OCFPrepaidIncrease           = "m03_ocf_prepaid_increase"
-	FamilyM03OCFUnearnedRevenueIncrease   = "m03_ocf_unearned_revenue_increase"
-	FamilyM03OCFQuickRatio                = "m03_ocf_quick_ratio"
+	FamilyM03OCFAccountsPayableIncrease = "m03_ocf_ap_increase"
+	FamilyM03OCFPrepaidIncrease         = "m03_ocf_prepaid_increase"
+	FamilyM03OCFUnearnedRevenueIncrease = "m03_ocf_unearned_revenue_increase"
+	FamilyM03OCFQuickRatio              = "m03_ocf_quick_ratio"
 
 	// Wave 1: Stream-M04 (Revenue Recognition ASC 606)
 	FamilyM04VariableConsideration = "m04_variable_consideration"
@@ -83,39 +83,39 @@ const (
 )
 
 var supportedFamilies = map[string]struct{}{
-	FamilyCashService:           {},
-	FamilyCustomerAdvance:       {},
-	FamilyServiceOnCredit:       {},
-	FamilyCollectReceivable:     {},
-	FamilyEarnAdvance:           {},
-	FamilyCashRent:              {},
-	FamilyBorrowCash:            {},
-	FamilyIssueShares:           {},
-	FamilyCashExpense:           {},
-	FamilyPrepaidPurchase:       {},
-	FamilyPrepaidConsumption:    {},
-	FamilyEquipmentPurchaseCash: {},
-	FamilyRepayNotePrincipal:    {},
-	FamilyDividendCash:          {},
-	FamilyDeclareDividend:       {},
-	FamilyPayDividendPayable:    {},
-	FamilyBadDebtAllowance:      {},
-	FamilyWriteOffReceivable:    {},
-	FamilyIssueBondsPar:         {},
-	FamilyIssueBondsDiscount:    {},
-	FamilyIssueBondsPremium:     {},
-	FamilyPayBondInterest:       {},
-	FamilyAcquireGoodwill:       {},
-	FamilyRepurchaseTreasuryStock: {},
+	FamilyCashService:                   {},
+	FamilyCustomerAdvance:               {},
+	FamilyServiceOnCredit:               {},
+	FamilyCollectReceivable:             {},
+	FamilyEarnAdvance:                   {},
+	FamilyCashRent:                      {},
+	FamilyBorrowCash:                    {},
+	FamilyIssueShares:                   {},
+	FamilyCashExpense:                   {},
+	FamilyPrepaidPurchase:               {},
+	FamilyPrepaidConsumption:            {},
+	FamilyEquipmentPurchaseCash:         {},
+	FamilyRepayNotePrincipal:            {},
+	FamilyDividendCash:                  {},
+	FamilyDeclareDividend:               {},
+	FamilyPayDividendPayable:            {},
+	FamilyBadDebtAllowance:              {},
+	FamilyWriteOffReceivable:            {},
+	FamilyIssueBondsPar:                 {},
+	FamilyIssueBondsDiscount:            {},
+	FamilyIssueBondsPremium:             {},
+	FamilyPayBondInterest:               {},
+	FamilyAcquireGoodwill:               {},
+	FamilyRepurchaseTreasuryStock:       {},
 	FamilyCapitalizeSoftwareFeasibility: {},
-	FamilyCreditSalesCashFlow:   {},
-	FamilyCurrentRatioAnalysis:  {},
-	FamilyRepo105Analysis:       {},
-	FamilyAppleMultiElementRevenue: {},
-	FamilyGoodwillImpairment:    {},
-	FamilyDigitalAssetAccounting: {},
-	FamilyReportingPolicyChoice: {},
-	FamilyFinancialForecasting:  {},
+	FamilyCreditSalesCashFlow:           {},
+	FamilyCurrentRatioAnalysis:          {},
+	FamilyRepo105Analysis:               {},
+	FamilyAppleMultiElementRevenue:      {},
+	FamilyGoodwillImpairment:            {},
+	FamilyDigitalAssetAccounting:        {},
+	FamilyReportingPolicyChoice:         {},
+	FamilyFinancialForecasting:          {},
 
 	// Wave 1 Streams
 	FamilyM03OCFAccountsPayableIncrease: {},
@@ -128,22 +128,22 @@ var supportedFamilies = map[string]struct{}{
 	FamilyM04SatisfactionOverTime:       {},
 	FamilyM05InventoryFIFO:              {},
 	FamilyM05InventoryLIFO:              {},
-	FamilyM05InventoryNRVWriteDown:       {},
-	FamilyM05FreightInCapitalize:         {},
+	FamilyM05InventoryNRVWriteDown:      {},
+	FamilyM05FreightInCapitalize:        {},
 
 	// Wave 2 Streams
-	FamilyM06StraightLineDepr:         {},
-	FamilyM06MACRSTaxTiming:           {},
-	FamilyM06AssetDisposalGainLoss:    {},
-	FamilyM06ImpairmentRecoverability: {},
+	FamilyM06StraightLineDepr:           {},
+	FamilyM06MACRSTaxTiming:             {},
+	FamilyM06AssetDisposalGainLoss:      {},
+	FamilyM06ImpairmentRecoverability:   {},
 	FamilyM07BondIssuanceDiscount:       {},
 	FamilyM07BondIssuancePremium:        {},
 	FamilyM07BondEffectiveInterestAmort: {},
 	FamilyM07BondContingentLiability:    {},
-	FamilyM08LeaseCommencementROUAsset: {},
-	FamilyM08LeasePeriodicPayment:      {},
-	FamilyM08TreasuryStockRepurchase:   {},
-	FamilyM08TreasuryStockReissuance:   {},
+	FamilyM08LeaseCommencementROUAsset:  {},
+	FamilyM08LeasePeriodicPayment:       {},
+	FamilyM08TreasuryStockRepurchase:    {},
+	FamilyM08TreasuryStockReissuance:    {},
 
 	// Wave 3 Streams
 	FamilyM09CookieJarReserve:              {},

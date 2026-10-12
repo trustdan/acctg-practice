@@ -58,8 +58,8 @@ func TestStreamM08BatchInvariants(t *testing.T) {
 	catalog := buildM08TestCatalog()
 
 	expectedIDs := map[string]bool{
-		"q_m08_lse_commencement_rou_asset_01": false,
-		"q_m08_lse_periodic_lease_payment_02": false,
+		"q_m08_lse_commencement_rou_asset_01":    false,
+		"q_m08_lse_periodic_lease_payment_02":    false,
 		"q_m08_lse_treasury_stock_repurchase_03": false,
 		"q_m08_lse_treasury_stock_reissuance_04": false,
 	}

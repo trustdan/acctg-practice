@@ -1160,5 +1160,3 @@ func (FinancialForecastingRule) DiagnoseError(candidate domain.Entry, params map
 	}
 	return nil, ""
 }
-
-

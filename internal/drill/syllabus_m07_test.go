@@ -58,10 +58,10 @@ func TestStreamM07BatchInvariants(t *testing.T) {
 	catalog := buildM07TestCatalog()
 
 	expectedIDs := map[string]bool{
-		"q_m07_bnd_issuance_discount_01":       false,
-		"q_m07_bnd_issuance_premium_02":        false,
+		"q_m07_bnd_issuance_discount_01":        false,
+		"q_m07_bnd_issuance_premium_02":         false,
 		"q_m07_bnd_effective_interest_amort_03": false,
-		"q_m07_bnd_contingent_liability_04":    false,
+		"q_m07_bnd_contingent_liability_04":     false,
 	}
 
 	for _, q := range batch.Questions {

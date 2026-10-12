@@ -1,5 +1,49 @@
 # Implementation handoff
 
+## LLM Provider Navigation, Cursor Tracking & Intuitive Scrolling — 2026-10-12
+
+- Resolved usability friction in Tutor Settings (`StateTutorConfig`) where arrow keys and `j/k` could not navigate between provider options:
+  - Added dedicated `TutorProviderCursor int` (0-5), `TutorScroll int`, and `TutorFollowCursor bool` fields to `Model`.
+  - When opening Tutor Settings (pressing `[t]`), `openTutorConfig` sets `TutorProviderCursor` to the currently active provider and resets scroll offset with `TutorFollowCursor = true`.
+  - Implemented `j`/`k` and `down`/`up` arrow navigation, plus `g`/`home` (top) and `G`/`end` (bottom) shortcuts.
+  - Added `Enter` and `Space` to activate / configure the provider currently under the cursor (mirroring numbers `1-6`).
+  - Added `e` shortcut to edit API keys / server URLs for the provider under the cursor.
+  - Updated `renderPageViewport` in [internal/tui/view.go](file:///c:/Users/Dan/acctg-practice/internal/tui/view.go) with automatic cursor following: moving the cursor with `j`/`k`/arrows automatically scrolls the viewport up and down so options are never hidden below the fold.
+  - Preserved manual viewport scrolling with `u`/`d` and `PgUp`/`PgDn` without wiping out scroll state on other keystrokes.
+  - Updated footer help text to clearly reflect `[↑/↓, j/k] Navigate  •  [Enter/Space/1-6] Choose  •  [e] Edit Key/URL  •  [l] LM Studio URL  •  [m] Select Model  •  [r] Discover  •  [a] ChatGPT Account  •  [x] Clear  •  [Esc/t] Return`.
+  - Added unit test `TestTutorConfigNavigationAndScroll` in [internal/tui/tui_test.go](file:///c:/Users/Dan/acctg-practice/internal/tui/tui_test.go).
+  - Verified with `go test ./...` and `go vet ./...` (100% pass across all packages).
+- Files: [internal/tui/model.go](file:///c:/Users/Dan/acctg-practice/internal/tui/model.go), [internal/tui/view.go](file:///c:/Users/Dan/acctg-practice/internal/tui/view.go), [internal/tui/tui_test.go](file:///c:/Users/Dan/acctg-practice/internal/tui/tui_test.go), [docs/HANDOFF.md](file:///c:/Users/Dan/acctg-practice/docs/HANDOFF.md).
+- Next: Prepare for full curriculum benchmark testing, release packaging, or further expanding higher-level synthesis questions.
+
+## Active Module Badge & Question View Indicator — 2026-10-12
+
+- Added prominent active module indicator badge on the question view:
+  - Added `ModuleBadge` styling to [internal/tui/styles.go](file:///c:/Users/Dan/acctg-practice/internal/tui/styles.go) with bold white text on high-contrast sky blue background.
+  - Implemented `activeModulesBadgeText()` and `formatModuleList()` in [internal/tui/view.go](file:///c:/Users/Dan/acctg-practice/internal/tui/view.go) to dynamically summarize active modules:
+    - Single module selected (e.g. Module 3): displays `Module: 3`.
+    - Multiple modules selected: displays `Modules: 1, 2` or `Modules: 1-3, 5`.
+    - All 10 modules selected: displays `Modules: All`.
+  - Displayed the badge in `renderHeader`, visible across Drill (`renderDrill`), Feedback (`renderFeedback`), and Recap (`renderRecap`).
+  - Added responsive compact header label (`Q1/10` vs `Question 1/10`) for terminals under 90 columns so badges and titles never awkwardly wrap.
+  - Added unit test `TestActiveModuleBadgeOnQuestionView` in [internal/tui/tui_test.go](file:///c:/Users/Dan/acctg-practice/internal/tui/tui_test.go).
+  - Verified with `go test ./...` and `go vet ./...` (100% pass across all packages).
+- Files: [internal/tui/styles.go](file:///c:/Users/Dan/acctg-practice/internal/tui/styles.go), [internal/tui/view.go](file:///c:/Users/Dan/acctg-practice/internal/tui/view.go), [internal/tui/tui_test.go](file:///c:/Users/Dan/acctg-practice/internal/tui/tui_test.go), [docs/HANDOFF.md](file:///c:/Users/Dan/acctg-practice/docs/HANDOFF.md).
+- Next: Prepare for full curriculum benchmark testing, release packaging, or further expanding higher-level synthesis questions.
+
+## Module Selection Scrolling & Dynamic Cursor Tracking Fix — 2026-10-12
+
+- Fixed viewport scrolling issue in Module Selection modal (`StateModuleSelect`):
+  - Previously, `m.PageScroll = 0` was unconditionally invoked on every keypress in `Update`, resetting viewport scroll whenever the learner navigated or toggled modules, and cursor movement (`down`/`up`/`j`/`k`) did not auto-scroll the viewport to keep lower modules in view.
+  - Added dedicated `ModuleScroll int` and `ModuleFollowCursor bool` fields to `Model`.
+  - Updated `renderPageViewport` in [internal/tui/view.go](file:///c:/Users/Dan/acctg-practice/internal/tui/view.go) to bind `scroll` to `&m.ModuleScroll` during `StateModuleSelect` and automatically track active module cursor, keeping the selected module and its surrounding box in full view.
+  - When cursor is on Module 1 (index 0), scroll resets to top (`0`) to reveal header and intro; when cursor reaches the final module (Module 10), scroll adjusts to `maxScroll` to reveal the module, controls box, and status bar.
+  - Preserved manual scrolling via `[u/d]` and `[PgUp/PgDn]`, and added `[g/G]` / `[Home/End]` quick jump shortcuts. Toggling with `[Space]` preserves the current scroll offset.
+  - Added unit test `TestModuleSelectionScrollingAndCursorTracking` in [internal/tui/tui_test.go](file:///c:/Users/Dan/acctg-practice/internal/tui/tui_test.go).
+  - Verified with `go test ./...` and `go vet ./...` (100% pass across all packages).
+- Files: [internal/tui/model.go](file:///c:/Users/Dan/acctg-practice/internal/tui/model.go), [internal/tui/view.go](file:///c:/Users/Dan/acctg-practice/internal/tui/view.go), [internal/tui/tui_test.go](file:///c:/Users/Dan/acctg-practice/internal/tui/tui_test.go), [docs/HANDOFF.md](file:///c:/Users/Dan/acctg-practice/docs/HANDOFF.md).
+- Next: Prepare for full curriculum benchmark testing, release packaging, or further expanding higher-level synthesis questions.
+
 ## Multi-Agent Wave 3 Integration: 135 Active Questions (136 Templates) — Minimum 4 Questions Per Module Across All 10 Modules — 2026-10-12
 
 - Successfully authored, tested, and integrated 5 new questions (2 for Module 9, 3 for Module 10), bringing the active bank to 135 active questions (136 templates) and achieving a minimum of 4 active questions for every single module (1 through 10) in the UW Foster syllabus:

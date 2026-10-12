@@ -3356,3 +3356,257 @@ func TestConfigModuleFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestModuleSelectionScrollingAndCursorTracking(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	// Set terminal size to standard 24-line height
+	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+
+	// 1. Open Module Selection
+	sendKey(m, "m")
+	if m.State != tui.StateModuleSelect {
+		t.Fatalf("expected StateModuleSelect, got %v", m.State)
+	}
+
+	initialView := m.View()
+	if !strings.Contains(initialView, "Module 1:") {
+		t.Fatalf("expected Module 1: visible initially")
+	}
+	if strings.Contains(initialView, "Module 10:") {
+		t.Fatalf("expected Module 10: to be off-screen initially in 24-row terminal")
+	}
+
+	// 2. Navigate down to Module 10 (press 'j' 9 times)
+	for i := 0; i < 9; i++ {
+		sendKey(m, "j")
+	}
+	if m.ModuleCursor != 9 {
+		t.Fatalf("expected ModuleCursor 9, got %d", m.ModuleCursor)
+	}
+
+	// Auto-scroll must bring Module 10 into view
+	mod10View := m.View()
+	if !strings.Contains(mod10View, "Module 10") {
+		t.Fatalf("expected Module 10 to be visible after navigating down, got view:\n%s", mod10View)
+	}
+	if m.ModuleScroll == 0 {
+		t.Fatalf("expected ModuleScroll > 0 when cursor is at Module 10")
+	}
+
+	// 3. Wrap around down: pressing 'j' on Module 10 wraps to Module 1
+	sendKey(m, "j")
+	if m.ModuleCursor != 0 {
+		t.Fatalf("expected ModuleCursor 0 after wrap, got %d", m.ModuleCursor)
+	}
+	wrapView := m.View()
+	if !strings.Contains(wrapView, "Module 1") {
+		t.Fatalf("expected Module 1 visible after wrapping to top")
+	}
+	if m.ModuleScroll != 0 {
+		t.Fatalf("expected ModuleScroll == 0 after wrapping to top, got %d", m.ModuleScroll)
+	}
+
+	// 4. Wrap around up: pressing 'k' on Module 1 wraps to Module 10
+	sendKey(m, "k")
+	if m.ModuleCursor != 9 {
+		t.Fatalf("expected ModuleCursor 9 after wrap up, got %d", m.ModuleCursor)
+	}
+	m10WrapView := m.View()
+	if !strings.Contains(m10WrapView, "Module 10") {
+		t.Fatalf("expected Module 10 visible after wrapping up")
+	}
+
+	// 5. Jump shortcuts: '1' jumps to Module 1, '0' jumps to Module 10
+	sendKey(m, "1")
+	if m.ModuleCursor != 0 {
+		t.Fatalf("expected ModuleCursor 0 after '1', got %d", m.ModuleCursor)
+	}
+	m1JumpView := m.View()
+	if !strings.Contains(m1JumpView, "Module 1") {
+		t.Fatalf("expected Module 1 visible after jump '1'")
+	}
+	if m.ModuleScroll != 0 {
+		t.Fatalf("expected ModuleScroll 0 after jumping to Module 1, got %d", m.ModuleScroll)
+	}
+
+	sendKey(m, "0")
+	if m.ModuleCursor != 9 {
+		t.Fatalf("expected ModuleCursor 9 after '0', got %d", m.ModuleCursor)
+	}
+	m0JumpView := m.View()
+	if !strings.Contains(m0JumpView, "Module 10") {
+		t.Fatalf("expected Module 10 visible after jump '0'")
+	}
+	if m.ModuleScroll == 0 {
+		t.Fatalf("expected ModuleScroll > 0 after jumping to Module 10")
+	}
+
+	// 6. Manual scroll keys 'd' and 'u', and toggle without resetting scroll
+	sendKey(m, "g") // Top
+	_ = m.View()
+	if m.ModuleScroll != 0 {
+		t.Fatalf("expected ModuleScroll 0 after 'g'")
+	}
+
+	sendKey(m, "d") // Scroll down manually
+	if m.ModuleScroll == 0 {
+		t.Fatalf("expected ModuleScroll > 0 after pressing 'd'")
+	}
+	savedScroll := m.ModuleScroll
+
+	// Space toggles module without wiping scroll
+	sendKey(m, " ")
+	if m.ModuleScroll != savedScroll {
+		t.Fatalf("expected space not to reset scroll: got %d, expected %d", m.ModuleScroll, savedScroll)
+	}
+
+	// 'u' scrolls up
+	sendKey(m, "u")
+	if m.ModuleScroll >= savedScroll {
+		t.Fatalf("expected 'u' to scroll up: got %d, was %d", m.ModuleScroll, savedScroll)
+	}
+}
+
+func TestActiveModuleBadgeOnQuestionView(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	// Default question view should show "Modules: All"
+	view := m.View()
+	if !strings.Contains(view, "Modules: All") {
+		t.Fatalf("expected 'Modules: All' badge in default question view, got:\n%s", view)
+	}
+
+	// Select only Module 3
+	sendKey(m, "m")
+	sendKey(m, "c")
+	sendKey(m, "3")
+	sendSpecialKey(m, tea.KeyEnter)
+
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected StateDrill, got %v", m.State)
+	}
+
+	viewMod3 := m.View()
+	if !strings.Contains(viewMod3, "Module: 3") {
+		t.Fatalf("expected 'Module: 3' badge in question view, got:\n%s", viewMod3)
+	}
+
+	// Select Modules 1 and 2
+	sendKey(m, "m")
+	sendKey(m, "c")
+	sendKey(m, "1")
+	sendKey(m, "2")
+	sendSpecialKey(m, tea.KeyEnter)
+
+	viewMod12 := m.View()
+	if !strings.Contains(viewMod12, "Modules: 1, 2") {
+		t.Fatalf("expected 'Modules: 1, 2' badge in question view, got:\n%s", viewMod12)
+	}
+}
+
+func TestTutorConfigNavigationAndScroll(t *testing.T) {
+	m, _ := setupTestTUI(t)
+
+	// Enter Tutor Config screen
+	sendKey(m, "t")
+	if m.State != tui.StateTutorConfig {
+		t.Fatalf("expected StateTutorConfig, got %v", m.State)
+	}
+
+	// Initial cursor should be 0 (offline)
+	if m.TutorProviderCursor != 0 {
+		t.Fatalf("expected TutorProviderCursor 0, got %d", m.TutorProviderCursor)
+	}
+
+	// Navigate down with 'j'
+	sendKey(m, "j")
+	if m.TutorProviderCursor != 1 {
+		t.Fatalf("expected cursor 1 after 'j', got %d", m.TutorProviderCursor)
+	}
+
+	// Navigate down with 'down' arrow
+	sendSpecialKey(m, tea.KeyDown)
+	if m.TutorProviderCursor != 2 {
+		t.Fatalf("expected cursor 2 after 'down', got %d", m.TutorProviderCursor)
+	}
+
+	// Navigate up with 'k'
+	sendKey(m, "k")
+	if m.TutorProviderCursor != 1 {
+		t.Fatalf("expected cursor 1 after 'k', got %d", m.TutorProviderCursor)
+	}
+
+	// Navigate up with 'up' arrow
+	sendSpecialKey(m, tea.KeyUp)
+	if m.TutorProviderCursor != 0 {
+		t.Fatalf("expected cursor 0 after 'up', got %d", m.TutorProviderCursor)
+	}
+
+	// Wrap around up -> 5
+	sendKey(m, "k")
+	if m.TutorProviderCursor != 5 {
+		t.Fatalf("expected cursor 5 after wrapping 'k', got %d", m.TutorProviderCursor)
+	}
+
+	// Wrap around down -> 0
+	sendKey(m, "j")
+	if m.TutorProviderCursor != 0 {
+		t.Fatalf("expected cursor 0 after wrapping 'j', got %d", m.TutorProviderCursor)
+	}
+
+	// Jump to bottom with 'G'
+	sendKey(m, "G")
+	if m.TutorProviderCursor != 5 {
+		t.Fatalf("expected cursor 5 after 'G', got %d", m.TutorProviderCursor)
+	}
+
+	// Jump to top with 'g'
+	sendKey(m, "g")
+	if m.TutorProviderCursor != 0 {
+		t.Fatalf("expected cursor 0 after 'g', got %d", m.TutorProviderCursor)
+	}
+
+	// Quick select with number '6' (LM Studio)
+	sendKey(m, "6")
+	if m.TutorProviderCursor != 5 {
+		t.Fatalf("expected cursor 5 after pressing '6', got %d", m.TutorProviderCursor)
+	}
+	if m.AuthStore.GetConfig().ActiveProvider != tutor.ProviderLMStudio {
+		t.Fatalf("expected LM Studio to be active")
+	}
+
+	// Move cursor to 0 and press Enter
+	sendKey(m, "g")
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.AuthStore.GetConfig().ActiveProvider != tutor.ProviderOffline {
+		t.Fatalf("expected Offline to be active after Enter on cursor 0")
+	}
+
+	// Test cursor follow scroll in small terminal
+	m.Height = 15
+	m.Width = 80
+	sendKey(m, "G") // cursor at 5 (LM Studio)
+	_ = m.View()
+	if m.TutorScroll == 0 {
+		t.Fatalf("expected TutorScroll > 0 when cursor at bottom in small terminal")
+	}
+
+	// Manual scroll with 'u' / 'd'
+	initialScroll := m.TutorScroll
+	sendKey(m, "u")
+	if m.TutorFollowCursor {
+		t.Fatalf("expected TutorFollowCursor=false after manual 'u' scroll")
+	}
+	if m.TutorScroll >= initialScroll {
+		t.Fatalf("expected TutorScroll to decrease after 'u', was %d now %d", initialScroll, m.TutorScroll)
+	}
+
+	// Exit tutor config with 'esc'
+	sendKey(m, "esc")
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected StateDrill after esc, got %v", m.State)
+	}
+}

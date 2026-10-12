@@ -50,6 +50,7 @@ type Styles struct {
 	MasteryBadge  lipgloss.Style
 	MasteryScore  lipgloss.Style
 	ScaffoldBadge lipgloss.Style
+	ModuleBadge   lipgloss.Style
 
 	// Airline / Lualine Status Bar
 	StatusLine           lipgloss.Style
@@ -439,6 +440,12 @@ func DefaultStyles() Styles {
 		Bold(true).
 		Foreground(white).
 		Background(purpleDark).
+		Padding(0, 1)
+
+	s.ModuleBadge = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(white).
+		Background(skyBlue).
 		Padding(0, 1)
 
 	s.MasteryScore = lipgloss.NewStyle().

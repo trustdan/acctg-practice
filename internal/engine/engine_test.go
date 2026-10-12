@@ -1445,5 +1445,3 @@ func TestFinancialForecastingRule(t *testing.T) {
 		t.Errorf("reconciliation failed: %v", err)
 	}
 }
-
-

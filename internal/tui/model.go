@@ -91,10 +91,12 @@ type Model struct {
 	Questions []bank.QuestionJSON
 
 	// Module selection & filtering
-	AllQuestions    []bank.QuestionJSON
-	SelectedModules map[int]bool
-	ModuleCursor    int
-	ModuleNotice    string
+	AllQuestions       []bank.QuestionJSON
+	SelectedModules    map[int]bool
+	ModuleCursor       int
+	ModuleScroll       int
+	ModuleFollowCursor bool
+	ModuleNotice       string
 
 	// Session state
 	SessionID            string
@@ -139,13 +141,16 @@ type Model struct {
 	CandidateRequestID    int
 
 	// Tutor settings state (Stage 11 & Stage 18)
-	AuthStore          *tutor.AuthStore
-	ModelCache         *tutor.ModelCache
-	TutorInputActive   bool
-	TutorInputBuffer   string
-	TutorInputProvider string
-	TutorAuthNotice    string
-	OAuthActiveFlow    *tutor.OAuthFlow
+	AuthStore           *tutor.AuthStore
+	ModelCache          *tutor.ModelCache
+	TutorInputActive    bool
+	TutorInputBuffer    string
+	TutorInputProvider  string
+	TutorAuthNotice     string
+	OAuthActiveFlow     *tutor.OAuthFlow
+	TutorProviderCursor int
+	TutorScroll         int
+	TutorFollowCursor   bool
 
 	// Model Selection & Discovery (Stage 18)
 	TutorModelSelectActive bool
@@ -219,21 +224,21 @@ type Model struct {
 
 // Config holds configuration parameters for initializing the TUI.
 type Config struct {
-	DB             *storage.DB
-	Catalog        *domain.AccountCatalog
-	Questions      []bank.QuestionJSON
-	TotalQuestions int
-	Intensity      mastery.SessionIntensity
-	Seed           int64
-	Clock          mastery.Clock
-	Tutor          tutor.Tutor
-	TutorTimeout   time.Duration
-	AuthStore      *tutor.AuthStore
-	ModelCache     *tutor.ModelCache
-	TutorModel     string
-	OAuthClientID  string
-	ExamMode       bool
-	ExamTimeLimit  time.Duration
+	DB              *storage.DB
+	Catalog         *domain.AccountCatalog
+	Questions       []bank.QuestionJSON
+	TotalQuestions  int
+	Intensity       mastery.SessionIntensity
+	Seed            int64
+	Clock           mastery.Clock
+	Tutor           tutor.Tutor
+	TutorTimeout    time.Duration
+	AuthStore       *tutor.AuthStore
+	ModelCache      *tutor.ModelCache
+	TutorModel      string
+	OAuthClientID   string
+	ExamMode        bool
+	ExamTimeLimit   time.Duration
 	ResumeExam      bool
 	Intro           bool
 	SelectedModules []int
@@ -319,29 +324,38 @@ func NewModel(cfg Config) (*Model, error) {
 	}
 
 	m := &Model{
-		State:           StateDrill,
-		PreviousState:   StateDrill,
-		DB:              cfg.DB,
-		Catalog:         cfg.Catalog,
-		Engine:          eng,
-		Generator:       gen,
-		Scheduler:       sched,
-		AllQuestions:    allQuestions,
-		Questions:       activeQuestions,
-		SelectedModules: selectedModules,
-		ModuleCursor:    0,
-		Tutor:           cfg.Tutor,
-		TutorTimeout:    cfg.TutorTimeout,
-		AuthStore:       cfg.AuthStore,
-		ModelCache:      modelCache,
-		SessionID:       sessID,
-		TotalQuestions:  cfg.TotalQuestions,
-		RNG:             rng,
-		Seed:            cfg.Seed,
-		Clock:           cfg.Clock,
-		Styles:          DefaultStyles(),
-		Width:           80,
-		Height:          24,
+		State:               StateDrill,
+		PreviousState:       StateDrill,
+		DB:                  cfg.DB,
+		Catalog:             cfg.Catalog,
+		Engine:              eng,
+		Generator:           gen,
+		Scheduler:           sched,
+		AllQuestions:        allQuestions,
+		Questions:           activeQuestions,
+		SelectedModules:     selectedModules,
+		ModuleCursor:        0,
+		ModuleScroll:        0,
+		ModuleFollowCursor:  true,
+		TutorProviderCursor: 0,
+		TutorScroll:         0,
+		TutorFollowCursor:   true,
+		Tutor:               cfg.Tutor,
+		TutorTimeout:        cfg.TutorTimeout,
+		AuthStore:           cfg.AuthStore,
+		ModelCache:          modelCache,
+		SessionID:           sessID,
+		TotalQuestions:      cfg.TotalQuestions,
+		RNG:                 rng,
+		Seed:                cfg.Seed,
+		Clock:               cfg.Clock,
+		Styles:              DefaultStyles(),
+		Width:               80,
+		Height:              24,
+	}
+
+	if m.AuthStore != nil {
+		m.TutorProviderCursor = tutorProviderIndex(m.AuthStore.GetConfig().ActiveProvider)
 	}
 
 	// Persist session if DB is provided
@@ -714,6 +728,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.State == StateStatements {
 					scroll = &m.StatementsScroll
 				}
+				if m.State == StateModuleSelect {
+					scroll = &m.ModuleScroll
+					m.ModuleFollowCursor = false
+				}
+				if m.State == StateTutorConfig {
+					scroll = &m.TutorScroll
+					m.TutorFollowCursor = false
+				}
 				*scroll += step
 				if *scroll < 0 {
 					*scroll = 0
@@ -723,7 +745,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		}
-		m.PageScroll = 0
+		if m.State != StateModuleSelect && m.State != StateRecap && m.State != StateStatements && m.State != StateTutorConfig {
+			m.PageScroll = 0
+		}
 
 		// Global emergency exit
 		if key == "ctrl+c" {
@@ -1001,10 +1025,7 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "t":
-			m.cancelTutor()
-			m.PreviousState = StateDrill
-			m.State = StateTutorConfig
-			m.TutorAuthNotice = ""
+			m.openTutorConfig(StateDrill)
 			return m, nil
 
 		case "p":
@@ -1087,16 +1108,15 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 		return m.requestCandidate()
 
 	case "t":
-		m.cancelTutor()
-		m.PreviousState = StateDrill
-		m.State = StateTutorConfig
-		m.TutorAuthNotice = ""
+		m.openTutorConfig(StateDrill)
 		return m, nil
 
 	case "m", "M":
 		m.cancelTutor()
 		m.PreviousState = StateDrill
 		m.State = StateModuleSelect
+		m.ModuleScroll = 0
+		m.ModuleFollowCursor = true
 		m.ModuleNotice = ""
 		return m, nil
 
@@ -1326,16 +1346,15 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "t":
-		m.cancelTutor()
-		m.PreviousState = StateFeedback
-		m.State = StateTutorConfig
-		m.TutorAuthNotice = ""
+		m.openTutorConfig(StateFeedback)
 		return m, nil
 
 	case "m", "M":
 		m.cancelTutor()
 		m.PreviousState = StateFeedback
 		m.State = StateModuleSelect
+		m.ModuleScroll = 0
+		m.ModuleFollowCursor = true
 		m.ModuleNotice = ""
 		return m, nil
 
@@ -1420,14 +1439,14 @@ func (m *Model) updateRecap(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "t":
-		m.PreviousState = StateRecap
-		m.State = StateTutorConfig
-		m.TutorAuthNotice = ""
+		m.openTutorConfig(StateRecap)
 		return m, nil
 
 	case "m", "M":
 		m.PreviousState = StateRecap
 		m.State = StateModuleSelect
+		m.ModuleScroll = 0
+		m.ModuleFollowCursor = true
 		m.ModuleNotice = ""
 		return m, nil
 
@@ -1538,9 +1557,7 @@ func (m *Model) updateMastery(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "t":
-		m.PreviousState = StateMastery
-		m.State = StateTutorConfig
-		m.TutorAuthNotice = ""
+		m.openTutorConfig(StateMastery)
 		return m, nil
 
 	case "s", "esc", "enter", " ":
@@ -1599,14 +1616,14 @@ func (m *Model) updateSessionComplete(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "t":
-		m.PreviousState = StateSessionComplete
-		m.State = StateTutorConfig
-		m.TutorAuthNotice = ""
+		m.openTutorConfig(StateSessionComplete)
 		return m, nil
 
 	case "m", "M":
 		m.PreviousState = StateSessionComplete
 		m.State = StateModuleSelect
+		m.ModuleScroll = 0
+		m.ModuleFollowCursor = true
 		m.ModuleNotice = ""
 		return m, nil
 
@@ -1649,21 +1666,38 @@ func (m *Model) updateSessionComplete(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) updateModuleSelect(key string) (tea.Model, tea.Cmd) {
+	maxIdx := len(bank.AllCourseModules()) - 1
+	if maxIdx < 0 {
+		maxIdx = 0
+	}
+
 	switch key {
 	case "up", "k":
 		if m.ModuleCursor > 0 {
 			m.ModuleCursor--
 		} else {
-			m.ModuleCursor = 9
+			m.ModuleCursor = maxIdx
 		}
+		m.ModuleFollowCursor = true
 		return m, nil
 
 	case "down", "j":
-		if m.ModuleCursor < 9 {
+		if m.ModuleCursor < maxIdx {
 			m.ModuleCursor++
 		} else {
 			m.ModuleCursor = 0
 		}
+		m.ModuleFollowCursor = true
+		return m, nil
+
+	case "g", "home":
+		m.ModuleCursor = 0
+		m.ModuleFollowCursor = true
+		return m, nil
+
+	case "G", "end":
+		m.ModuleCursor = maxIdx
+		m.ModuleFollowCursor = true
 		return m, nil
 
 	case " ", "space":
@@ -1675,12 +1709,16 @@ func (m *Model) updateModuleSelect(key string) (tea.Model, tea.Cmd) {
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
 		modNum := int(key[0] - '0')
 		m.SelectedModules[modNum] = !m.SelectedModules[modNum]
+		m.ModuleCursor = modNum - 1
+		m.ModuleFollowCursor = true
 		m.ModuleNotice = ""
 		return m, nil
 
 	case "0":
 		modNum := 10
 		m.SelectedModules[modNum] = !m.SelectedModules[modNum]
+		m.ModuleCursor = maxIdx
+		m.ModuleFollowCursor = true
 		m.ModuleNotice = ""
 		return m, nil
 
@@ -1958,84 +1996,46 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 	}
 
 	switch key {
-	case "1":
-		if m.AuthStore != nil {
-			_ = m.AuthStore.SetActiveProvider(tutor.ProviderOffline)
-			m.rebuildTutor()
-			m.TutorAuthNotice = "Switched to Offline Tutor (100% local machine mode)."
+	case "up", "k":
+		if m.TutorProviderCursor > 0 {
+			m.TutorProviderCursor--
+		} else {
+			m.TutorProviderCursor = 5
 		}
+		m.TutorFollowCursor = true
 		return m, nil
 
-	case "2":
-		if m.OAuthActiveFlow != nil {
-			return m, nil
+	case "down", "j":
+		if m.TutorProviderCursor < 5 {
+			m.TutorProviderCursor++
+		} else {
+			m.TutorProviderCursor = 0
 		}
-		// Continue with ChatGPT Plus (OAuth)
-		if m.AuthStore != nil && m.AuthStore.IsConfigured(tutor.ProviderChatGPTPlan) {
-			_ = m.AuthStore.SetActiveProvider(tutor.ProviderChatGPTPlan)
-			m.rebuildTutor()
-			m.TutorAuthNotice = "Activated connected ChatGPT Plus plan."
-			return m, nil
-		}
-
-		chatgptTutor := tutor.NewOpenAIChatGPTPlanTutor(tutor.ChatGPTPlanConfig{
-			AuthStore: m.AuthStore,
-		})
-		flow, authURL, err := chatgptTutor.StartOAuthFlow()
-		if err != nil {
-			m.TutorAuthNotice = "Failed starting OAuth flow: " + err.Error()
-			return m, nil
-		}
-		m.OAuthActiveFlow = flow
-		m.TutorAuthNotice = fmt.Sprintf("Login listener active at %s\nPlease authorize in browser: %s", flow.RedirectURI, authURL)
-
-		return m, func() tea.Msg {
-			_ = tutor.OpenSignInBrowser(authURL)
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-			defer cancel()
-			tok, err := flow.Complete(ctx)
-			return oauthCompleteMsg{Token: tok, Err: err}
-		}
-
-	case "3":
-		m.TutorInputActive = true
-		m.TutorInputProvider = tutor.ProviderAnthropic
-		m.TutorInputBuffer = ""
-		m.TutorAuthNotice = ""
+		m.TutorFollowCursor = true
 		return m, nil
 
-	case "4":
-		m.TutorInputActive = true
-		m.TutorInputProvider = tutor.ProviderGoogle
-		m.TutorInputBuffer = ""
-		m.TutorAuthNotice = ""
+	case "g", "home":
+		m.TutorProviderCursor = 0
+		m.TutorFollowCursor = true
 		return m, nil
 
-	case "5":
-		m.TutorInputActive = true
-		m.TutorInputProvider = tutor.ProviderOpenAI
-		m.TutorInputBuffer = ""
-		m.TutorAuthNotice = ""
+	case "G", "end":
+		m.TutorProviderCursor = 5
+		m.TutorFollowCursor = true
 		return m, nil
 
-	case "6":
-		if m.AuthStore != nil {
-			_ = m.AuthStore.SetActiveProvider(tutor.ProviderLMStudio)
-			m.rebuildTutor()
-			m.TutorFetchingModels = true
-			m.TutorAuthNotice = fmt.Sprintf("Switched to LM Studio (local). Checking %s...", m.AuthStore.ResolveLMStudioURL())
-			return m, m.cmdCheckLMStudio()
-		}
-		return m, nil
+	case "enter", " ", "space":
+		return m.selectTutorProvider(m.TutorProviderCursor, false)
+
+	case "1", "2", "3", "4", "5", "6":
+		idx := int(key[0] - '1')
+		return m.selectTutorProvider(idx, false)
+
+	case "e":
+		return m.editTutorProvider(m.TutorProviderCursor)
 
 	case "l":
-		if m.AuthStore != nil {
-			m.TutorInputActive = true
-			m.TutorInputProvider = tutor.ProviderLMStudio
-			m.TutorInputBuffer = m.AuthStore.ResolveLMStudioURL()
-			m.TutorAuthNotice = ""
-		}
-		return m, nil
+		return m.editTutorProvider(5)
 
 	case "m":
 		if m.AuthStore != nil {
@@ -2103,9 +2103,181 @@ func (m *Model) updateTutorConfig(key string) (tea.Model, tea.Cmd) {
 			m.OAuthActiveFlow = nil
 		}
 		m.State = m.PreviousState
+		m.TutorScroll = 0
+		m.TutorFollowCursor = true
 		return m, nil
 	}
 
+	return m, nil
+}
+
+func tutorProviderIndex(prov string) int {
+	switch prov {
+	case tutor.ProviderOffline:
+		return 0
+	case tutor.ProviderChatGPTPlan:
+		return 1
+	case tutor.ProviderAnthropic:
+		return 2
+	case tutor.ProviderGoogle:
+		return 3
+	case tutor.ProviderOpenAI:
+		return 4
+	case tutor.ProviderLMStudio:
+		return 5
+	default:
+		return 0
+	}
+}
+
+func tutorProviderByIndex(idx int) string {
+	switch idx {
+	case 0:
+		return tutor.ProviderOffline
+	case 1:
+		return tutor.ProviderChatGPTPlan
+	case 2:
+		return tutor.ProviderAnthropic
+	case 3:
+		return tutor.ProviderGoogle
+	case 4:
+		return tutor.ProviderOpenAI
+	case 5:
+		return tutor.ProviderLMStudio
+	default:
+		return tutor.ProviderOffline
+	}
+}
+
+func (m *Model) openTutorConfig(prevState UIState) {
+	m.cancelTutor()
+	m.PreviousState = prevState
+	m.State = StateTutorConfig
+	m.TutorAuthNotice = ""
+	m.TutorScroll = 0
+	m.TutorFollowCursor = true
+	m.TutorModelSelectActive = false
+	m.TutorInputActive = false
+	m.TutorOAuthInputActive = false
+	m.TutorCustomModelActive = false
+
+	activeProv := tutor.ProviderOffline
+	if m.AuthStore != nil {
+		activeProv = m.AuthStore.GetConfig().ActiveProvider
+	}
+	m.TutorProviderCursor = tutorProviderIndex(activeProv)
+}
+
+func (m *Model) selectTutorProvider(idx int, forceEdit bool) (tea.Model, tea.Cmd) {
+	if idx < 0 || idx > 5 {
+		return m, nil
+	}
+	m.TutorProviderCursor = idx
+	m.TutorFollowCursor = true
+
+	switch idx {
+	case 0: // Offline
+		if m.AuthStore != nil {
+			_ = m.AuthStore.SetActiveProvider(tutor.ProviderOffline)
+			m.rebuildTutor()
+			m.TutorAuthNotice = "Switched to Offline Tutor (100% local machine mode)."
+		}
+		return m, nil
+
+	case 1: // ChatGPT Plus / Pro
+		if m.OAuthActiveFlow != nil {
+			return m, nil
+		}
+		if !forceEdit && m.AuthStore != nil && m.AuthStore.IsConfigured(tutor.ProviderChatGPTPlan) {
+			_ = m.AuthStore.SetActiveProvider(tutor.ProviderChatGPTPlan)
+			m.rebuildTutor()
+			m.TutorAuthNotice = "Activated connected ChatGPT Plus plan."
+			return m, nil
+		}
+
+		chatgptTutor := tutor.NewOpenAIChatGPTPlanTutor(tutor.ChatGPTPlanConfig{
+			AuthStore: m.AuthStore,
+		})
+		flow, authURL, err := chatgptTutor.StartOAuthFlow()
+		if err != nil {
+			m.TutorAuthNotice = "Failed starting OAuth flow: " + err.Error()
+			return m, nil
+		}
+		m.OAuthActiveFlow = flow
+		m.TutorAuthNotice = fmt.Sprintf("Login listener active at %s\nPlease authorize in browser: %s", flow.RedirectURI, authURL)
+
+		return m, func() tea.Msg {
+			_ = tutor.OpenSignInBrowser(authURL)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+			tok, err := flow.Complete(ctx)
+			return oauthCompleteMsg{Token: tok, Err: err}
+		}
+
+	case 2, 3, 4: // Anthropic, Google, OpenAI
+		provID := tutorProviderByIndex(idx)
+		provNames := map[string]string{
+			tutor.ProviderAnthropic: "Anthropic Claude",
+			tutor.ProviderGoogle:    "Google Gemini",
+			tutor.ProviderOpenAI:    "OpenAI API",
+		}
+		if !forceEdit && m.AuthStore != nil && m.AuthStore.IsConfigured(provID) {
+			_ = m.AuthStore.SetActiveProvider(provID)
+			m.rebuildTutor()
+			m.TutorAuthNotice = fmt.Sprintf("✓ Switched to %s.", provNames[provID])
+			return m, nil
+		}
+		m.TutorInputActive = true
+		m.TutorInputProvider = provID
+		m.TutorInputBuffer = ""
+		m.TutorAuthNotice = ""
+		return m, nil
+
+	case 5: // LM Studio
+		if forceEdit {
+			if m.AuthStore != nil {
+				m.TutorInputActive = true
+				m.TutorInputProvider = tutor.ProviderLMStudio
+				m.TutorInputBuffer = m.AuthStore.ResolveLMStudioURL()
+				m.TutorAuthNotice = ""
+			}
+			return m, nil
+		}
+		if m.AuthStore != nil {
+			_ = m.AuthStore.SetActiveProvider(tutor.ProviderLMStudio)
+			m.rebuildTutor()
+			m.TutorFetchingModels = true
+			m.TutorAuthNotice = fmt.Sprintf("Switched to LM Studio (local). Checking %s...", m.AuthStore.ResolveLMStudioURL())
+			return m, m.cmdCheckLMStudio()
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m *Model) editTutorProvider(idx int) (tea.Model, tea.Cmd) {
+	if idx < 0 || idx > 5 {
+		return m, nil
+	}
+	m.TutorProviderCursor = idx
+	m.TutorFollowCursor = true
+	switch idx {
+	case 0:
+		m.TutorAuthNotice = "Offline provider uses deterministic rules; no credentials or settings to edit."
+		return m, nil
+	case 1:
+		return m.selectTutorProvider(1, true)
+	case 2, 3, 4:
+		provID := tutorProviderByIndex(idx)
+		m.TutorInputActive = true
+		m.TutorInputProvider = provID
+		m.TutorInputBuffer = ""
+		m.TutorAuthNotice = ""
+		return m, nil
+	case 5:
+		return m.selectTutorProvider(5, true)
+	}
 	return m, nil
 }
 

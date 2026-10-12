@@ -56,9 +56,9 @@ func TestStreamM05BatchInvariants(t *testing.T) {
 	catalog := buildM05TestCatalog()
 
 	expectedIDs := map[string]bool{
-		"q_m05_inv_fifo_costing_01":  false,
-		"q_m05_inv_lifo_costing_02":  false,
-		"q_m05_inv_nrv_writedown_03": false,
+		"q_m05_inv_fifo_costing_01":   false,
+		"q_m05_inv_lifo_costing_02":   false,
+		"q_m05_inv_nrv_writedown_03":  false,
 		"q_m05_inv_freight_in_cap_04": false,
 	}
 
@@ -256,8 +256,8 @@ func TestStreamM05PedagogyPolicy(t *testing.T) {
 	var policy struct {
 		SchemaVersion int `json:"schema_version"`
 		Questions     []struct {
-			QuestionID        string   `json:"question_id"`
-			QuestionVersion   int      `json:"question_version"`
+			QuestionID        string `json:"question_id"`
+			QuestionVersion   int    `json:"question_version"`
 			SettingGroup      string `json:"setting_group"`
 			Contrasts         []any  `json:"contrasts"`
 			DistractorProfile string `json:"distractor_profile"`

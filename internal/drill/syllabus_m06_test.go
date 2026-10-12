@@ -59,9 +59,9 @@ func TestStreamM06BatchInvariants(t *testing.T) {
 	catalog := buildM06TestCatalog()
 
 	expectedIDs := map[string]bool{
-		"q_m06_ppe_straight_line_depr_01":      false,
-		"q_m06_ppe_macrs_tax_timing_02":        false,
-		"q_m06_ppe_asset_disposal_gain_loss_03": false,
+		"q_m06_ppe_straight_line_depr_01":        false,
+		"q_m06_ppe_macrs_tax_timing_02":          false,
+		"q_m06_ppe_asset_disposal_gain_loss_03":  false,
 		"q_m06_ppe_impairment_recoverability_04": false,
 	}
 
@@ -280,11 +280,11 @@ func TestStreamM06PedagogyPolicy(t *testing.T) {
 	var policy struct {
 		SchemaVersion int `json:"schema_version"`
 		Questions     []struct {
-			QuestionID        string   `json:"question_id"`
-			QuestionVersion   int      `json:"question_version"`
-			SettingGroup      string   `json:"setting_group"`
-			Contrasts         []any    `json:"contrasts"`
-			DistractorProfile string   `json:"distractor_profile"`
+			QuestionID        string `json:"question_id"`
+			QuestionVersion   int    `json:"question_version"`
+			SettingGroup      string `json:"setting_group"`
+			Contrasts         []any  `json:"contrasts"`
+			DistractorProfile string `json:"distractor_profile"`
 		} `json:"questions"`
 	}
 

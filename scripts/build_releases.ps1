@@ -1,4 +1,4 @@
-﻿# AccountTutor 9000 - Multi-Platform Release Packaging (PowerShell)
+# AccountTutor 9000 - Multi-Platform Release Packaging (PowerShell)
 # Builds standalone native binaries for Windows, macOS (Apple Silicon and Intel), and Linux.
 
 $ErrorActionPreference = "Stop"
@@ -66,6 +66,7 @@ $Env:GOARCH = "amd64"
 & go build "-ldflags=$LdFlags" -o "$DistDir\acctg-windows-amd64.exe" ./cmd/acctg
 if ($LASTEXITCODE -ne 0) { throw "Windows AMD64 build failed" }
 Copy-Item "$DistDir\acctg-windows-amd64.exe" "$DistDir\acctg.exe" -Force
+Copy-Item "$DistDir\acctg-windows-amd64.exe" "$RootDir\acctg.exe" -Force
 
 # macOS ARM64 (Apple Silicon M1-M4)
 Write-Host "  -> Compiling macOS Apple Silicon ARM64 (dist/acctg-mac-arm64)..."

@@ -88,6 +88,12 @@ func (m *Model) renderPageViewport(content string) string {
 	if m.State == StateStatements {
 		scroll = &m.StatementsScroll
 	}
+	if m.State == StateModuleSelect {
+		scroll = &m.ModuleScroll
+	}
+	if m.State == StateTutorConfig {
+		scroll = &m.TutorScroll
+	}
 	if m.Height <= 0 || m.Width <= 0 {
 		return "\n" + content + "\n"
 	}
@@ -106,6 +112,74 @@ func (m *Model) renderPageViewport(content string) string {
 		rows = 1
 	}
 	maxScroll := len(lines) - rows
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+
+	if m.State == StateModuleSelect && m.ModuleFollowCursor {
+		cursorIdx := -1
+		for i, line := range lines {
+			if strings.Contains(line, "▶") {
+				cursorIdx = i
+				break
+			}
+		}
+		if cursorIdx >= 0 {
+			boxTop := cursorIdx - 1
+			if boxTop < 0 {
+				boxTop = 0
+			}
+			boxBottom := cursorIdx + 2
+			if boxBottom >= len(lines) {
+				boxBottom = len(lines) - 1
+			}
+
+			if m.ModuleCursor == 0 {
+				*scroll = 0
+			} else if m.ModuleCursor >= len(bank.AllCourseModules())-1 {
+				*scroll = maxScroll
+			} else {
+				if boxBottom >= *scroll+rows {
+					*scroll = boxBottom - rows + 1
+				}
+				if boxTop < *scroll {
+					*scroll = boxTop
+				}
+			}
+		}
+	} else if m.State == StateTutorConfig && m.TutorFollowCursor {
+		cursorIdx := -1
+		for i, line := range lines {
+			if strings.Contains(line, "▶") {
+				cursorIdx = i
+				break
+			}
+		}
+		if cursorIdx >= 0 {
+			boxTop := cursorIdx - 1
+			if boxTop < 0 {
+				boxTop = 0
+			}
+			boxBottom := cursorIdx + 3
+			if boxBottom >= len(lines) {
+				boxBottom = len(lines) - 1
+			}
+
+			if m.TutorProviderCursor == 0 {
+				*scroll = 0
+			} else if m.TutorProviderCursor >= 5 {
+				*scroll = maxScroll
+			} else {
+				if boxBottom >= *scroll+rows {
+					*scroll = boxBottom - rows + 1
+				}
+				if boxTop < *scroll {
+					*scroll = boxTop
+				}
+			}
+		}
+	}
+
 	if *scroll > maxScroll {
 		*scroll = maxScroll
 	}
@@ -113,6 +187,9 @@ func (m *Model) renderPageViewport(content string) string {
 		*scroll = 0
 	}
 	end := *scroll + rows
+	if end > len(lines) {
+		end = len(lines)
+	}
 	visible := strings.Join(lines[*scroll:end], "\n")
 	if m.Height == 1 {
 		return visible
@@ -136,13 +213,20 @@ func (m *Model) renderHeader(contentWidth int) string {
 	}
 
 	logo := m.Styles.LogoBanner.Render("▌║ ＡＣＣＴＧ  ＰＲＡＣＴＩＣＥ ║▌")
-	meta := m.Styles.HeaderSubtitle.Render(fmt.Sprintf(" Question %d/%d%s", qNum, totQ, stageInfo))
+	qLabel := fmt.Sprintf(" Question %d/%d%s", qNum, totQ, stageInfo)
+	if m.Width > 0 && m.Width < 90 {
+		qLabel = fmt.Sprintf(" Q%d/%d%s", qNum, totQ, stageInfo)
+	}
+	meta := m.Styles.HeaderSubtitle.Render(qLabel)
 
 	// Scaffold badge
 	scaffoldBadge := ""
 	if m.CurrentInstance != nil {
 		scaffoldBadge = "  " + m.Styles.ScaffoldBadge.Render(fmt.Sprintf("Scaffold: %s", m.CurrentInstance.ScaffoldLevel.String()))
 	}
+
+	// Active modules badge
+	moduleBadge := "  " + m.Styles.ModuleBadge.Render(m.activeModulesBadgeText())
 
 	// Streak indicator badge in header if streak >= 2
 	streakBadge := ""
@@ -162,8 +246,55 @@ func (m *Model) renderHeader(contentWidth int) string {
 		}
 	}
 
-	headerTop := lipgloss.JoinHorizontal(lipgloss.Center, logo, meta, scaffoldBadge, streakBadge)
+	headerTop := lipgloss.JoinHorizontal(lipgloss.Center, logo, meta, scaffoldBadge, moduleBadge, streakBadge)
 	return lipgloss.JoinVertical(lipgloss.Left, headerTop, progressDots)
+}
+
+// activeModulesBadgeText returns a concise label of which course modules are active/filtered.
+func (m *Model) activeModulesBadgeText() string {
+	totalMods := len(bank.AllCourseModules())
+	if totalMods == 0 {
+		totalMods = 10
+	}
+	var mods []int
+	for i := 1; i <= totalMods; i++ {
+		if m.SelectedModules != nil && m.SelectedModules[i] {
+			mods = append(mods, i)
+		}
+	}
+	if len(mods) == 0 {
+		return "Modules: None"
+	}
+	if len(mods) == totalMods {
+		return "Modules: All"
+	}
+	if len(mods) == 1 {
+		return fmt.Sprintf("Module: %d", mods[0])
+	}
+	return fmt.Sprintf("Modules: %s", formatModuleList(mods))
+}
+
+func formatModuleList(mods []int) string {
+	if len(mods) == 0 {
+		return "None"
+	}
+	var parts []string
+	start := 0
+	for start < len(mods) {
+		end := start
+		for end+1 < len(mods) && mods[end+1] == mods[end]+1 {
+			end++
+		}
+		if end == start {
+			parts = append(parts, fmt.Sprintf("%d", mods[start]))
+		} else if end == start+1 {
+			parts = append(parts, fmt.Sprintf("%d", mods[start]), fmt.Sprintf("%d", mods[end]))
+		} else {
+			parts = append(parts, fmt.Sprintf("%d-%d", mods[start], mods[end]))
+		}
+		start = end + 1
+	}
+	return strings.Join(parts, ", ")
 }
 
 func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lipgloss.Style) string {
@@ -173,7 +304,6 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 	modePill := modeStyle.Render(" " + modeName + " ")
 	infoPill := m.Styles.StatusInfo.Render(fmt.Sprintf(" Q%d/%d • %s ", qNum, totQ, m.SessionID))
 	intensityPill := m.Styles.StatusInfo.Render(fmt.Sprintf(" Mode: %s ", strings.ToUpper(string(m.Scheduler.Intensity()))))
-
 	streakPill := ""
 	if m.CurrentStreak >= 2 {
 		streakPill = m.Styles.StatusStreakHot.Render(fmt.Sprintf(" 🔥 %d ", m.CurrentStreak))
@@ -926,10 +1056,10 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 		activeProvider = m.AuthStore.GetConfig().ActiveProvider
 	}
 
-	formatStatus := func(provID string, isConfigured bool, label string) string {
+	formatStatus := func(provID string, isConfigured bool, label string, isCursor bool) string {
 		isActive := (activeProvider == provID)
 		activeMark := "  "
-		if isActive {
+		if isCursor {
 			activeMark = "▶ "
 		}
 
@@ -947,9 +1077,9 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	var providerLines []string
 
 	// 1. Offline
-	prov1 := formatStatus(tutor.ProviderOffline, true, "[1] Offline Machine Mode (Default)")
+	prov1 := formatStatus(tutor.ProviderOffline, true, "[1] Offline Machine Mode (Default)", m.TutorProviderCursor == 0)
 	prov1Desc := "    Zero network dependency. Fast, deterministic causal Socratic hints."
-	if activeProvider == tutor.ProviderOffline {
+	if m.TutorProviderCursor == 0 {
 		providerLines = append(providerLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(prov1+"\n"+prov1Desc))
 	} else {
 		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov1+"\n"+prov1Desc))
@@ -957,11 +1087,11 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 
 	// 2. ChatGPT Plus
 	hasChatGPT := (m.AuthStore != nil && m.AuthStore.IsConfigured(tutor.ProviderChatGPTPlan))
-	chatGPTInfo := "[2] ChatGPT Plus / Pro ? Continue with ChatGPT"
+	chatGPTInfo := "[2] ChatGPT Plus / Pro • Continue with ChatGPT"
 	if hasChatGPT {
 		chatGPTInfo += " (Connected)"
 	}
-	prov2 := formatStatus(tutor.ProviderChatGPTPlan, hasChatGPT, chatGPTInfo)
+	prov2 := formatStatus(tutor.ProviderChatGPTPlan, hasChatGPT, chatGPTInfo, m.TutorProviderCursor == 1)
 	chatGPTModel := tutor.DefaultChatGPTModel
 	chatGPTAccount := "Not connected"
 	if m.AuthStore != nil {
@@ -974,7 +1104,7 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 		}
 	}
 	prov2Desc := fmt.Sprintf("    Model: %s • Client ID: %s\n    Uses ChatGPT Plus / Pro plan allowance (no API billing). Preview: store=false, stream=true.", chatGPTModel, chatGPTAccount)
-	if activeProvider == tutor.ProviderChatGPTPlan {
+	if m.TutorProviderCursor == 1 {
 		providerLines = append(providerLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(prov2+"\n"+prov2Desc))
 	} else {
 		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov2+"\n"+prov2Desc))
@@ -986,13 +1116,13 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	if hasAnthropic {
 		antInfo += " (Key Set)"
 	}
-	prov3 := formatStatus(tutor.ProviderAnthropic, hasAnthropic, antInfo)
+	prov3 := formatStatus(tutor.ProviderAnthropic, hasAnthropic, antInfo, m.TutorProviderCursor == 2)
 	antModel := tutor.DefaultAnthropicModel
 	if m.AuthStore != nil {
 		antModel = m.AuthStore.ResolveModel(tutor.ProviderAnthropic)
 	}
 	prov3Desc := fmt.Sprintf("    Model: %s\n    Uses ANTHROPIC_API_KEY environment variable or securely stored key.", antModel)
-	if activeProvider == tutor.ProviderAnthropic {
+	if m.TutorProviderCursor == 2 {
 		providerLines = append(providerLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(prov3+"\n"+prov3Desc))
 	} else {
 		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov3+"\n"+prov3Desc))
@@ -1004,13 +1134,13 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	if hasGemini {
 		gemInfo += " (Key Set)"
 	}
-	prov4 := formatStatus(tutor.ProviderGoogle, hasGemini, gemInfo)
+	prov4 := formatStatus(tutor.ProviderGoogle, hasGemini, gemInfo, m.TutorProviderCursor == 3)
 	gemModel := tutor.DefaultGeminiModel
 	if m.AuthStore != nil {
 		gemModel = m.AuthStore.ResolveModel(tutor.ProviderGoogle)
 	}
 	prov4Desc := fmt.Sprintf("    Model: %s\n    Uses GEMINI_API_KEY environment variable or securely stored key.", gemModel)
-	if activeProvider == tutor.ProviderGoogle {
+	if m.TutorProviderCursor == 3 {
 		providerLines = append(providerLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(prov4+"\n"+prov4Desc))
 	} else {
 		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov4+"\n"+prov4Desc))
@@ -1022,13 +1152,13 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	if hasOpenAI {
 		oaiInfo += " (Key Set)"
 	}
-	prov5 := formatStatus(tutor.ProviderOpenAI, hasOpenAI, oaiInfo)
+	prov5 := formatStatus(tutor.ProviderOpenAI, hasOpenAI, oaiInfo, m.TutorProviderCursor == 4)
 	oaiModel := tutor.DefaultOpenAIAPIModel
 	if m.AuthStore != nil {
 		oaiModel = m.AuthStore.ResolveModel(tutor.ProviderOpenAI)
 	}
 	prov5Desc := fmt.Sprintf("    Model: %s\n    Uses OPENAI_API_KEY environment variable or securely stored key.", oaiModel)
-	if activeProvider == tutor.ProviderOpenAI {
+	if m.TutorProviderCursor == 4 {
 		providerLines = append(providerLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(prov5+"\n"+prov5Desc))
 	} else {
 		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov5+"\n"+prov5Desc))
@@ -1044,9 +1174,9 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	if lmModel == "" {
 		lmModel = "first available model"
 	}
-	prov6 := formatStatus(tutor.ProviderLMStudio, true, "[6] LM Studio (local) • No key needed")
+	prov6 := formatStatus(tutor.ProviderLMStudio, true, "[6] LM Studio (local) • No key needed", m.TutorProviderCursor == 5)
 	prov6Desc := fmt.Sprintf("    Model: %s • Server: %s\n    Runs on this machine with no account or billing. [l] Edit server URL.", lmModel, lmURL)
-	if activeProvider == tutor.ProviderLMStudio {
+	if m.TutorProviderCursor == 5 {
 		providerLines = append(providerLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(prov6+"\n"+prov6Desc))
 	} else {
 		providerLines = append(providerLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(prov6+"\n"+prov6Desc))
@@ -1131,7 +1261,7 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 	}
 
 	// Controls footer
-	footer := m.Styles.HelpText.Render("[1-6] Choose Provider  [l] LM Studio URL  [m] Select Model  [r] Discover Models  [a] Disconnect/Change ChatGPT Account  [x] Clear  [Esc/t] Return")
+	footer := m.Styles.HelpText.Render("[↑/↓, j/k] Navigate  •  [Enter/Space/1-6] Choose  •  [e] Edit Key/URL  •  [l] LM Studio URL  •  [m] Select Model  •  [r] Discover  •  [a] ChatGPT Account  •  [x] Clear  •  [Esc/t] Return")
 	sections = append(sections, footer)
 
 	// Airline Status Bar in TUTOR mode
@@ -1198,7 +1328,7 @@ func (m *Model) renderModuleSelect(contentWidth int) string {
 	sections = append(sections, lipgloss.JoinVertical(lipgloss.Left, moduleLines...))
 
 	controls := `CONTROLS:
-[1-9, 0] Toggle Module (0 = Mod 10)  •  [Space] Toggle Under Cursor  •  [↑/↓, j/k] Navigate
+[1-9, 0] Toggle Module (0 = Mod 10)  •  [Space] Toggle Under Cursor  •  [↑/↓, j/k] Navigate  •  [u/d] Scroll
 [a] Select All  •  [c] Clear All  •  [Enter] Apply & Refresh  •  [Esc] Cancel`
 	sections = append(sections, m.Styles.PromptBox.Width(contentWidth).Render(controls))
 

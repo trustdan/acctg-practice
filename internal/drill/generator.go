@@ -3583,5 +3583,3 @@ func buildFinancialForecastingStages(inst *domain.QuestionInstance, amt domain.M
 		RelevantConceptID: "financial_forecasting",
 	}
 }
-
-

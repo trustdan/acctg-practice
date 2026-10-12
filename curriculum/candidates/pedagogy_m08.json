@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "policy_version": 1,
+  "review": {
+    "reviewer": "Worker Agent 3 (Stream-M08)",
+    "approved_at": "2026-10-12T18:20:00Z",
+    "source": "Stream-M08 Leases ASC 842 & Stockholders' Equity Pedagogical Policy"
+  },
+  "questions": [
+    {
+      "question_id": "q_m08_lse_commencement_rou_asset_01",
+      "question_version": 1,
+      "setting_group": "lease.commencement",
+      "contrasts": [
+        {
+          "question_id": "q_m08_lse_periodic_lease_payment_02",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "lease_commencement_rou_vs_expense"
+    },
+    {
+      "question_id": "q_m08_lse_periodic_lease_payment_02",
+      "question_version": 1,
+      "setting_group": "lease.periodic_payment",
+      "contrasts": [
+        {
+          "question_id": "q_m08_lse_commencement_rou_asset_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "lease_payment_principal_vs_interest"
+    },
+    {
+      "question_id": "q_m08_lse_treasury_stock_repurchase_03",
+      "question_version": 1,
+      "setting_group": "equity.treasury_stock_repurchase",
+      "contrasts": [
+        {
+          "question_id": "q_m08_lse_treasury_stock_reissuance_04",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "treasury_stock_contra_equity_vs_asset"
+    },
+    {
+      "question_id": "q_m08_lse_treasury_stock_reissuance_04",
+      "question_version": 1,
+      "setting_group": "equity.treasury_stock_reissuance",
+      "contrasts": [
+        {
+          "question_id": "q_m08_lse_treasury_stock_repurchase_03",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "treasury_stock_reissuance_apic_vs_gain"
+    }
+  ]
+}

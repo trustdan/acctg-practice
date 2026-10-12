@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q_m08_lse_commencement_rou_asset_01",
+      "version": 1,
+      "family_id": "m08_lse_commencement_rou_asset",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under ASC 842, the company enters into a 5-year operating lease for office space with annual lease payments. At the lease commencement date, the present value of future lease payments discounted at the incremental borrowing rate is ${amount_dollars}. Record the initial lease commencement transaction on the balance sheet.",
+      "parameters": {
+        "amount_minor_units": [
+          6000000,
+          12000000,
+          24000000
+        ]
+      },
+      "concepts": [
+        "lease_commencement",
+        "rou_asset_recognition",
+        "lease_liability_asc842",
+        "present_value_measurement"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "right_of_use_asset",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "lease_liability",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M08 Candidate Batch: UW Foster Module 8 Leases ASC 842 & Stockholders' Equity (Initial Lease Commencement ROU Asset)"
+      }
+    },
+    {
+      "id": "q_m08_lse_periodic_lease_payment_02",
+      "version": 1,
+      "family_id": "m08_lse_periodic_lease_payment",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under ASC 842, the company makes an annual lease payment of ${amount_dollars} cash for leased facility assets. Of this total cash outflow, ${interest_dollars} represents interest expense accrued on the outstanding lease obligation, and ${principal_dollars} reduces the principal lease liability.",
+      "parameters": {
+        "amount_minor_units": [
+          1000000,
+          2000000,
+          3000000
+        ],
+        "interest_minor_units": [
+          200000,
+          400000,
+          600000
+        ],
+        "principal_minor_units": [
+          800000,
+          1600000,
+          2400000
+        ]
+      },
+      "concepts": [
+        "periodic_lease_payment",
+        "lease_liability_amortization",
+        "interest_expense",
+        "asc_842_subsequent_measurement"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "lease_liability",
+            "side": "debit",
+            "amount_parameter": "principal_minor_units"
+          },
+          {
+            "account_id": "interest_expense",
+            "side": "debit",
+            "amount_parameter": "interest_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M08 Candidate Batch: UW Foster Module 8 Leases ASC 842 & Stockholders' Equity (Periodic Lease Payment with Interest and Principal Amortization)"
+      }
+    },
+    {
+      "id": "q_m08_lse_treasury_stock_repurchase_03",
+      "version": 1,
+      "family_id": "m08_lse_treasury_stock_repurchase",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under the cost method of accounting for share repurchases, the company buys back common shares from open market investors for ${amount_dollars} cash to be held in treasury for future employee equity compensation.",
+      "parameters": {
+        "amount_minor_units": [
+          2000000,
+          5000000,
+          10000000
+        ]
+      },
+      "concepts": [
+        "treasury_stock_cost_method",
+        "share_repurchases",
+        "contra_equity",
+        "cash_outflow_financing"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "treasury_stock",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M08 Candidate Batch: UW Foster Module 8 Leases ASC 842 & Stockholders' Equity (Treasury Stock Repurchase under Cost Method)"
+      }
+    },
+    {
+      "id": "q_m08_lse_treasury_stock_reissuance_04",
+      "version": 1,
+      "family_id": "m08_lse_treasury_stock_reissuance",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "The company reissues treasury shares to market investors for ${amount_dollars} cash. The shares were originally acquired at a cost basis of ${cost_dollars}, resulting in cash proceeds exceeding historical acquisition cost by ${apic_dollars}.",
+      "parameters": {
+        "amount_minor_units": [
+          1500000,
+          3000000,
+          4500000
+        ],
+        "cost_minor_units": [
+          1000000,
+          2000000,
+          3000000
+        ],
+        "apic_minor_units": [
+          500000,
+          1000000,
+          1500000
+        ]
+      },
+      "concepts": [
+        "treasury_stock_reissuance",
+        "apic_treasury_stock",
+        "no_gain_or_loss_on_treasury",
+        "stockholders_equity"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "treasury_stock",
+            "side": "credit",
+            "amount_parameter": "cost_minor_units"
+          },
+          {
+            "account_id": "additional_paid_in_capital",
+            "side": "credit",
+            "amount_parameter": "apic_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M08 Candidate Batch: UW Foster Module 8 Leases ASC 842 & Stockholders' Equity (Treasury Stock Reissuance Above Cost)"
+      }
+    }
+  ]
+}

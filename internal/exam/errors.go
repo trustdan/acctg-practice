@@ -250,6 +250,26 @@ func DistractorExplanation(tag string) (misconception string, remediation string
 		return "Gain Recorded on Reissuing Treasury Stock",
 			"Recognized an income statement gain upon reissuing treasury shares above cost. Transactions in a company's own equity can never create income statement gains or losses under US GAAP; any excess proceeds are credited to Additional Paid-in Capital."
 
+	case engine.TagM09DiscretionaryReserveOveraccrual:
+		return "Discretionary Cookie Jar Reserve Buffering",
+			"Intentionally over-accrued bad debt expense to build hidden reserves. Under GAAP and financial reporting quality standards (SAB 104), allowances must reflect bona fide loss expectations, not management discretion to smooth future earnings."
+
+	case engine.TagM09WarrantyExpensedWhenPaid:
+		return "Warranty Expensed on Cash Basis Rather Than Accrued",
+			"Expensed warranty costs only when paid in cash. Under the GAAP matching principle (ASC 460), estimated future warranty obligations must be recognized in the period of product sale."
+
+	case engine.TagM10ForecastingAPOmitted:
+		return "Trade Payable Omitted in Operating Expense Forecast",
+			"Modeled operating expense as immediate cash payment rather than trade credit. Linking forecasted operating costs to Accounts Payable via working capital drivers (like DPO) is necessary for realistic pro-forma cash flow projections."
+
+	case engine.TagM10CapExExpensedImmediately:
+		return "Capital Expenditure Expensed Immediately",
+			"Expensed long-term productive equipment immediately. In financial modeling, capital expenditures (CapEx) purchase multi-period assets that must be capitalized as Equipment and depreciated over time."
+
+	case engine.TagM10EFNTreatedAsEquityWithoutShares:
+		return "External Financing Needed Misclassified",
+			"Recorded debt financing as common stock without share issuance. The External Financing Needed (EFN) plug must match the planned debt instrument (Notes Payable) rather than diluting equity without stock issuance."
+
 	default:
 		clean := strings.ReplaceAll(tag, "_", " ")
 		clean = strings.Title(clean)
@@ -318,6 +338,16 @@ func ConceptDisplayName(conceptID string) string {
 		return "Aggressive vs. Conservative Reporting Strategy"
 	case "financial_forecasting":
 		return "Disaggregated Financial Statement Forecasting"
+	case "cookie_jar_reserves":
+		return "Cookie Jar Reserves & Earnings Management"
+	case "warranty_accrual":
+		return "Warranty Expense & Liability Matching (ASC 460)"
+	case "forecasting_operating_working_capital":
+		return "Pro-Forma Operating Expenses & Working Capital"
+	case "forecasting_capex":
+		return "Pro-Forma Capital Expenditures & Capacity Expansion"
+	case "forecasting_debt_plug":
+		return "Pro-Forma External Financing Needed (EFN) & Debt Plug"
 	default:
 		clean := strings.ReplaceAll(conceptID, "_", " ")
 		return strings.Title(clean)

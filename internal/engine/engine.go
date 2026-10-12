@@ -120,6 +120,15 @@ func NewEngine(catalog *domain.AccountCatalog) *Engine {
 	// Wave 2: Stream-M08
 	RegisterM08Rules(e)
 
+	// Wave 3: Stream-M09
+	e.rules[bank.FamilyM09CookieJarReserve] = M09CookieJarReserveRule{}
+	e.rules[bank.FamilyM09WarrantyAccrual] = M09WarrantyAccrualRule{}
+
+	// Wave 3: Stream-M10
+	e.rules[bank.FamilyM10ForecastingOperatingExpenseAP] = M10ForecastingOperatingExpenseAPRule{}
+	e.rules[bank.FamilyM10ForecastingCapEx] = M10ForecastingCapExRule{}
+	e.rules[bank.FamilyM10ForecastingDebtPlug] = M10ForecastingDebtPlugRule{}
+
 	return e
 }
 

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q_m09_qual_cookie_jar_reserve_01",
+      "version": 1,
+      "family_id": "m09_qual_cookie_jar_reserve",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "During an unusually profitable fiscal year (Module 9), corporate executives decide to exercise accounting discretion by recording an additional ${amount_dollars} in bad debt expense above statistical loss models, deliberately building a 'cookie jar' allowance reserve to smooth future reported earnings. Record the journal entry for this discretionary reserve addition.",
+      "parameters": {
+        "amount_minor_units": [
+          1500000,
+          3000000,
+          6000000
+        ]
+      },
+      "concepts": [
+        "cookie_jar_reserves",
+        "earnings_quality",
+        "allowance_method",
+        "reporting_strategy"
+      ],
+      "module": 9,
+      "modules": [
+        9,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "bad_debt_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "allowance_for_doubtful_accounts",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M09 Candidate Batch: UW Foster Module 9 Quality of Financial Reporting (Discretionary Cookie Jar Reserve Buffering)"
+      }
+    },
+    {
+      "id": "q_m09_qual_warranty_accrual_02",
+      "version": 1,
+      "family_id": "m09_qual_warranty_accrual",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under US GAAP accrual accounting (ASC 460), high financial reporting quality requires matching anticipated product defect obligations against current period sales. Based on current quarterly product shipments, the company estimates ${amount_dollars} in future warranty claims. Record the adjusting entry to accrue estimated warranty expense and the related liability.",
+      "parameters": {
+        "amount_minor_units": [
+          2000000,
+          4500000,
+          9000000
+        ]
+      },
+      "concepts": [
+        "warranty_accrual",
+        "matching_principle",
+        "accrued_liabilities",
+        "earnings_quality"
+      ],
+      "module": 9,
+      "modules": [
+        9,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "warranty_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "warranty_liability",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M09 Candidate Batch: UW Foster Module 9 Quality of Financial Reporting (Warranty Expense & Liability Matching)"
+      }
+    }
+  ]
+}

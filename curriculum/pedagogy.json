@@ -1044,6 +1044,41 @@
       "setting_group": "equity.treasury_stock_reissuance",
       "contrasts": [],
       "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m09_qual_cookie_jar_reserve_01",
+      "question_version": 1,
+      "setting_group": "qual.cookie_jar_reserve",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m09_qual_warranty_accrual_02",
+      "question_version": 1,
+      "setting_group": "qual.warranty_accrual",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m10_fore_operating_expense_ap_01",
+      "question_version": 1,
+      "setting_group": "fore.operating_expense_ap",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m10_fore_capex_equipment_cash_02",
+      "question_version": 1,
+      "setting_group": "fore.capex_equipment_cash",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m10_fore_debt_plug_cash_notes_03",
+      "question_version": 1,
+      "setting_group": "fore.debt_plug_cash_notes",
+      "contrasts": [],
+      "distractor_profile": ""
     }
   ]
 }

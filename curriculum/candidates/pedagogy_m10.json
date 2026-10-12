@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "policy_version": 1,
+  "review": {
+    "reviewer": "Worker Agent (Stream-M10)",
+    "approved_at": "2026-10-12T19:00:00Z",
+    "source": "Stream-M10 Financial Statement Forecasting Pedagogical Policy"
+  },
+  "questions": [
+    {
+      "question_id": "q_m10_fore_operating_expense_ap_01",
+      "question_version": 1,
+      "setting_group": "fore.operating_expense_ap",
+      "contrasts": [
+        {
+          "question_id": "q_m10_fore_capex_equipment_cash_02",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "forecasting_opex_working_capital"
+    },
+    {
+      "question_id": "q_m10_fore_capex_equipment_cash_02",
+      "question_version": 1,
+      "setting_group": "fore.capex_equipment_cash",
+      "contrasts": [
+        {
+          "question_id": "q_m10_fore_operating_expense_ap_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "forecasting_capex_vs_expense"
+    },
+    {
+      "question_id": "q_m10_fore_debt_plug_cash_notes_03",
+      "question_version": 1,
+      "setting_group": "fore.debt_plug_cash_notes",
+      "contrasts": [
+        {
+          "question_id": "q_m10_fore_capex_equipment_cash_02",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "forecasting_efn_debt_plug"
+    }
+  ]
+}

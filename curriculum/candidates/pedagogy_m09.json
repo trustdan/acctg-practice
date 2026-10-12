@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "policy_version": 1,
+  "review": {
+    "reviewer": "Worker Agent (Stream-M09)",
+    "approved_at": "2026-10-12T19:00:00Z",
+    "source": "Stream-M09 Quality of Financial Reporting Pedagogical Policy"
+  },
+  "questions": [
+    {
+      "question_id": "q_m09_qual_cookie_jar_reserve_01",
+      "question_version": 1,
+      "setting_group": "qual.cookie_jar_reserve",
+      "contrasts": [
+        {
+          "question_id": "q_m09_qual_warranty_accrual_02",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "cookie_jar_reserves_vs_allowance"
+    },
+    {
+      "question_id": "q_m09_qual_warranty_accrual_02",
+      "question_version": 1,
+      "setting_group": "qual.warranty_accrual",
+      "contrasts": [
+        {
+          "question_id": "q_m09_qual_cookie_jar_reserve_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "warranty_accrual_vs_cash_basis"
+    }
+  ]
+}

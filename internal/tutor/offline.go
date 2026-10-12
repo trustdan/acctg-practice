@@ -243,6 +243,16 @@ func socraticHintForErrorTag(tag string) string {
 		return "Can a company hold an investment asset in its own stock, or is repurchased stock classified as a contra-equity account?"
 	case engine.TagM08GainRecordedOnTreasuryReissuance:
 		return "Can transactions in a corporation's own capital stock ever generate income statement gains or losses under US GAAP?"
+	case engine.TagM09DiscretionaryReserveOveraccrual:
+		return "Can management intentionally overstate uncollectible reserves in profitable quarters to buffer future earnings without compromising reporting quality?"
+	case engine.TagM09WarrantyExpensedWhenPaid:
+		return "Under accrual accounting and the matching principle, must product warranty costs be estimated and accrued in the period of sale rather than delayed until cash repairs are performed?"
+	case engine.TagM10ForecastingAPOmitted:
+		return "When forecasting operating expenses on trade credit, does the entry credit Cash or the trade liability Accounts Payable?"
+	case engine.TagM10CapExExpensedImmediately:
+		return "Do multi-period capital expenditures for productive machinery belong on the income statement as immediate expense, or on the balance sheet as capitalized Equipment?"
+	case engine.TagM10EFNTreatedAsEquityWithoutShares:
+		return "When pro-forma asset expansion requires external debt borrowing, does the financing plug credit Notes Payable or Common Stock?"
 	default:
 		return ""
 	}
@@ -282,6 +292,16 @@ func familyContrastExplanation(familyID string) string {
 		return "Contrast: A conservative reporting strategy defers revenue to Unearned Revenue until all performance obligations are fulfilled, preserving earnings quality, whereas an aggressive policy prematurely accelerates revenue recognition."
 	case "financial_forecasting":
 		return "Contrast: Pro-forma forecasting built from disaggregated operational drivers (unit volume, selling price per unit) provides actionable visibility into capacity constraints and working capital, unlike crude aggregated growth percentages."
+	case "m09_qual_cookie_jar_reserve":
+		return "Contrast: Management discretion in setting accounting estimates should reflect bona fide economic expectations; intentionally over-accruing bad debt reserves creates a cookie jar reserve that obscures true earnings quality."
+	case "m09_qual_warranty_accrual":
+		return "Contrast: Under the matching principle (ASC 460), estimated future product warranty claims are matched against sales revenue in the current period by debiting Warranty Expense and crediting Warranty Liability."
+	case "m10_fore_operating_expense_ap":
+		return "Contrast: In pro-forma forecasting, linking operating expenses to trade payables ensures working capital metrics (such as DPO) realistically reflect the timing of operating cash outflows."
+	case "m10_fore_capex_equipment_cash":
+		return "Contrast: Capital expenditures (CapEx) purchase long-term productive assets (Debit Equipment, Credit Cash), expanding balance sheet capacity and flowing into investing cash outflows rather than operating expenses."
+	case "m10_fore_debt_plug_cash_notes":
+		return "Contrast: External Financing Needed (EFN) reconciles projected asset growth with projected spontaneous funding; plugging EFN with debt issuance (Debit Cash, Credit Notes Payable) connects the balance sheet directly to financing cash flows."
 	default:
 		return ""
 	}

@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q_m10_fore_operating_expense_ap_01",
+      "version": 1,
+      "family_id": "m10_fore_operating_expense_ap",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "In constructing a pro-forma financial statement forecast (Module 10), an analyst models ${amount_dollars} in operating rent expense for next fiscal year, assuming terms are incurred on account (Accounts Payable) based on historical days-payable-outstanding (DPO). Record the projected entry to reflect operating expense and trade liabilities.",
+      "parameters": {
+        "amount_minor_units": [
+          1800000,
+          3600000,
+          7200000
+        ]
+      },
+      "concepts": [
+        "forecasting_operating_working_capital",
+        "pro_forma_statements",
+        "working_capital_drivers",
+        "trade_payables"
+      ],
+      "module": 10,
+      "modules": [
+        10,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "rent_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M10 Candidate Batch: UW Foster Module 10 Financial Statement Forecasting (Operating Expense & Working Capital Linkage)"
+      }
+    },
+    {
+      "id": "q_m10_fore_capex_equipment_cash_02",
+      "version": 1,
+      "family_id": "m10_fore_capex_equipment_cash",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "In preparing pro-forma statements (Module 10), management forecasts a ${amount_dollars} capital expenditure (CapEx) to purchase productive factory equipment using existing cash balances to support projected sales volume growth. Record the projected entry to capitalize this investment in physical capacity.",
+      "parameters": {
+        "amount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ]
+      },
+      "concepts": [
+        "forecasting_capex",
+        "capacity_expansion",
+        "investing_cash_flows",
+        "capitalized_assets"
+      ],
+      "module": 10,
+      "modules": [
+        10,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "equipment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M10 Candidate Batch: UW Foster Module 10 Financial Statement Forecasting (CapEx Capacity Expansion)"
+      }
+    },
+    {
+      "id": "q_m10_fore_debt_plug_cash_notes_03",
+      "version": 1,
+      "family_id": "m10_fore_debt_plug_cash_notes",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "In pro-forma balance sheet forecasting (Module 10), projected asset expansion exceeds internal retained earnings and spontaneous liabilities, leaving an External Financing Needed (EFN) shortfall of ${amount_dollars}. To balance the projected accounting equation, management plans to borrow long-term bank notes for cash. Record the projected entry for this financing plug.",
+      "parameters": {
+        "amount_minor_units": [
+          4000000,
+          8000000,
+          16000000
+        ]
+      },
+      "concepts": [
+        "forecasting_debt_plug",
+        "external_financing_needed",
+        "financing_cash_flows",
+        "pro_forma_balance_sheet"
+      ],
+      "module": 10,
+      "modules": [
+        10,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M10 Candidate Batch: UW Foster Module 10 Financial Statement Forecasting (External Financing Needed Debt Plug)"
+      }
+    }
+  ]
+}

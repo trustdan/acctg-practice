@@ -197,6 +197,10 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 		BuildM07Stages(q.FamilyID, instance, money, seed, processed)
 	case bank.FamilyM08LeaseCommencementROUAsset, bank.FamilyM08LeasePeriodicPayment, bank.FamilyM08TreasuryStockRepurchase, bank.FamilyM08TreasuryStockReissuance:
 		BuildM08Stages(q.FamilyID, instance, money, seed, processed)
+	case bank.FamilyM09CookieJarReserve, bank.FamilyM09WarrantyAccrual:
+		BuildM09Stages(q.FamilyID, instance, money, seed, processed)
+	case bank.FamilyM10ForecastingOperatingExpenseAP, bank.FamilyM10ForecastingCapEx, bank.FamilyM10ForecastingDebtPlug:
+		BuildM10Stages(q.FamilyID, instance, money, seed, processed)
 	default:
 		buildGenericStages(instance, money, seed, processed)
 	}

@@ -1,5 +1,28 @@
 # Implementation handoff
 
+## Multi-Agent Wave 3 Integration: 135 Active Questions (136 Templates) — Minimum 4 Questions Per Module Across All 10 Modules — 2026-10-12
+
+- Successfully authored, tested, and integrated 5 new questions (2 for Module 9, 3 for Module 10), bringing the active bank to 135 active questions (136 templates) and achieving a minimum of 4 active questions for every single module (1 through 10) in the UW Foster syllabus:
+  - Stream-M09 (Module 9: Quality of Financial Reporting — brings M09 from 2 to 4 questions):
+    - `q_m09_qual_cookie_jar_reserve_01`: Discretionary cookie jar reserve buffering via intentional over-accrual to Allowance for Doubtful Accounts (Debit `bad_debt_expense`, Credit `allowance_for_doubtful_accounts`), explaining earnings management and income smoothing distortions.
+    - `q_m09_qual_warranty_accrual_02`: Product warranty obligation matching under ASC 460 (Debit `warranty_expense`, Credit `warranty_liability`), adhering to GAAP matching principles rather than cash-basis repairs.
+  - Stream-M10 (Module 10: Financial Statement Forecasting — brings M10 from 1 to 4 questions):
+    - `q_m10_fore_operating_expense_ap_01`: Pro-forma operating expense incurred on trade terms linked to working capital days-payable-outstanding (Debit `rent_expense`, Credit `accounts_payable`).
+    - `q_m10_fore_capex_equipment_cash_02`: Pro-forma capital expenditures (CapEx) to expand productive capacity (Debit `equipment`, Credit `cash`), modeling the investing cash outflow and PP&E balance sheet expansion.
+    - `q_m10_fore_debt_plug_cash_notes_03`: Pro-forma External Financing Needed (EFN) debt borrowing plug (Debit `cash`, Credit `notes_payable`), reconciling projected asset requirements with projected funding sources.
+  - Account Catalog Extensions (`curriculum/accounts.json`):
+    - Extended account catalog to 39 canonical accounts: added `warranty_expense` (expense, normal debit) and `warranty_liability` (liability, normal credit).
+  - Test Suite & Reconcile Verification:
+    - Updated bank, pedagogy, exam, mastery, and TUI tests for 135 active questions (136 templates, 270 exam items, 945 mastery attempts, 405 scenario checks, 1,215 context variants).
+    - `go test ./...` passed 100% across all 11 packages.
+    - `go vet ./...` passed with 0 warnings.
+    - Root executable `acctg.exe` compiled cleanly and `./acctg.exe --reconcile-all --db :memory:` verified 135/135 active questions (100% reconciled: Journal == T-Accounts == Equation).
+  - Curriculum Balance Invariant Achieved:
+    - M01: 36 (119 eligible) | M02: 36 (131 eligible) | M03: 6 | M04: 4 | M05: 7 (38 eligible) | M06: 7 (19 eligible) | M07: 7 (19 eligible) | M08: 6 (8 eligible) | M09: 4 | M10: 4.
+    - Every module in the curriculum now has $\ge 4$ active questions available for targeted drills.
+- Files: curriculum/accounts.json, curriculum/seed-questions.json, curriculum/pedagogy.json, curriculum/candidates/batch_m09.json, curriculum/candidates/batch_m10.json, curriculum/candidates/pedagogy_m09.json, curriculum/candidates/pedagogy_m10.json, internal/bank/family.go, internal/bank/schema.go, internal/bank/validator_test.go, internal/bank/pedagogy_test.go, internal/drill/generator.go, internal/drill/stages_m09.go, internal/drill/stages_m10.go, internal/drill/syllabus_m09_test.go, internal/drill/syllabus_m10_test.go, internal/engine/engine.go, internal/engine/event_m09.go, internal/engine/event_m10.go, internal/engine/rules_m09.go, internal/engine/rules_m10.go, internal/exam/errors.go, internal/exam/expanded_bank_test.go, internal/mastery/expanded_bank_test.go, internal/tui/expanded_bank_test.go, internal/tui/expanded_context_test.go, internal/tutor/offline.go, docs/HANDOFF.md.
+- Next: Prepare for full curriculum benchmark testing, release packaging, or further expanding higher-level synthesis questions.
+
 ## Multi-Agent Wave 2 Integration: 130 Active Questions (131 Templates) — 2026-10-12
 
 - Successfully merged and integrated Wave 2 parallel streams (Stream-M06, Stream-M07, Stream-M08) into the master active bank:

@@ -71,6 +71,15 @@ const (
 	FamilyM08LeasePeriodicPayment      = "m08_lse_periodic_lease_payment"
 	FamilyM08TreasuryStockRepurchase   = "m08_lse_treasury_stock_repurchase"
 	FamilyM08TreasuryStockReissuance   = "m08_lse_treasury_stock_reissuance"
+
+	// Wave 3: Stream-M09 (Quality of Financial Reporting)
+	FamilyM09CookieJarReserve = "m09_qual_cookie_jar_reserve"
+	FamilyM09WarrantyAccrual  = "m09_qual_warranty_accrual"
+
+	// Wave 3: Stream-M10 (Financial Statement Forecasting)
+	FamilyM10ForecastingOperatingExpenseAP = "m10_fore_operating_expense_ap"
+	FamilyM10ForecastingCapEx              = "m10_fore_capex_equipment_cash"
+	FamilyM10ForecastingDebtPlug           = "m10_fore_debt_plug_cash_notes"
 )
 
 var supportedFamilies = map[string]struct{}{
@@ -135,6 +144,13 @@ var supportedFamilies = map[string]struct{}{
 	FamilyM08LeasePeriodicPayment:      {},
 	FamilyM08TreasuryStockRepurchase:   {},
 	FamilyM08TreasuryStockReissuance:   {},
+
+	// Wave 3 Streams
+	FamilyM09CookieJarReserve:              {},
+	FamilyM09WarrantyAccrual:               {},
+	FamilyM10ForecastingOperatingExpenseAP: {},
+	FamilyM10ForecastingCapEx:              {},
+	FamilyM10ForecastingDebtPlug:           {},
 }
 
 // IsSupportedFamily checks whether the family ID has reviewed semantic rules in code.

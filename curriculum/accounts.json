@@ -227,6 +227,18 @@
       "name": "Contingent Liability",
       "category": "liability",
       "normal_side": "credit"
+    },
+    {
+      "id": "warranty_expense",
+      "name": "Warranty Expense",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "warranty_liability",
+      "name": "Warranty Liability",
+      "category": "liability",
+      "normal_side": "credit"
     }
   ]
 }

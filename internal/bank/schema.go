@@ -158,9 +158,11 @@ func QuestionModules(q QuestionJSON) []int {
 		return []int{1, 2, 3, 8}
 	case FamilyRepo105Analysis, FamilyDigitalAssetAccounting:
 		return []int{1, 2, 8}
-	case FamilyCapitalizeSoftwareFeasibility, FamilyReportingPolicyChoice:
+	case FamilyCapitalizeSoftwareFeasibility, FamilyReportingPolicyChoice,
+		FamilyM09CookieJarReserve, FamilyM09WarrantyAccrual:
 		return []int{1, 2, 9}
-	case FamilyFinancialForecasting:
+	case FamilyFinancialForecasting,
+		FamilyM10ForecastingOperatingExpenseAP, FamilyM10ForecastingCapEx, FamilyM10ForecastingDebtPlug:
 		return []int{1, 2, 10}
 	case FamilyM03OCFAccountsPayableIncrease, FamilyM03OCFPrepaidIncrease, FamilyM03OCFUnearnedRevenueIncrease:
 		return []int{1, 2, 3}

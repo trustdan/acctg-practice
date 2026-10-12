@@ -178,6 +178,43 @@
       "name": "Cost of Goods Sold",
       "category": "expense",
       "normal_side": "debit"
+    },
+    {
+      "id": "accumulated_depreciation",
+      "name": "Accumulated Depreciation",
+      "category": "asset",
+      "normal_side": "credit",
+      "contra_of": "equipment"
+    },
+    {
+      "id": "depreciation_expense",
+      "name": "Depreciation Expense",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "gain_on_disposal",
+      "name": "Gain on Disposal",
+      "category": "revenue",
+      "normal_side": "credit"
+    },
+    {
+      "id": "loss_on_disposal",
+      "name": "Loss on Disposal",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "right_of_use_asset",
+      "name": "Right-of-Use Asset",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "lease_liability",
+      "name": "Lease Liability",
+      "category": "liability",
+      "normal_side": "credit"
     }
   ]
 }

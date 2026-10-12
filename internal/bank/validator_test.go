@@ -16,8 +16,8 @@ func TestCanonicalAccountsValidation(t *testing.T) {
 	if file.SchemaVersion != 1 {
 		t.Fatalf("expected schema version 1, got %d", file.SchemaVersion)
 	}
-	if catalog.Count() != 29 {
-		t.Fatalf("expected 29 accounts in canonical catalog, got %d", catalog.Count())
+	if catalog.Count() != 35 {
+		t.Fatalf("expected 35 accounts in canonical catalog, got %d", catalog.Count())
 	}
 
 	// Verify key accounts exist

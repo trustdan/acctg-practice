@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q_m07_bnd_issuance_discount_01",
+      "version": 1,
+      "family_id": "m07_bnd_issuance_discount",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "To fund long-term factory modernization, the company issues 10-year bonds with a contractual face value of ${amount_dollars}. Because the market interest rate exceeds the stated coupon rate, investors require a discount, and the company receives cash proceeds of 95% of face value with a 5% discount below par.",
+      "parameters": {
+        "amount_minor_units": [
+          100000000,
+          200000000,
+          400000000
+        ],
+        "cash_minor_units": [
+          95000000,
+          190000000,
+          380000000
+        ],
+        "discount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ]
+      },
+      "concepts": [
+        "bond_discount_issuance",
+        "contra_liability",
+        "discount_on_bonds_payable_classification",
+        "bonds_payable_classification"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "discount_on_bonds_payable",
+            "side": "debit",
+            "amount_parameter": "discount_minor_units"
+          },
+          {
+            "account_id": "bonds_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M07)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "Stream-M07 Candidate Batch: UW Foster Module 7 Liabilities & Debt Financing (Bond Issuance at Discount)"
+      }
+    },
+    {
+      "id": "q_m07_bnd_issuance_premium_02",
+      "version": 1,
+      "family_id": "m07_bnd_issuance_premium",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "The company issues 10-year bonds with a contractual face value of ${amount_dollars}. Because the stated coupon rate exceeds the prevailing market yield, investors pay a premium above par, yielding cash proceeds equal to 105% of face value with a 5% premium.",
+      "parameters": {
+        "amount_minor_units": [
+          100000000,
+          200000000,
+          400000000
+        ],
+        "cash_minor_units": [
+          105000000,
+          210000000,
+          420000000
+        ],
+        "premium_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ]
+      },
+      "concepts": [
+        "bond_premium_issuance",
+        "adjunct_liability",
+        "premium_on_bonds_payable_classification",
+        "bonds_payable_classification"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "premium_on_bonds_payable",
+            "side": "credit",
+            "amount_parameter": "premium_minor_units"
+          },
+          {
+            "account_id": "bonds_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M07)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "Stream-M07 Candidate Batch: UW Foster Module 7 Liabilities & Debt Financing (Bond Issuance at Premium)"
+      }
+    },
+    {
+      "id": "q_m07_bnd_effective_interest_amort_03",
+      "version": 1,
+      "family_id": "m07_bnd_effective_interest_amort",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "At the semiannual interest payment date, the company applies the effective interest method under ASC 835-30 for bonds issued at a discount. Total economic interest expense of ${amount_dollars} is recognized (carrying value multiplied by the semiannual market rate), while contractual cash coupon interest of 6% annual (3% semiannual) is paid to bondholders. The difference amortizes the bond discount.",
+      "parameters": {
+        "amount_minor_units": [
+          3800000,
+          7600000,
+          15200000
+        ],
+        "cash_minor_units": [
+          3000000,
+          6000000,
+          12000000
+        ],
+        "discount_minor_units": [
+          800000,
+          1600000,
+          3200000
+        ]
+      },
+      "concepts": [
+        "effective_interest_method",
+        "bond_discount_amortization",
+        "interest_expense_recognition",
+        "carrying_value_accretion"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "interest_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "discount_on_bonds_payable",
+            "side": "credit",
+            "amount_parameter": "discount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M07)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "Stream-M07 Candidate Batch: UW Foster Module 7 Liabilities & Debt Financing (Effective Interest Method Amortization)"
+      }
+    },
+    {
+      "id": "q_m07_bnd_contingent_liability_04",
+      "version": 1,
+      "family_id": "m07_bnd_contingent_liability",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "At fiscal year-end, the company's legal counsel confirms that an adverse judgment in a pending intellectual property infringement lawsuit is probable, and the ultimate liability loss is reasonably estimable at ${amount_dollars}. Under ASC 450, the company accrues the loss and corresponding liability.",
+      "parameters": {
+        "amount_minor_units": [
+          25000000,
+          50000000,
+          100000000
+        ]
+      },
+      "concepts": [
+        "contingent_liability_accrual",
+        "asc_450",
+        "probable_and_estimable",
+        "loss_contingency"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "litigation_loss",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "contingent_liability",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M07)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "Stream-M07 Candidate Batch: UW Foster Module 7 Liabilities & Debt Financing (ASC 450 Contingent Liability Accrual)"
+      }
+    }
+  ]
+}

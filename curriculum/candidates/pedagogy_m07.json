@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "policy_version": 1,
+  "review": {
+    "reviewer": "Worker Agent 2 (Stream-M07)",
+    "approved_at": "2026-10-12T18:30:00Z",
+    "source": "Stream-M07 Liabilities & Bond Amortization Pedagogical Policy"
+  },
+  "questions": [
+    {
+      "question_id": "q_m07_bnd_issuance_discount_01",
+      "question_version": 1,
+      "setting_group": "bonds.issuance_discount",
+      "contrasts": [
+        {
+          "question_id": "q_m07_bnd_issuance_premium_02",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "bond_discount_vs_premium"
+    },
+    {
+      "question_id": "q_m07_bnd_issuance_premium_02",
+      "question_version": 1,
+      "setting_group": "bonds.issuance_premium",
+      "contrasts": [
+        {
+          "question_id": "q_m07_bnd_issuance_discount_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "bond_discount_vs_premium"
+    },
+    {
+      "question_id": "q_m07_bnd_effective_interest_amort_03",
+      "question_version": 1,
+      "setting_group": "bonds.effective_interest_amort",
+      "contrasts": [
+        {
+          "question_id": "q_m07_bnd_issuance_discount_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "bond_effective_vs_straightline_amort"
+    },
+    {
+      "question_id": "q_m07_bnd_contingent_liability_04",
+      "question_version": 1,
+      "setting_group": "liabilities.contingent_liability",
+      "contrasts": [
+        {
+          "question_id": "q_m07_bnd_issuance_discount_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "contingent_accrual_vs_disclosure"
+    }
+  ]
+}

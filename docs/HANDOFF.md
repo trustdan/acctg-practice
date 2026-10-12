@@ -1,5 +1,20 @@
 # Implementation handoff
 
+## Documentation & README Refresh for 10-Module Scope and Privacy Guardrails — 2026-10-12
+
+- Updated [README.md](file:///c:/Users/Dan/acctg-practice/README.md) to showcase new application features while strictly upholding privacy and scope guidelines:
+  - Documented Study Module Selection (`[m]` / `[M]` modal and `--module` / `--modules` CLI flags) and active module indicator badges (`Module: 3`, `Modules: 1-3`, `Modules: All`).
+  - Documented Sub-Question Reasoning Stage Cycling (`←` / `→`) and Big-Picture Question Navigation (`Ctrl+←` / `Ctrl+→`).
+  - Documented Tutor Settings navigation improvements (`↑`/`↓`/`j`/`k`, `Enter`/`Space` activation, `e` quick-edit, cursor tracking).
+  - Updated Keyboard Reference and Command Line reference tables with new shortcuts and flags.
+  - Updated Accounting Scope to reflect the current 135 active reviewed scenarios across 62 transaction families and 39 canonical accounts spanning all 10 financial reporting modules.
+  - Added dedicated "Feedback, issues, and contributing" section tailored for non-GitHub users explaining what Issues are, how to file them without technical jargon, non-code ways to contribute, and pointing developers to CONTRIBUTING.md.
+  - Verified with `go test ./...` and `go vet ./...`.
+- Files: [README.md](file:///c:/Users/Dan/acctg-practice/README.md), [docs/HANDOFF.md](file:///c:/Users/Dan/acctg-practice/docs/HANDOFF.md).
+- Next: Prepare release distribution packages or continue content enhancements.
+
+
+
 ## LLM Provider Navigation, Cursor Tracking & Intuitive Scrolling — 2026-10-12
 
 - Resolved usability friction in Tutor Settings (`StateTutorConfig`) where arrow keys and `j/k` could not navigate between provider options:

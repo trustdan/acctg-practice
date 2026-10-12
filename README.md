@@ -33,6 +33,7 @@ Financial accounting practice in your terminal: work through a business event, b
 - [Command line](#command-line)
 - [Local data and privacy](#local-data-and-privacy)
 - [Accounting scope](#accounting-scope)
+- [Feedback, issues, and contributing](#feedback-issues-and-contributing)
 - [Build and release](#build-and-release)
 
 ## Install and run
@@ -104,6 +105,8 @@ The launchers include a Wine fallback if `acctg.exe` is present and Wine is alre
 
 - **Progressive drills:** identify accounts, classify them, choose increase/decrease and debit/credit, then reconcile the entry with the accounting equation. Errors receive a causal hint, one retry, and an explanation. Reviewed pairs can then provide a guided comparison within the session.
 - **Adaptive scaffolding:** practice moves from seven steps to four and then two as independent evidence supports it. Mistakes restore guidance. Reduced guidance requires independent success in two reviewed reasoning settings and a delayed success that changes settings. Guided comparisons do not count as independent evidence.
+- **Study module selection:** press `m` (or `M`) during drills, feedback, or recaps to select specific accounting topics (Modules 1–10) or multi-select any combination, and refresh the session immediately. The question header displays the active module badge (`Module: 3`, `Modules: 1-3`, or `Modules: All`).
+- **Sub-question & history navigation:** press `←` / `→` to step back and forth through completed reasoning stages (1–7) within the active question without re-grading or losing progress. At bookends, step back into the previous question's recap, or use `Ctrl+←` / `Ctrl+→` to jump directly between big-picture questions in session history.
 - **Journal entry practice:** enter multiple debit/credit lines, including split postings. Grading compares account totals independently of line order. Recaps include the transaction analysis grid, T-accounts, and equation effects derived from the same postings.
 - **Financial statements:** inspect the Pioneer Consulting accounting-cycle case, trial balances, income statement, retained earnings, balance sheet, cash flows, and reconciliation proofs.
 - **Exams:** take timed or untimed assessments with assistance and feedback withheld until completion. Saved exams support resumption, history, and reports with error patterns and question reviews.
@@ -111,7 +114,7 @@ The launchers include a Wine fallback if `acctg.exe` is present and Wine is alre
 
 ## AI tutor
 
-Offline help works without an account. Press `t` to open Tutor Settings and choose offline, ChatGPT subscription sign-in, Anthropic, Google Gemini, OpenAI API, or a local model through LM Studio.
+Offline help works without an account. Press `t` to open Tutor Settings and choose offline, ChatGPT subscription sign-in, Anthropic, Google Gemini, OpenAI API, or a local model through LM Studio. Use `↑`/`↓` or `j`/`k` to navigate providers (with cursor tracking that scrolls the viewport), `Enter` or `Space` (or keys `1`–`6`) to select, and `e` to edit credentials or server URLs.
 
 For ChatGPT, choose `2` to open the browser sign-in flow. Registration is automatic; no manual OAuth client ID is needed. After sign-in, choose an available model. In settings, `m` opens model selection and `r` requests a fresh provider catalog; cached models support later selection. Use `a` in settings to disconnect the saved ChatGPT connection and sign in with another account.
 
@@ -213,8 +216,9 @@ Keys depend on the current screen; text fields accept ordinary typing. Uppercase
 | `?` / `e` | Hint / explanation |
 | `h` / F1 | Help and accounting reference |
 | `s` | Mastery dashboard |
+| `m` / `M` | Select study modules (1–10) and refresh drill questions |
 | `V` | Read saved explanations |
-| `t` | Tutor settings (`1`–`6` choose a provider; `6` is local LM Studio, `l` edits its address) |
+| `t` | Tutor settings (`↑`/`↓`/`j`/`k` navigate, `Enter`/`Space`/`1`–`6` select, `e` edit key/URL) |
 | `p` / `n` | Review questions / request a new LLM question |
 | `J` | Journal entry practice |
 | `F` | Financial statements |
@@ -235,6 +239,8 @@ Examples use the Windows filename. On macOS or Linux, substitute your executable
 .\acctg.exe --help
 .\acctg.exe --version
 .\acctg.exe --skip-intro --size=10 --intensity=spaced
+.\acctg.exe --module=5
+.\acctg.exe --modules=1,2,5
 .\acctg.exe --practice-journal
 .\acctg.exe --statements
 .\acctg.exe --reconcile-all
@@ -273,19 +279,51 @@ Use `--questions` or `--size` for session length; intensities are `standard`, `s
 | macOS | `~/Library/Application Support/acctg-practice` |
 | Linux | `$XDG_CONFIG_HOME/acctg-practice`, or `~/.config/acctg-practice` |
 
-`acctg_practice.db` stores attempts, question snapshots, local published content, exams, arcade scores, and learner-saved explanations. `tutor_auth.json` stores credentials and provider settings; `models_cache.json` stores discovered models. Credentials use local JSON file storage with restrictive permission requests, not an encrypted OS keychain. Protect that directory and exclude it from releases and commits.
+AccountTutor runs 100% locally and offline by default. No external account or network connection is required. All 135 curriculum question templates, 39 canonical accounts, and deterministic validation rules are compiled directly into the binary without external dependencies or cloud synchronization. No course files, documents, or local learner records are ever uploaded to any cloud service.
 
-Schema upgrades create database backups. For a manual file backup, close the application first and copy the database along with any remaining SQLite sidecar files. JSON export provides practice history, not a complete replacement for a database backup. Optional provider requests send the context needed for the selected action; offline drills require no network. LM Studio requests go only to a server on this computer unless you opt in to a remote host; `tutor_auth.json` stores its address but never an LM Studio token.
+`acctg_practice.db` stores attempts, question snapshots, local published content, exams, arcade scores, and learner-saved explanations on your machine. `tutor_auth.json` stores optional credentials and provider settings; `models_cache.json` stores discovered models. Credentials use local JSON file storage with restrictive permission requests, not an encrypted OS keychain. Protect that directory and exclude it from releases and commits.
+
+Schema upgrades create database backups. For a manual file backup, close the application first and copy the database along with any remaining SQLite sidecar files. JSON export provides practice history, not a complete replacement for a database backup. Optional AI provider requests send only the minimal context needed for the selected hint or explanation; offline drills require no network. LM Studio requests go only to a server on this computer unless you opt in to a remote host; `tutor_auth.json` stores its address but never an LM Studio token.
 
 ## Accounting scope
 
-The embedded seed bank contains **90 active reviewed scenarios across 13 families**, plus one retired record. It covers cash services, credit services, customer advances and their fulfillment, receivable collection, cash expenses, prepaid purchases/consumption, equipment purchases, borrowing, principal repayment, stock issuance, and dividends. Reviewed local questions extend these supported families. Guided contrasts follow eligible mistakes; amount choices distinguish today's transaction from original totals, prior entries and per-recipient amounts.
+The embedded seed bank contains **135 active reviewed scenarios across 62 transaction families** (plus one retired record), supported by a canonical catalog of **39 accounts**. It spans 10 comprehensive financial reporting study modules with at least 4 active questions per module:
 
-The current 90-scenario quality pass covers journal and exam replay, focused offline help, delayed transfer evidence and stronger distractors. See [the quality review](docs/QUALITY-REVIEW90.md) for coverage and remaining validation gates. Expansion beyond 90 has not started.
+- **Module 1 & 2: Economic Transactions & Double-Entry Mechanics**: cash and credit services, customer advances and fulfillment, receivable collection, operating expenses, prepaid assets, equipment purchases, notes payable borrowing, stock issuance, dividends, and balancing debits and credits.
+- **Module 3: Statement Analysis & Cash Flows**: indirect Statement of Cash Flows operating adjustments (accounts payable, prepaids, unearned revenue) and working capital liquidity analysis (Current Ratio and Quick Ratio).
+- **Module 4: Financial Statements Project & Revenue Recognition**: complete cycle statement articulation, trial balances, and ASC 606 revenue recognition (variable consideration constraints, contract assets vs receivables, right-of-return deferrals, and over-time satisfaction).
+- **Module 5: Inventory, Cost of Goods Sold & Receivables**: perpetual FIFO vs LIFO inventory costing, Lower of Cost or Net Realizable Value (LCNRV) write-downs, freight-in capitalization, allowance method for bad debts, customer write-offs, and multi-element revenue arrangements.
+- **Module 6: Property, Plant & Equipment, Equity & Intangibles**: straight-line depreciation adjusting entries, MACRS accelerated depreciation tax timing differences, derecognition upon asset sale with gain/loss on disposal, ASC 360 impairment testing, and ASC 350 goodwill impairment.
+- **Module 7: Long-Term Liabilities, Bonds & Contingencies**: bond issuance at par, discount, and premium; effective interest method coupon payments and discount/premium amortization under ASC 835-30; and ASC 450 loss contingency accruals.
+- **Module 8: Leases, Equity & Financial Structure**: initial lease commencement capitalizing Right-of-Use (ROU) assets and lease liabilities under ASC 842, periodic lease payment bifurcation, treasury stock repurchase and reissuance under the cost method, collateralized repo borrowings, and digital asset accounting.
+- **Module 9: Financial Reporting Strategy & Quality**: conservative vs aggressive reporting choices, discretionary cookie jar reserve buffering, product warranty obligations under ASC 460, and technological feasibility software capitalization under ASC 985-20.
+- **Module 10: Financial Statement Forecasting**: pro-forma operating expense accruals linked to days-payable-outstanding, capital expenditures (CapEx) productive capacity expansion, and External Financing Needed (EFN) debt plug reconciliation.
 
-Money uses integer minor units. Debit means left and credit means right; increase/decrease follows account metadata. Revenue records earning, and cash receipt alone does not establish revenue. Journal entries, T-accounts, and statement effects share deterministic rules.
+Every question satisfies a 3-way balance invariant: Journal Postings == T-Accounts == Accounting Equation. Money uses integer minor units. Debit means left and credit means right; increase/decrease follows account metadata. Revenue records earning, and cash receipt alone does not establish revenue. Journal entries, T-accounts, and statement effects share deterministic rules.
 
-See [the course evidence map](https://github.com/trustdan/acctg-practice/blob/main/docs/COURSE-MAP.md) for source status and limitations. No local syllabus or slide deck is currently available; course-specific coverage and exam rules should be checked against your actual course materials.
+## Feedback, issues, and contributing
+
+Whether you are an accounting student, an instructor, or a developer, your questions and suggestions make AccountTutor better!
+
+### What is an "Issue" and how do I report one?
+
+If you are not familiar with GitHub, think of an **"Issue"** as an open discussion thread or support ticket. If you notice a typo in a problem, an explanation that could be worded better, a question where you disagree with the answer, or a technical glitch (like text wrapping strangely in your terminal), you can report it directly to the project maintainers:
+
+1. **Visit the Issues page:** Open [AccountTutor Issues](https://github.com/trustdan/acctg-practice/issues) in any web browser.
+2. **Create a free account:** If you do not have a GitHub account yet, sign up for free at [github.com/signup](https://github.com/signup). It only takes an email address and a password.
+3. **Click "New Issue":** Press the green button near the top right of the page.
+4. **Describe the feedback or problem:**
+   - **Title:** A brief summary (for example: *"Typo in Module 5 inventory problem"* or *"Screen cut off on macOS Terminal"*).
+   - **Details:** Tell us what question or screen you were on, what you saw, and what you expected. If it's a technical issue, mention your operating system (Windows, Mac, or Linux).
+5. **Click "Submit new issue":** Your note will be posted directly to the team so we can address it in the next update.
+
+### How to contribute
+
+You do not need to know how to code to contribute to AccountTutor:
+
+- **Suggest new accounting scenarios:** Have a business event, journal entry, or tricky transaction you would love to see as a practice question? Open an issue with the scenario and the debits/credits!
+- **Refine teaching explanations:** If a hint felt unhelpful or an explanation was confusing, let us know how you would explain the concept to a fellow classmate.
+- **Code contributions:** For programmers interested in adding new engine rules, improving TUI performance, or expanding unit tests, read [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, architecture invariants, and pull request guidelines.
 
 ## Build and release
 

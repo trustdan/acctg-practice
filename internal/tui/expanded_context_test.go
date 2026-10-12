@@ -67,7 +67,7 @@ func TestExpandedBankTeachingAndTutorContext(t *testing.T) {
 			}
 		}
 	}
-	if checked != 810 {
-		t.Fatalf("expected 810 amount/scaffold combinations, got %d", checked)
+	if checked != 954 {
+		t.Fatalf("expected 954 amount/scaffold combinations, got %d", checked)
 	}
 }

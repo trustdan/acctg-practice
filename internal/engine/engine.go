@@ -37,6 +37,22 @@ func NewEngine(catalog *domain.AccountCatalog) *Engine {
 	dividendCash := DividendCashRule{}
 	declareDividend := DeclareDividendRule{}
 	payDividend := PayDividendPayableRule{}
+	badDebtAllowance := BadDebtAllowanceRule{}
+	writeOffReceivable := WriteOffReceivableRule{}
+	issueBondsPar := IssueBondsParRule{}
+	issueBondsDiscount := IssueBondsDiscountRule{}
+	acquireGoodwill := AcquireGoodwillRule{}
+	creditSalesCashFlow := CreditSalesCashFlowRule{}
+	capitalizeSoftware := CapitalizeSoftwareFeasibilityRule{}
+	currentRatioAnalysis := CurrentRatioAnalysisRule{}
+	repurchaseTreasuryStock := RepurchaseTreasuryStockRule{}
+	payBondInterest := PayBondInterestRule{}
+	repo105Analysis := Repo105AnalysisRule{}
+	appleMultiElementRevenue := AppleMultiElementRevenueRule{}
+	goodwillImpairment := GoodwillImpairmentRule{}
+	digitalAssetAccounting := DigitalAssetAccountingRule{}
+	reportingPolicyChoice := ReportingPolicyChoiceRule{}
+	financialForecasting := FinancialForecastingRule{}
 
 	e.rules[bank.FamilyCashService] = cashService
 	e.rules[bank.FamilyServiceOnCredit] = serviceCredit
@@ -57,6 +73,22 @@ func NewEngine(catalog *domain.AccountCatalog) *Engine {
 	e.rules[bank.FamilyDividendCash] = dividendCash
 	e.rules[bank.FamilyDeclareDividend] = declareDividend
 	e.rules[bank.FamilyPayDividendPayable] = payDividend
+	e.rules[bank.FamilyBadDebtAllowance] = badDebtAllowance
+	e.rules[bank.FamilyWriteOffReceivable] = writeOffReceivable
+	e.rules[bank.FamilyIssueBondsPar] = issueBondsPar
+	e.rules[bank.FamilyIssueBondsDiscount] = issueBondsDiscount
+	e.rules[bank.FamilyAcquireGoodwill] = acquireGoodwill
+	e.rules[bank.FamilyCreditSalesCashFlow] = creditSalesCashFlow
+	e.rules[bank.FamilyCapitalizeSoftwareFeasibility] = capitalizeSoftware
+	e.rules[bank.FamilyCurrentRatioAnalysis] = currentRatioAnalysis
+	e.rules[bank.FamilyRepurchaseTreasuryStock] = repurchaseTreasuryStock
+	e.rules[bank.FamilyPayBondInterest] = payBondInterest
+	e.rules[bank.FamilyRepo105Analysis] = repo105Analysis
+	e.rules[bank.FamilyAppleMultiElementRevenue] = appleMultiElementRevenue
+	e.rules[bank.FamilyGoodwillImpairment] = goodwillImpairment
+	e.rules[bank.FamilyDigitalAssetAccounting] = digitalAssetAccounting
+	e.rules[bank.FamilyReportingPolicyChoice] = reportingPolicyChoice
+	e.rules[bank.FamilyFinancialForecasting] = financialForecasting
 
 	return e
 }

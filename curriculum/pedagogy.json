@@ -764,6 +764,118 @@
         }
       ],
       "distractor_profile": "earned_advance_vs_receivable"
+    },
+    {
+      "question_id": "bad_debt_allowance_basic",
+      "question_version": 1,
+      "setting_group": "bad_debt_allowance.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_bonds_par_basic",
+      "question_version": 1,
+      "setting_group": "issue_bonds_par.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "acquire_goodwill_basic",
+      "question_version": 1,
+      "setting_group": "acquire_goodwill.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "credit_sales_cash_flow_basic",
+      "question_version": 1,
+      "setting_group": "credit_sales_cash_flow.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "write_off_receivable_basic",
+      "question_version": 1,
+      "setting_group": "write_off_receivable.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "issue_bonds_discount_basic",
+      "question_version": 1,
+      "setting_group": "issue_bonds_discount.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "capitalize_software_feasibility_basic",
+      "question_version": 1,
+      "setting_group": "capitalize_software_feasibility.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "current_ratio_analysis_basic",
+      "question_version": 1,
+      "setting_group": "current_ratio_analysis.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "repurchase_treasury_stock_basic",
+      "question_version": 1,
+      "setting_group": "repurchase_treasury_stock.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "pay_bond_interest_discount_basic",
+      "question_version": 1,
+      "setting_group": "pay_bond_interest.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "repo105_analysis_basic",
+      "question_version": 1,
+      "setting_group": "repo105_analysis.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "apple_multielement_revenue_basic",
+      "question_version": 1,
+      "setting_group": "apple_multielement_revenue.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "goodwill_impairment_basic",
+      "question_version": 1,
+      "setting_group": "goodwill_impairment.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "digital_asset_accounting_basic",
+      "question_version": 1,
+      "setting_group": "digital_asset_accounting.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "reporting_policy_choice_basic",
+      "question_version": 1,
+      "setting_group": "reporting_policy_choice.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "financial_forecasting_basic",
+      "question_version": 1,
+      "setting_group": "financial_forecasting.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
     }
   ]
 }

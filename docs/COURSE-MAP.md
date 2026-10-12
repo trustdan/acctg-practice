@@ -2,7 +2,7 @@
 
 ## Course materials status
 
-No local syllabus, slide decks, or problem-set files were located in the repository root or subdirectories during Stage 00 orientation. Per `docs/AGENT-CONTRACT.md` and `PLAN.md`, course conventions must not be invented; standard US GAAP financial accounting conventions govern.
+Syllabus confirmed for **Financial Reporting and Analysis (UW Foster School of Business)** covering Modules 1 through 10. Foundational transaction recording (Modules 1, 2, 4) is implemented in the active bank. The architecture and expansion roadmap for Modules 3 through 10 is documented in [docs/SYLLABUS-EXPANSION-PLAN.md](file:///c:/Users/Dan/acctg-practice/docs/SYLLABUS-EXPANSION-PLAN.md).
 
 ## Convention status & evidence register
 

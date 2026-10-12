@@ -87,6 +87,8 @@ func main() {
 		arcadeScoresFlag      = flag.Bool("arcade-scores", false, "alias for --high-scores")
 		testLLMFlag           = flag.Bool("test-llm", false, "test and diagnose connections across all configured AI tutor providers and exit")
 		testProvidersFlag     = flag.Bool("test-providers", false, "alias for --test-llm")
+		modulesFlag           = flag.String("modules", "", "comma-separated list of syllabus modules to study (e.g. 1,2,5; default: all)")
+		moduleFlag            = flag.Int("module", 0, "single syllabus module to study (1-10; alias for --modules)")
 		versionFlag           = flag.Bool("version", false, "display version and exit")
 	)
 
@@ -1074,24 +1076,48 @@ func main() {
 		showIntro = true
 	}
 
+	var selectedModules []int
+	if *moduleFlag > 0 {
+		if *moduleFlag < 1 || *moduleFlag > 10 {
+			fmt.Fprintf(os.Stderr, "error: --module must be between 1 and 10, got %d\n", *moduleFlag)
+			os.Exit(1)
+		}
+		selectedModules = append(selectedModules, *moduleFlag)
+	} else if *modulesFlag != "" {
+		parts := strings.Split(*modulesFlag, ",")
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			var mNum int
+			if _, err := fmt.Sscanf(p, "%d", &mNum); err != nil || mNum < 1 || mNum > 10 {
+				fmt.Fprintf(os.Stderr, "error: invalid module number %q in --modules (must be 1-10)\n", p)
+				os.Exit(1)
+			}
+			selectedModules = append(selectedModules, mNum)
+		}
+	}
+
 	cfg := tui.Config{
-		DB:             db,
-		Catalog:        catalog,
-		Questions:      activeQuestions,
-		TotalQuestions: totalQuestions,
-		Intensity:      mastery.SessionIntensity(*intensityFlag),
-		Seed:           seed,
-		Clock:          mastery.RealClock{},
-		Tutor:          tutorProvider,
-		TutorTimeout:   *tutorTimeoutFlag,
-		AuthStore:      authStore,
-		ModelCache:     modelCache,
-		TutorModel:     *tutorModelFlag,
-		OAuthClientID:  *oauthClientIDFlag,
-		ExamMode:       isExam,
-		ExamTimeLimit:  examTime,
-		ResumeExam:     *resumeExamFlag,
-		Intro:          showIntro,
+		DB:              db,
+		Catalog:         catalog,
+		Questions:       activeQuestions,
+		TotalQuestions:  totalQuestions,
+		Intensity:       mastery.SessionIntensity(*intensityFlag),
+		Seed:            seed,
+		Clock:           mastery.RealClock{},
+		Tutor:           tutorProvider,
+		TutorTimeout:    *tutorTimeoutFlag,
+		AuthStore:       authStore,
+		ModelCache:      modelCache,
+		TutorModel:      *tutorModelFlag,
+		OAuthClientID:   *oauthClientIDFlag,
+		ExamMode:        isExam,
+		ExamTimeLimit:   examTime,
+		ResumeExam:      *resumeExamFlag,
+		Intro:           showIntro,
+		SelectedModules: selectedModules,
 	}
 
 	model, err := tui.NewModel(cfg)

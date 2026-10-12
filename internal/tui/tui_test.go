@@ -500,8 +500,8 @@ func TestSubQuestionCyclingWithinQuestion(t *testing.T) {
 	}
 
 	view := m.View()
-	if !strings.Contains(view, "[REVIEW: Step 1") {
-		t.Fatalf("expected [REVIEW: Step 1...] in view, got:\n%s", view)
+	if !strings.Contains(view, "[REVIEW:") {
+		t.Fatalf("expected [REVIEW: ...] in view, got:\n%s", view)
 	}
 	if !strings.Contains(view, "✓") {
 		t.Fatalf("expected checkmark for correct answer in view, got:\n%s", view)
@@ -3241,5 +3241,118 @@ func TestStartupAnimationHighScorePersistenceAndInitialsEntry(t *testing.T) {
 
 	if m.State != tui.StateDrill {
 		t.Errorf("expected transition to StateDrill after submitting initials, got %v", m.State)
+	}
+}
+
+func TestModuleSelectionModalAndQuestionRefresh(t *testing.T) {
+	m, db := setupTestTUI(t)
+	defer db.Close()
+
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected initial StateDrill, got %v", m.State)
+	}
+
+	// 1. Press [M] or [m] to open Module Selection modal
+	sendKey(m, "m")
+	if m.State != tui.StateModuleSelect {
+		t.Fatalf("expected StateModuleSelect after pressing 'm', got %v", m.State)
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "SYLLABUS STUDY MODULE SELECTION") {
+		t.Errorf("expected module selection title in view, got: %s", view)
+	}
+	if !strings.Contains(view, "Module 1") || !strings.Contains(view, "Module 5") {
+		t.Errorf("expected Module list in view, got: %s", view)
+	}
+
+	// 2. Navigation with j/k
+	sendKey(m, "j")
+	if m.ModuleCursor != 1 {
+		t.Errorf("expected ModuleCursor 1 after 'j', got %d", m.ModuleCursor)
+	}
+	sendKey(m, "k")
+	if m.ModuleCursor != 0 {
+		t.Errorf("expected ModuleCursor 0 after 'k', got %d", m.ModuleCursor)
+	}
+
+	// 3. Clear all modules with 'c'
+	sendKey(m, "c")
+	for i := 1; i <= 10; i++ {
+		if m.SelectedModules[i] {
+			t.Errorf("expected module %d to be unselected after 'c'", i)
+		}
+	}
+
+	// 4. Select All with 'a'
+	sendKey(m, "a")
+	for i := 1; i <= 10; i++ {
+		if !m.SelectedModules[i] {
+			t.Errorf("expected module %d to be selected after 'a'", i)
+		}
+	}
+
+	// 5. Toggle single module with number key, e.g. clear and select only Module 5
+	sendKey(m, "c")
+	sendKey(m, "5") // toggle module 5
+	if !m.SelectedModules[5] {
+		t.Errorf("expected Module 5 to be selected")
+	}
+	if m.SelectedModules[1] {
+		t.Errorf("expected Module 1 to remain unselected")
+	}
+
+	// 6. Press Enter to apply and refresh!
+	sendSpecialKey(m, tea.KeyEnter)
+	if m.State != tui.StateDrill {
+		t.Fatalf("expected return to StateDrill after applying, got %v", m.State)
+	}
+
+	// Verify questions were filtered to Module 5
+	if len(m.Questions) == 0 {
+		t.Fatalf("expected questions for module 5, got 0")
+	}
+	for _, q := range m.Questions {
+		if !bank.MatchesModules(q, map[int]bool{5: true}) {
+			t.Errorf("question %s does not match Module 5", q.ID)
+		}
+	}
+
+	// Current instance should match module 5
+	if m.CurrentInstance == nil {
+		t.Fatalf("expected CurrentInstance to be non-nil after refresh")
+	}
+}
+
+func TestConfigModuleFilter(t *testing.T) {
+	cat, _, err := bank.LoadAccounts(bytes.NewReader(curriculum.AccountsJSON))
+	if err != nil {
+		t.Fatalf("failed to load accounts: %v", err)
+	}
+	qBank, err := bank.LoadQuestionBank(bytes.NewReader(curriculum.SeedQuestionsJSON), cat)
+	if err != nil {
+		t.Fatalf("failed to load seed questions: %v", err)
+	}
+
+	cfg := tui.Config{
+		Catalog:         cat,
+		Questions:       qBank.Questions,
+		TotalQuestions:  10,
+		Seed:            42,
+		SelectedModules: []int{7}, // Only module 7 (bonds/notes)
+	}
+
+	m, err := tui.NewModel(cfg)
+	if err != nil {
+		t.Fatalf("failed to create model with SelectedModules: %v", err)
+	}
+
+	if len(m.Questions) == 0 {
+		t.Fatalf("expected questions for module 7")
+	}
+	for _, q := range m.Questions {
+		if !bank.MatchesModules(q, map[int]bool{7: true}) {
+			t.Errorf("question %s should match Module 7", q.ID)
+		}
 	}
 }

@@ -16,8 +16,8 @@ func TestCanonicalAccountsValidation(t *testing.T) {
 	if file.SchemaVersion != 1 {
 		t.Fatalf("expected schema version 1, got %d", file.SchemaVersion)
 	}
-	if catalog.Count() != 14 {
-		t.Fatalf("expected 14 accounts in canonical catalog, got %d", catalog.Count())
+	if catalog.Count() != 27 {
+		t.Fatalf("expected 27 accounts in canonical catalog, got %d", catalog.Count())
 	}
 
 	// Verify key accounts exist
@@ -36,6 +36,19 @@ func TestCanonicalAccountsValidation(t *testing.T) {
 		"rent_expense",
 		"insurance_expense",
 		"dividends",
+		"allowance_for_doubtful_accounts",
+		"bad_debt_expense",
+		"bonds_payable",
+		"discount_on_bonds_payable",
+		"premium_on_bonds_payable",
+		"interest_expense",
+		"treasury_stock",
+		"additional_paid_in_capital",
+		"goodwill",
+		"patents",
+		"capitalized_software_costs",
+		"loss_on_impairment",
+		"digital_assets",
 	}
 	for _, id := range required {
 		acc, ok := catalog.Get(id)
@@ -61,8 +74,8 @@ func TestCanonicalSeedQuestionsValidation(t *testing.T) {
 	if qBank.SchemaVersion != 1 {
 		t.Fatalf("expected schema version 1, got %d", qBank.SchemaVersion)
 	}
-	if len(qBank.Questions) != 91 {
-		t.Fatalf("expected 91 canonical question templates (90 active, 1 retired), got %d", len(qBank.Questions))
+	if len(qBank.Questions) != 107 {
+		t.Fatalf("expected 107 canonical question templates (106 active, 1 retired), got %d", len(qBank.Questions))
 	}
 
 	activeCount := 0
@@ -81,8 +94,8 @@ func TestCanonicalSeedQuestionsValidation(t *testing.T) {
 		}
 	}
 
-	if activeCount != 90 {
-		t.Errorf("expected 90 active templates, got %d", activeCount)
+	if activeCount != 106 {
+		t.Errorf("expected 106 active templates, got %d", activeCount)
 	}
 	if retiredCount != 1 {
 		t.Errorf("expected 1 retired template, got %d", retiredCount)

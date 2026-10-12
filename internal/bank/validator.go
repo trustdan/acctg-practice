@@ -204,18 +204,20 @@ func LoadQuestionBank(r io.Reader, catalog *domain.AccountCatalog) (*QuestionBan
 
 		// Validate fixture balancing for each sample parameter value
 		sampleAmounts := q.Parameters["amount_minor_units"]
-		for _, amt := range sampleAmounts {
+		for idx := range sampleAmounts {
 			var totalDebit, totalCredit int64
 			for _, p := range q.ExpectedFixture.Postings {
+				paramVals := q.Parameters[p.AmountParameter]
+				pAmt := paramVals[idx%len(paramVals)]
 				if p.Side == string(domain.SideDebit) {
-					totalDebit += amt
+					totalDebit += pAmt
 				} else if p.Side == string(domain.SideCredit) {
-					totalCredit += amt
+					totalCredit += pAmt
 				}
 			}
 			if totalDebit <= 0 || totalDebit != totalCredit {
-				return nil, fmt.Errorf("question %q expected fixture is unbalanced for amount %d: debits=%d, credits=%d",
-					id, amt, totalDebit, totalCredit)
+				return nil, fmt.Errorf("question %q expected fixture is unbalanced for sample %d: debits=%d, credits=%d",
+					id, idx, totalDebit, totalCredit)
 			}
 		}
 

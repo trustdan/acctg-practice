@@ -18,6 +18,23 @@ const (
 	FamilyDividendCash          = "dividend_cash"
 	FamilyDeclareDividend       = "declare_dividend"
 	FamilyPayDividendPayable    = "pay_dividend_payable"
+	FamilyBadDebtAllowance      = "bad_debt_allowance"
+	FamilyWriteOffReceivable    = "write_off_receivable"
+	FamilyIssueBondsPar         = "issue_bonds_par"
+	FamilyIssueBondsDiscount    = "issue_bonds_discount"
+	FamilyIssueBondsPremium     = "issue_bonds_premium"
+	FamilyPayBondInterest       = "pay_bond_interest"
+	FamilyAcquireGoodwill       = "acquire_goodwill"
+	FamilyRepurchaseTreasuryStock = "repurchase_treasury_stock"
+	FamilyCapitalizeSoftwareFeasibility = "capitalize_software_feasibility"
+	FamilyCreditSalesCashFlow   = "credit_sales_cash_flow"
+	FamilyCurrentRatioAnalysis  = "current_ratio_analysis"
+	FamilyRepo105Analysis       = "repo105_analysis"
+	FamilyAppleMultiElementRevenue = "apple_multielement_revenue"
+	FamilyGoodwillImpairment    = "goodwill_impairment"
+	FamilyDigitalAssetAccounting = "digital_asset_accounting"
+	FamilyReportingPolicyChoice = "reporting_policy_choice"
+	FamilyFinancialForecasting  = "financial_forecasting"
 )
 
 var supportedFamilies = map[string]struct{}{
@@ -37,6 +54,23 @@ var supportedFamilies = map[string]struct{}{
 	FamilyDividendCash:          {},
 	FamilyDeclareDividend:       {},
 	FamilyPayDividendPayable:    {},
+	FamilyBadDebtAllowance:      {},
+	FamilyWriteOffReceivable:    {},
+	FamilyIssueBondsPar:         {},
+	FamilyIssueBondsDiscount:    {},
+	FamilyIssueBondsPremium:     {},
+	FamilyPayBondInterest:       {},
+	FamilyAcquireGoodwill:       {},
+	FamilyRepurchaseTreasuryStock: {},
+	FamilyCapitalizeSoftwareFeasibility: {},
+	FamilyCreditSalesCashFlow:   {},
+	FamilyCurrentRatioAnalysis:  {},
+	FamilyRepo105Analysis:       {},
+	FamilyAppleMultiElementRevenue: {},
+	FamilyGoodwillImpairment:    {},
+	FamilyDigitalAssetAccounting: {},
+	FamilyReportingPolicyChoice: {},
+	FamilyFinancialForecasting:  {},
 }
 
 // IsSupportedFamily checks whether the family ID has reviewed semantic rules in code.

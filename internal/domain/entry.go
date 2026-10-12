@@ -128,17 +128,35 @@ func (e Entry) EquationEffects(catalog *AccountCatalog) (EquationDelta, error) {
 			}
 
 		case CategoryLiability:
-			if p.Side == SideCredit {
-				dLiab = dLiab.Add(p.Amount)
+			if acc.ContraOf != "" {
+				// Contra-liability (e.g. Discount on Bonds Payable): debit increases contra (reduces net liab), credit decreases
+				if p.Side == SideDebit {
+					dLiab = dLiab.Sub(p.Amount)
+				} else {
+					dLiab = dLiab.Add(p.Amount)
+				}
 			} else {
-				dLiab = dLiab.Sub(p.Amount)
+				if p.Side == SideCredit {
+					dLiab = dLiab.Add(p.Amount)
+				} else {
+					dLiab = dLiab.Sub(p.Amount)
+				}
 			}
 
 		case CategoryEquity:
-			if p.Side == SideCredit {
-				dEquity = dEquity.Add(p.Amount)
+			if acc.ContraOf != "" {
+				// Contra-equity (e.g. Treasury Stock): debit increases contra (reduces net equity), credit decreases
+				if p.Side == SideDebit {
+					dEquity = dEquity.Sub(p.Amount)
+				} else {
+					dEquity = dEquity.Add(p.Amount)
+				}
 			} else {
-				dEquity = dEquity.Sub(p.Amount)
+				if p.Side == SideCredit {
+					dEquity = dEquity.Add(p.Amount)
+				} else {
+					dEquity = dEquity.Sub(p.Amount)
+				}
 			}
 
 		case CategoryRevenue:
@@ -290,12 +308,24 @@ func PostingEquationEffect(p Posting, catalog *AccountCatalog) string {
 		return "(-A)"
 
 	case CategoryLiability:
+		if acc.ContraOf != "" {
+			if p.Side == SideDebit {
+				return "(-L)"
+			}
+			return "(+L)"
+		}
 		if p.Side == SideCredit {
 			return "(+L)"
 		}
 		return "(-L)"
 
 	case CategoryEquity:
+		if acc.ContraOf != "" {
+			if p.Side == SideDebit {
+				return "(-E)"
+			}
+			return "(+E)"
+		}
 		if p.Side == SideCredit {
 			return "(+E)"
 		}

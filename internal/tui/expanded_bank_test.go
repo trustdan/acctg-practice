@@ -52,8 +52,8 @@ func TestExpandedBankJournalAndRecapsAllAmounts(t *testing.T) {
 			checked++
 		}
 	}
-	if checked != 270 {
-		t.Fatalf("expected 270 scenario/amount checks, got %d", checked)
+	if checked != 318 {
+		t.Fatalf("expected 318 scenario/amount checks, got %d", checked)
 	}
 }
 
@@ -63,7 +63,7 @@ func TestJournalNextUsesActiveRenderedAllowedAmountsWithoutChangingDrillIndex(t 
 	sendKey(m, "J")
 	drillIndex := m.CurrentQuestionIndex
 	visited := map[string]bool{}
-	for i := 0; i < 90; i++ {
+	for i := 0; i < 98; i++ {
 		sendKey(m, "n")
 		q := m.Questions[m.JournalQuestionIndex]
 		if !bank.IsActiveForPractice(q.Status) || strings.Contains(m.JournalScenario, "${") {
@@ -76,7 +76,7 @@ func TestJournalNextUsesActiveRenderedAllowedAmountsWithoutChangingDrillIndex(t 
 				allowed = true
 			}
 		}
-		if !allowed || m.JournalCanonicalEntry.Postings[0].Amount.Cents() != amount {
+		if !allowed || (m.JournalCanonicalEntry.TotalCredit().Cents() != amount && m.JournalCanonicalEntry.Postings[0].Amount.Cents() != amount) {
 			t.Fatalf("%s prompt and grading amount disagree", q.ID)
 		}
 		if m.CurrentQuestionIndex != drillIndex {
@@ -84,7 +84,7 @@ func TestJournalNextUsesActiveRenderedAllowedAmountsWithoutChangingDrillIndex(t 
 		}
 		visited[q.ID] = true
 	}
-	if len(visited) != 90 {
+	if len(visited) != 98 {
 		t.Fatalf("journal failed to traverse active bank: %d", len(visited))
 	}
 }

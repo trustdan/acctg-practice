@@ -5023,6 +5023,1140 @@
         "approved_at": "2026-10-04T01:27:02Z",
         "source": "Expansion batch 14; continuing delegated review; complete rendered teaching/options/stored hints, amount/scaffold/contrast and ledger regressions, representative full/faded offline terminal checks; see docs/EXPANSION-BATCH14-REVIEW.md"
       }
+    },
+    {
+      "id": "bad_debt_allowance_basic",
+      "version": 1,
+      "family_id": "bad_debt_allowance",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "At fiscal year-end, the company reviews outstanding customer balances and estimates that ${amount_dollars} of accounts receivable will prove uncollectible under the allowance method.",
+      "parameters": {
+        "amount_minor_units": [
+          250000,
+          500000,
+          1000000
+        ]
+      },
+      "concepts": [
+        "bad_debt_allowance",
+        "matching_principle",
+        "contra_asset_classification",
+        "debit_credit_translation"
+      ],
+      "module": 5,
+      "modules": [
+        1,
+        2,
+        5
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "bad_debt_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "allowance_for_doubtful_accounts",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Under the matching principle, which expense account captures the estimated credit losses from this period's sales?",
+          "explanation": "Bad Debt Expense records the estimated uncollectible accounts in the period the sales occurred. Offsetting Accounts Receivable directly would use the direct write-off method, which is not GAAP."
+        },
+        "direction": {
+          "hint": "Does recording additional estimated uncollectible accounts add to the expense accumulated this period?",
+          "explanation": "Bad Debt Expense increases as additional uncollectible costs are recorded for the period."
+        },
+        "counter_account": {
+          "hint": "We do not yet know which specific customers will not pay. Which contra-asset reserve account is credited?",
+          "explanation": "Allowance for Doubtful Accounts is credited. It is a contra-asset that offsets Accounts Receivable on the balance sheet without removing specific customer balances before they default."
+        },
+        "balanced_entry": {
+          "hint": "Which entry establishes the uncollectible reserve without crediting specific customer accounts directly?",
+          "explanation": "Debit Bad Debt Expense ${amount_dollars} and Credit Allowance for Doubtful Accounts ${amount_dollars}. Direct write-off to Accounts Receivable is rejected by GAAP matching."
+        },
+        "equation_effect": {
+          "hint": "How do an expense and a contra-asset affect the balance sheet equation?",
+          "explanation": "Net assets decrease by ${amount_dollars} through the contra-asset Allowance for Doubtful Accounts, and Equity decreases by ${amount_dollars} via Bad Debt Expense; liabilities are unchanged."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T15:45:00Z",
+        "source": "Syllabus Interleaved Batch 1 (Module 5); allowance method bad debt adjusting entry; complete teaching package and causal distractor hints"
+      }
+    },
+    {
+      "id": "issue_bonds_par_basic",
+      "version": 1,
+      "family_id": "issue_bonds_par",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "To fund long-term expansion, the company issues 10-year bonds at face value (par), receiving ${amount_dollars} cash from investors today.",
+      "parameters": {
+        "amount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ]
+      },
+      "concepts": [
+        "bonds_payable_classification",
+        "debt_vs_equity",
+        "cash_classification",
+        "debit_credit_translation"
+      ],
+      "module": 7,
+      "modules": [
+        1,
+        2,
+        7
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "bonds_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What liquid resource entered the business upon issuing the bonds to investors?",
+          "explanation": "Cash records the money received from issuing bonds to investors."
+        },
+        "direction": {
+          "hint": "Did money flow into the business from bondholders today?",
+          "explanation": "Cash increases because the company received cash proceeds from the bond issue."
+        },
+        "counter_account": {
+          "hint": "Did investors buy debt notes with repayment obligations or equity ownership shares?",
+          "explanation": "Bonds Payable is a long-term liability recording the principal obligation owed to bondholders. Common Stock represents equity ownership, not debt."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the cash received alongside the long-term debt obligation incurred?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Bonds Payable ${amount_dollars}. Bonds are debt financing, not equity or revenue."
+        },
+        "equation_effect": {
+          "hint": "How does receiving cash in exchange for a debt obligation affect assets and liabilities?",
+          "explanation": "Assets increase by ${amount_dollars} (+Cash) and liabilities increase by ${amount_dollars} (+Bonds Payable). Equity is unaffected by borrowing principal."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T15:45:00Z",
+        "source": "Syllabus Interleaved Batch 1 (Module 7); long-term bond issuance at par; debt vs equity contrast; complete teaching package"
+      }
+    },
+    {
+      "id": "acquire_goodwill_basic",
+      "version": 1,
+      "family_id": "acquire_goodwill",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company acquires a business unit for ${amount_dollars} cash, recognizing ${amount_dollars} of Goodwill representing excess purchase price over the fair value of identifiable net assets.",
+      "parameters": {
+        "amount_minor_units": [
+          10000000,
+          20000000,
+          40000000
+        ]
+      },
+      "concepts": [
+        "goodwill_classification",
+        "intangible_assets",
+        "capitalization_vs_expense",
+        "asset_swap"
+      ],
+      "module": 6,
+      "modules": [
+        1,
+        2,
+        6
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "goodwill",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "What intangible asset account captures the premium paid for an established business's reputation, workforce, and synergies?",
+          "explanation": "Goodwill is capitalized as an intangible asset representing the premium paid over the fair value of identifiable net assets acquired."
+        },
+        "direction": {
+          "hint": "Was a new intangible asset acquired by the company today?",
+          "explanation": "Goodwill increases because the company acquired a new business unit."
+        },
+        "counter_account": {
+          "hint": "What liquid resource did the buyer pay to complete the acquisition?",
+          "explanation": "Cash decreases because the purchase was paid in cash, so Cash is credited."
+        },
+        "balanced_entry": {
+          "hint": "Which entry capitalizes the acquired intangible asset and records the cash outflow?",
+          "explanation": "Debit Goodwill ${amount_dollars} and Credit Cash ${amount_dollars}. Goodwill is capitalized, not expensed at acquisition."
+        },
+        "equation_effect": {
+          "hint": "One asset (Goodwill) increased while another asset (Cash) decreased by the same amount. What is the net effect?",
+          "explanation": "This is an asset swap: Goodwill increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Net Assets, Liabilities, and Equity remain completely unchanged."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T15:45:00Z",
+        "source": "Syllabus Interleaved Batch 1 (Module 6); business combination goodwill recognition; capitalization vs expense; complete teaching package"
+      }
+    },
+    {
+      "id": "credit_sales_cash_flow_basic",
+      "version": 1,
+      "family_id": "credit_sales_cash_flow",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The company completes ${amount_dollars} of services today and invoices the customer on account. In preparing the Statement of Cash Flows under the indirect method, how is this revenue and receivable change treated?",
+      "parameters": {
+        "amount_minor_units": [
+          500000,
+          1000000,
+          2000000
+        ]
+      },
+      "concepts": [
+        "statement_of_cash_flows_indirect",
+        "accounts_receivable_classification",
+        "accrual_vs_cash_flow",
+        "service_revenue_classification"
+      ],
+      "module": 3,
+      "modules": [
+        1,
+        2,
+        3
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "The customer was billed but has not paid. Which account tracks uncollected customer receivables?",
+          "explanation": "Accounts Receivable records the claim to future cash. No cash was received today."
+        },
+        "direction": {
+          "hint": "Does completing unpaid work add to the customer claims owed to the company?",
+          "explanation": "Accounts Receivable increases as a new customer invoice is issued."
+        },
+        "counter_account": {
+          "hint": "The service work is done today. Which account records earning from completed work?",
+          "explanation": "Service Revenue is credited because the performance obligation was satisfied today."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the receivable claim and the earned revenue?",
+          "explanation": "Debit Accounts Receivable ${amount_dollars} and Credit Service Revenue ${amount_dollars}."
+        },
+        "equation_effect": {
+          "hint": "Net Income includes this revenue, but no cash came in. In the indirect method operating section, do you add or subtract the increase in receivables?",
+          "explanation": "Assets increase by ${amount_dollars} (+A/R) and Equity increases by ${amount_dollars} (+Revenue). On the Statement of Cash Flows (indirect method), because Net Income includes this ${amount_dollars} of revenue but no cash was received, the increase in Accounts Receivable must be DEDUCTED from Net Income to calculate Operating Cash Flow."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T15:45:00Z",
+        "source": "Syllabus Interleaved Batch 1 (Module 3); indirect statement of cash flows operating adjustment for A/R increase; complete teaching package"
+      }
+    },
+    {
+      "id": "write_off_receivable_basic",
+      "version": 1,
+      "family_id": "write_off_receivable",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "After exhaustive collection efforts, the company determines that a customer's ${amount_dollars} account receivable is completely uncollectible and writes it off under the allowance method.",
+      "parameters": {
+        "amount_minor_units": [
+          120000,
+          250000,
+          500000
+        ]
+      },
+      "concepts": [
+        "allowance_write_off",
+        "allowance_for_doubtful_accounts_classification",
+        "accounts_receivable_classification",
+        "net_realizable_value"
+      ],
+      "module": 5,
+      "modules": [
+        1,
+        2,
+        5
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "allowance_for_doubtful_accounts",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accounts_receivable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Bad Debt Expense was already recognized when estimating uncollectibles at period end. Which reserve account absorbs this specific customer default?",
+          "explanation": "Allowance for Doubtful Accounts is the contra-asset reserve that absorbs specific customer defaults under the allowance method, matching bad debt expense in advance."
+        },
+        "direction": {
+          "hint": "Does writing off an uncollectible customer account reduce the balance of the previously accumulated allowance reserve?",
+          "explanation": "Allowance for Doubtful Accounts decreases because the reserve is being used to write off a specific default."
+        },
+        "counter_account": {
+          "hint": "The customer will never pay. Which account tracked the specific uncollected invoice that must now be removed?",
+          "explanation": "Accounts Receivable is credited to eliminate the uncollectible customer account from the company's ledger."
+        },
+        "balanced_entry": {
+          "hint": "Which entry reduces the contra-asset reserve and eliminates the uncollectible customer account?",
+          "explanation": "Debit Allowance for Doubtful Accounts ${amount_dollars} and Credit Accounts Receivable ${amount_dollars}. Do not debit Bad Debt Expense again."
+        },
+        "equation_effect": {
+          "hint": "Gross A/R went down, but the offsetting allowance also went down by the same amount. Did Net Realizable Value change?",
+          "explanation": "This entry has a $0 net effect on total assets: Gross A/R decreases by ${amount_dollars}, and Allowance for Doubtful Accounts decreases by ${amount_dollars}. Net Realizable Accounts Receivable and Net Income are completely unchanged upon write-off."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:15:00Z",
+        "source": "Syllabus Interleaved Batch 2 (Module 5); customer account write-off under allowance method; net realizable value unchanged; complete teaching package"
+      }
+    },
+    {
+      "id": "issue_bonds_discount_basic",
+      "version": 1,
+      "family_id": "issue_bonds_discount",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "To finance production facility upgrades, the company issues 10-year bonds at a discount (market rate > coupon rate), issuing ${amount_dollars} face value bonds for 95% cash proceeds with a 5% discount below par.",
+      "parameters": {
+        "amount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ],
+        "cash_minor_units": [
+          4750000,
+          9500000,
+          19000000
+        ],
+        "discount_minor_units": [
+          250000,
+          500000,
+          1000000
+        ]
+      },
+      "concepts": [
+        "bond_discount_issuance",
+        "discount_on_bonds_payable_classification",
+        "bonds_payable_classification",
+        "contra_liability"
+      ],
+      "module": 7,
+      "modules": [
+        1,
+        2,
+        7
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "discount_on_bonds_payable",
+            "side": "debit",
+            "amount_parameter": "discount_minor_units"
+          },
+          {
+            "account_id": "bonds_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Does issuing bonds at a discount represent an immediate loss, or a contra-liability account that offsets Bonds Payable to carrying value?",
+          "explanation": "Discount on Bonds Payable is a contra-liability account recording the discount below par value."
+        },
+        "direction": {
+          "hint": "A new bond contract is issued below par. Does the accumulated bond discount increase or decrease?",
+          "explanation": "Discount on Bonds Payable increases as the new discount is recorded upon issuance."
+        },
+        "counter_account": {
+          "hint": "Which long-term liability account records the principal maturity repayment obligation owed to bondholders?",
+          "explanation": "Bonds Payable is credited for the full par/face value of the debt obligation owed at maturity."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the cash proceeds, the contra-liability discount, and the full face value debt obligation?",
+          "explanation": "Debit Cash, Debit Discount on Bonds Payable, and Credit Bonds Payable ${amount_dollars}. The discount is amortized over time, not expensed at issuance."
+        },
+        "equation_effect": {
+          "hint": "Cash received increases Assets. Bonds Payable increases liabilities, but Discount offsets it. Is Equity affected upon borrowing?",
+          "explanation": "Assets increase by cash received (+Cash); Net Liabilities increase by the net carrying value (+Bonds Payable ${amount_dollars} minus -Discount); Equity is completely unaffected by debt issuance proceeds."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:15:00Z",
+        "source": "Syllabus Interleaved Batch 2 (Module 7); bond issuance at discount; contra-liability mechanics; complete teaching package"
+      }
+    },
+    {
+      "id": "capitalize_software_feasibility_basic",
+      "version": 1,
+      "family_id": "capitalize_software_feasibility",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "Following Microsoft-style software development accounting, after establishing technological feasibility for a new commercial software release, the company pays ${amount_dollars} cash for developer coding and testing costs.",
+      "parameters": {
+        "amount_minor_units": [
+          3000000,
+          6000000,
+          12000000
+        ]
+      },
+      "concepts": [
+        "software_capitalization",
+        "capitalized_software_costs_classification",
+        "r_and_d_vs_capitalization",
+        "intangible_assets"
+      ],
+      "module": 9,
+      "modules": [
+        1,
+        2,
+        9
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "capitalized_software_costs",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Costs incurred AFTER technological feasibility is established are capitalized as an asset. Which account captures capitalized software costs?",
+          "explanation": "Capitalized Software Costs is an intangible asset account capturing software development costs incurred between technological feasibility and general commercial release."
+        },
+        "direction": {
+          "hint": "Does the capitalized software asset balance increase as coding and testing costs are capitalized?",
+          "explanation": "Capitalized Software Costs increases as qualifying development costs are capitalized."
+        },
+        "counter_account": {
+          "hint": "What liquid resource did the company pay out for developer compensation?",
+          "explanation": "Cash is credited because cash was paid to fund the development expenditures."
+        },
+        "balanced_entry": {
+          "hint": "Which entry capitalizes the software development asset and records the cash paid for development?",
+          "explanation": "Debit Capitalized Software Costs ${amount_dollars} and Credit Cash ${amount_dollars}. Under US GAAP, feasibility mandates capitalization rather than immediate R&D expensing."
+        },
+        "equation_effect": {
+          "hint": "One asset increased while another asset decreased by the exact same amount. How does this asset exchange affect the accounting equation?",
+          "explanation": "This is an asset swap: Capitalized Software Costs increases by ${amount_dollars} and Cash decreases by ${amount_dollars}. Net Assets, Liabilities, and Equity remain completely unchanged."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:15:00Z",
+        "source": "Syllabus Interleaved Batch 2 (Module 9); software development capitalization post-feasibility (ASC 985-20); complete teaching package"
+      }
+    },
+    {
+      "id": "current_ratio_analysis_basic",
+      "version": 1,
+      "family_id": "current_ratio_analysis",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "A retail company with a current ratio greater than 1.0 pays ${amount_dollars} cash to settle trade supplier balances (Accounts Payable). How does this settlement affect working capital and the Current Ratio?",
+      "parameters": {
+        "amount_minor_units": [
+          1000000,
+          2000000,
+          5000000
+        ]
+      },
+      "concepts": [
+        "current_ratio_liquidity",
+        "accounts_payable_classification",
+        "working_capital_analysis",
+        "financial_statement_analysis"
+      ],
+      "module": 3,
+      "modules": [
+        1,
+        2,
+        3,
+        8
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_payable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Trade debts owed to suppliers for inventory or supplies are recorded in which current liability account?",
+          "explanation": "Accounts Payable records amounts owed to trade suppliers; paying supplier invoices settles this liability."
+        },
+        "direction": {
+          "hint": "Does paying supplier bills reduce the outstanding trade liability owed to creditors?",
+          "explanation": "Accounts Payable decreases as the debt to suppliers is satisfied."
+        },
+        "counter_account": {
+          "hint": "What liquid payment medium was transferred to suppliers to satisfy the invoice?",
+          "explanation": "Cash is credited because cash was disbursed to pay the suppliers."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the reduction to Accounts Payable alongside the cash outflow?",
+          "explanation": "Debit Accounts Payable ${amount_dollars} and Credit Cash ${amount_dollars}. Settle the liability without recording a second expense."
+        },
+        "equation_effect": {
+          "hint": "If a company has a Current Ratio greater than 1.0, what happens to the ratio when equal amounts are subtracted from both Current Assets and Current Liabilities?",
+          "explanation": "Assets decrease (-Cash ${amount_dollars}) and Liabilities decrease (-A/P ${amount_dollars}). Working Capital (CA - CL) is unchanged. For any firm with Current Ratio > 1.0, subtracting equal amounts from numerator and denominator increases the Current Ratio."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:15:00Z",
+        "source": "Syllabus Interleaved Batch 2 (Module 3/8); retail liquidity and current ratio analysis; working capital invariants; complete teaching package"
+      }
+    },
+    {
+      "id": "repurchase_treasury_stock_basic",
+      "version": 1,
+      "family_id": "repurchase_treasury_stock",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "To fund future employee stock awards, the corporation repurchases its own common stock from the open market, paying ${amount_dollars} cash to hold the shares in treasury.",
+      "parameters": {
+        "amount_minor_units": [
+          2500000,
+          5000000,
+          10000000
+        ]
+      },
+      "concepts": [
+        "treasury_stock_accounting",
+        "contra_equity",
+        "stock_repurchase",
+        "cash_classification"
+      ],
+      "module": 6,
+      "modules": [
+        1,
+        2,
+        6
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "treasury_stock",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "When a corporation buys back its own shares to hold in treasury, which contra-equity account records this reduction in stockholders' equity?",
+          "explanation": "Treasury Stock records the cost of the corporation's own shares repurchased from stockholders to hold in treasury."
+        },
+        "direction": {
+          "hint": "When additional shares of company stock are repurchased, does the Treasury Stock contra-equity balance increase or decrease?",
+          "explanation": "Treasury Stock increases because the corporation acquired more treasury shares at cost."
+        },
+        "counter_account": {
+          "hint": "What liquid asset account was disbursed to purchase the shares from market investors?",
+          "explanation": "Cash is credited because cash was disbursed to purchase the treasury shares."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the acquisition of treasury stock and the cash outflow?",
+          "explanation": "Debit Treasury Stock ${amount_dollars} and Credit Cash ${amount_dollars}. Treasury shares are recorded at cost as contra-equity, not as an asset."
+        },
+        "equation_effect": {
+          "hint": "Cash paid reduces Assets. What happens to total Stockholders' Equity when Treasury Stock (a contra-equity account) increases?",
+          "explanation": "Assets decrease (-Cash ${amount_dollars}) and Equity decreases (-Treasury Stock ${amount_dollars}); Liabilities are unaffected. Treasury stock reduces total stockholders' equity."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:30:00Z",
+        "source": "Syllabus Interleaved Batch 3 (Module 6); common stock repurchase at cost into treasury stock; contra-equity mechanics; complete teaching package"
+      }
+    },
+    {
+      "id": "pay_bond_interest_discount_basic",
+      "version": 1,
+      "family_id": "pay_bond_interest",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "The corporation records semi-annual interest on its bonds payable issued at a discount, paying cash coupon interest and amortizing bond discount for total interest expense of ${amount_dollars}.",
+      "parameters": {
+        "amount_minor_units": [
+          250000,
+          500000,
+          1000000
+        ],
+        "cash_minor_units": [
+          200000,
+          400000,
+          800000
+        ],
+        "discount_minor_units": [
+          50000,
+          100000,
+          200000
+        ]
+      },
+      "concepts": [
+        "bond_interest_expense",
+        "discount_amortization",
+        "contra_liability",
+        "cash_classification"
+      ],
+      "module": 7,
+      "modules": [
+        1,
+        2,
+        7
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "interest_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "discount_on_bonds_payable",
+            "side": "credit",
+            "amount_parameter": "discount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Which expense account records the total cost of borrowing, including cash interest and discount amortization?",
+          "explanation": "Interest Expense records the total cost of borrowed funds for the period, combining cash coupon paid and discount amortized."
+        },
+        "direction": {
+          "hint": "Does Interest Expense increase or decrease for the semi-annual period?",
+          "explanation": "Interest Expense increases as borrowing costs for the period are recognized."
+        },
+        "counter_account": {
+          "hint": "What liquid asset is paid to bondholders, and which contra-liability account is amortized toward par?",
+          "explanation": "Cash is credited for the cash coupon paid, and Discount on Bonds Payable is credited to amortize the contra-liability toward face value."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records total interest expense, cash paid, and discount amortization?",
+          "explanation": "Debit Interest Expense ${amount_dollars}, Credit Cash, and Credit Discount on Bonds Payable. Total interest expense exceeds the cash coupon by the amount of discount amortized."
+        },
+        "equation_effect": {
+          "hint": "Cash paid reduces Assets. Interest expense reduces Equity. Crediting the contra-liability discount increases carrying liabilities. Do both sides balance?",
+          "explanation": "Assets decrease (-Cash); Net Liabilities increase (+carrying value as contra-liability discount shrinks); Equity decreases (-Interest Expense ${amount_dollars}). Total debits equal total credits."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:30:00Z",
+        "source": "Syllabus Interleaved Batch 3 (Module 7); semi-annual bond coupon payment and discount amortization; compound 3-posting entry; complete teaching package"
+      }
+    },
+    {
+      "id": "repo105_analysis_basic",
+      "version": 1,
+      "family_id": "repo105_analysis",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "In an off-balance-sheet financing review (Lehman Brothers Repo 105 case), an institution enters into a short-term repurchase agreement, receiving ${amount_dollars} cash while pledging collateral. Under US GAAP economic substance (collateralized borrowing), how is the cash receipt recorded?",
+      "parameters": {
+        "amount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ]
+      },
+      "concepts": [
+        "repurchase_agreements",
+        "collateralized_borrowing_vs_sale",
+        "leverage_ratio_analysis",
+        "off_balance_sheet_financing"
+      ],
+      "module": 8,
+      "modules": [
+        1,
+        2,
+        8
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "notes_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Under economic substance, when an entity receives cash pledging securities it must repurchase days later, which debt liability account records this secured borrowing?",
+          "explanation": "Notes Payable records the contractual obligation to repay the borrowed cash, reflecting economic substance as collateralized financing."
+        },
+        "direction": {
+          "hint": "When new borrowing proceeds are received under the repo contract, does Notes Payable increase or decrease?",
+          "explanation": "Notes Payable increases because a new debt liability was incurred."
+        },
+        "counter_account": {
+          "hint": "What liquid asset was received from the counterparty upon pledging the collateral?",
+          "explanation": "Cash is debited because liquid cash funds were received."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the cash borrowing and the secured debt liability under collateralized financing?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Notes Payable ${amount_dollars}. In Repo 105, Lehman aggressively booked this as a sale to temporarily remove assets and hide leverage."
+        },
+        "equation_effect": {
+          "hint": "Assets increase (+Cash ${amount_dollars}) and Liabilities increase (+Notes Payable ${amount_dollars}). How does transparently recognizing this borrowing affect the financial leverage ratio (Assets/Equity)?",
+          "explanation": "Assets increase (+Cash ${amount_dollars}) and Liabilities increase (+Notes Payable ${amount_dollars}); Equity is unchanged. Total Assets expand, maintaining true leverage, unlike Lehman's off-balance-sheet sale treatment which cosmetically depressed reported leverage before quarter-end."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:30:00Z",
+        "source": "Syllabus Interleaved Batch 3 (Module 8); Lehman Brothers Repo 105 case analysis; collateralized financing vs off-balance-sheet sales; leverage ratio analysis; complete teaching package"
+      }
+    },
+    {
+      "id": "apple_multielement_revenue_basic",
+      "version": 1,
+      "family_id": "apple_multielement_revenue",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "Under multi-element revenue accounting (the Apple iPhone case), the company sells hardware with bundled future software upgrades for ${amount_dollars} cash, allocating 80% to delivered hardware (point-of-sale revenue) and 20% to future software upgrade obligations (unearned revenue).",
+      "parameters": {
+        "amount_minor_units": [
+          100000,
+          200000,
+          500000
+        ],
+        "delivered_revenue_minor_units": [
+          80000,
+          160000,
+          400000
+        ],
+        "unearned_revenue_minor_units": [
+          20000,
+          40000,
+          100000
+        ]
+      },
+      "concepts": [
+        "multi_element_revenue_recognition",
+        "point_of_sale_revenue",
+        "deferred_subscription_revenue",
+        "unearned_revenue_liability"
+      ],
+      "module": 5,
+      "modules": [
+        1,
+        2,
+        5
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "delivered_revenue_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "unearned_revenue_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "When a portion of the bundle price covers future performance obligations (software updates over 2 years), which liability account records that unearned portion?",
+          "explanation": "Unearned Revenue records the consideration allocated to undelivered performance obligations until future software updates are delivered over time."
+        },
+        "direction": {
+          "hint": "When customer cash is received for undelivered future software updates, does the Unearned Revenue liability increase or decrease?",
+          "explanation": "Unearned Revenue increases because the company assumed an obligation to provide future updates."
+        },
+        "counter_account": {
+          "hint": "Which revenue account records the earned portion allocated to the delivered hardware device?",
+          "explanation": "Cash is debited for full proceeds, and Service Revenue is credited for the portion allocated to the delivered hardware."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the cash proceeds, point-of-sale revenue for delivered hardware, and deferred revenue for software obligations?",
+          "explanation": "Debit Cash ${amount_dollars}, Credit Service Revenue for 80%, and Credit Unearned Revenue for 20%. Consideration is allocated between delivered and undelivered performance obligations."
+        },
+        "equation_effect": {
+          "hint": "Cash received increases Assets. How does splitting the transaction between earned revenue and unearned liability affect Liabilities and Equity?",
+          "explanation": "Assets increase (+Cash ${amount_dollars}), Liabilities increase (+Unearned Revenue for deferred updates), and Equity increases (+Service Revenue for delivered device). Performance obligations are properly allocated under ASC 606."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:30:00Z",
+        "source": "Syllabus Interleaved Batch 3 (Module 5); Apple multi-element revenue recognition case (hardware vs deferred iOS upgrades); performance obligation allocation under ASC 606; complete teaching package"
+      }
+    },
+    {
+      "id": "goodwill_impairment_basic",
+      "version": 1,
+      "family_id": "goodwill_impairment",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "During annual goodwill impairment testing under US GAAP (ASC 350), an operating reporting unit's carrying value exceeds its fair value due to deteriorating market conditions. The company determines that goodwill is impaired by ${amount_dollars} and writes down the asset.",
+      "parameters": {
+        "amount_minor_units": [
+          2000000,
+          5000000,
+          10000000
+        ]
+      },
+      "concepts": [
+        "goodwill_impairment",
+        "intangible_assets",
+        "impairment_testing",
+        "goodwill_accounting"
+      ],
+      "module": 6,
+      "modules": [
+        1,
+        2,
+        6
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "loss_on_impairment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "goodwill",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "When a reporting unit's fair value drops below its carrying value, which loss account absorbs this non-cash asset impairment write-down?",
+          "explanation": "Loss on Impairment is recognized in operating earnings to record the drop in goodwill value below carrying value."
+        },
+        "direction": {
+          "hint": "Does recognizing a new impairment loss increase or decrease the accumulated loss recorded for the period?",
+          "explanation": "Loss on Impairment increases as the asset write-down is recognized."
+        },
+        "counter_account": {
+          "hint": "Which recorded intangible asset became impaired and must be written down on the balance sheet?",
+          "explanation": "Goodwill is credited to reduce its balance sheet carrying value down to implied recoverable value."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the impairment loss in earnings and writes down the goodwill asset?",
+          "explanation": "Debit Loss on Impairment ${amount_dollars} and Credit Goodwill ${amount_dollars}. Goodwill impairment is a non-cash write-down that directly reduces asset carrying value."
+        },
+        "equation_effect": {
+          "hint": "Goodwill decreased and an impairment loss reduced net income. How does this write-down affect total Assets and Equity?",
+          "explanation": "Assets decrease (-Goodwill ${amount_dollars}) and Equity decreases (-Loss on Impairment ${amount_dollars}); Liabilities are unchanged. Under US GAAP (ASC 350), goodwill impairment cannot be reversed even if fair value subsequently recovers."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:50:00Z",
+        "source": "Syllabus Interleaved Batch 4 (Module 6); goodwill impairment testing under ASC 350; reporting unit fair value test; complete teaching package"
+      }
+    },
+    {
+      "id": "digital_asset_accounting_basic",
+      "version": 1,
+      "family_id": "digital_asset_accounting",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "In digital asset accounting (the Tesla Bitcoin case), a corporation purchases ${amount_dollars} of cryptocurrency for cash as an indefinite-lived intangible asset. Under US GAAP, how is the initial acquisition recorded, and how are subsequent market fluctuations treated?",
+      "parameters": {
+        "amount_minor_units": [
+          150000000,
+          300000000,
+          500000000
+        ]
+      },
+      "concepts": [
+        "digital_asset_accounting",
+        "indefinite_lived_intangibles",
+        "cryptocurrency_impairment",
+        "fair_value_accounting"
+      ],
+      "module": 8,
+      "modules": [
+        1,
+        2,
+        8
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "digital_assets",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Under US GAAP (ASC 350), are cryptocurrencies treated as legal cash equivalents, or capitalized as indefinite-lived intangible assets?",
+          "explanation": "Digital Assets records cryptocurrency holdings, classified as indefinite-lived intangible assets under US GAAP."
+        },
+        "direction": {
+          "hint": "When the company buys and takes custody of cryptocurrency, does its digital asset balance increase or decrease?",
+          "explanation": "Digital Assets increases as new digital holdings are acquired."
+        },
+        "counter_account": {
+          "hint": "What liquid payment medium was transferred from bank reserves to purchase the digital tokens?",
+          "explanation": "Cash is credited because cash was disbursed to execute the purchase."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the acquisition of the intangible digital asset and the cash outflow?",
+          "explanation": "Debit Digital Assets ${amount_dollars} and Credit Cash ${amount_dollars}. The purchase is an asset exchange, not an immediate operating expense."
+        },
+        "equation_effect": {
+          "hint": "One asset increased while another asset decreased by the exact same amount. How does this asset exchange affect the accounting equation?",
+          "explanation": "Asset swap: Digital Assets increases (+A ${amount_dollars}) and Cash decreases (-A ${amount_dollars}); Total Assets, Liabilities, and Equity remain unchanged. Under US GAAP (ASC 350), digital assets are tested for impairment whenever market prices drop below carrying value, but price appreciation cannot be recognized as a gain until realized upon sale."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:50:00Z",
+        "source": "Syllabus Interleaved Batch 4 (Module 8); Tesla Bitcoin case; cryptocurrency accounting as indefinite-lived intangibles; complete teaching package"
+      }
+    },
+    {
+      "id": "reporting_policy_choice_basic",
+      "version": 1,
+      "family_id": "reporting_policy_choice",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "Evaluating financial reporting strategy (Module 9), a company receives ${amount_dollars} cash for customer service agreements that include future ongoing support obligations. Following a conservative financial reporting policy (deferring revenue until performance is fully satisfied) rather than an aggressive policy (accelerating immediate revenue recognition), how is the cash receipt recorded?",
+      "parameters": {
+        "amount_minor_units": [
+          2500000,
+          5000000,
+          10000000
+        ]
+      },
+      "concepts": [
+        "reporting_strategy",
+        "conservative_vs_aggressive",
+        "revenue_timing",
+        "earnings_quality"
+      ],
+      "module": 9,
+      "modules": [
+        1,
+        2,
+        9
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "Under a conservative financial reporting policy, when cash is collected before all performance obligations are complete, which liability account defers the revenue?",
+          "explanation": "Unearned Revenue records customer consideration received before performance obligations are fully satisfied, adhering to conservative accrual principles."
+        },
+        "direction": {
+          "hint": "When a new advance customer receipt arrives with pending work, does the unearned obligation increase or decrease?",
+          "explanation": "Unearned Revenue increases as the new customer advance obligation is recognized."
+        },
+        "counter_account": {
+          "hint": "What liquid payment medium was received from the customer today?",
+          "explanation": "Cash is debited because cash proceeds were received."
+        },
+        "balanced_entry": {
+          "hint": "Which entry records the cash receipt and defers revenue recognition until performance obligations are satisfied?",
+          "explanation": "Debit Cash ${amount_dollars} and Credit Unearned Revenue ${amount_dollars}. Deferring revenue until earned preserves earnings quality and prevents premature revenue recognition."
+        },
+        "equation_effect": {
+          "hint": "Cash increased and an unearned liability was recognized. How does this conservative choice affect Liabilities vs Equity?",
+          "explanation": "Assets increase (+Cash ${amount_dollars}) and Liabilities increase (+Unearned Revenue ${amount_dollars}); Equity is unchanged. A conservative reporting strategy defers revenue until delivery, buffering future earnings, whereas aggressive acceleration immediately inflates current-period net income."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:50:00Z",
+        "source": "Syllabus Interleaved Batch 4 (Module 9); aggressive vs conservative reporting policy choices; revenue timing and earnings quality; complete teaching package"
+      }
+    },
+    {
+      "id": "financial_forecasting_basic",
+      "version": 1,
+      "family_id": "financial_forecasting",
+      "rule_version": 1,
+      "status": "active",
+      "scenario_template": "In preparing a pro-forma financial statement forecast (Module 10), an analyst models ${amount_dollars} in projected credit sales for next quarter using disaggregated operational drivers (unit volume times selling price per unit) rather than a crude aggregated top-line growth percentage.",
+      "parameters": {
+        "amount_minor_units": [
+          4000000,
+          8000000,
+          15000000
+        ]
+      },
+      "concepts": [
+        "financial_forecasting",
+        "disaggregated_drivers",
+        "pro_forma_statements",
+        "revenue_projections"
+      ],
+      "module": 10,
+      "modules": [
+        1,
+        2,
+        10
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "teaching": {
+        "identify_account": {
+          "hint": "When forecasting credit sales that customers will pay on invoice terms, which current asset account tracks the uncollected customer claims?",
+          "explanation": "Accounts Receivable is the asset that tracks projected uncollected customer sales in pro-forma financial statements."
+        },
+        "direction": {
+          "hint": "When projecting new quarterly credit sales, does the uncollected customer claim balance increase or decrease?",
+          "explanation": "Accounts Receivable increases as new credit sales are projected."
+        },
+        "counter_account": {
+          "hint": "Which income statement account captures projected earned sales from customer deliveries?",
+          "explanation": "Service Revenue is credited for the projected earnings generated in the forecast period."
+        },
+        "balanced_entry": {
+          "hint": "Which entry projects the uncollected receivable claim and the earned sales in the pro-forma model?",
+          "explanation": "Debit Accounts Receivable ${amount_dollars} and Credit Service Revenue ${amount_dollars}. Projected credit sales expand the receivable asset and increase projected operating earnings."
+        },
+        "equation_effect": {
+          "hint": "Receivables increased and revenue increased equity. Why is modeling bottom-up unit volume times price more reliable than simple percentage growth?",
+          "explanation": "Assets increase (+Accounts Receivable ${amount_dollars}) and Equity increases (+Service Revenue ${amount_dollars}); Liabilities are unchanged. In financial statement forecasting, bottom-up disaggregated unit drivers (volume × price, store count) provide structural predictive accuracy and enable working capital tie-outs, whereas crude top-line percentages obscure operational constraints."
+        }
+      },
+      "review": {
+        "reviewer": "Codex (review delegated by trustdan)",
+        "approved_at": "2026-10-12T16:50:00Z",
+        "source": "Syllabus Interleaved Batch 4 (Module 10); financial statement forecasting; disaggregated unit-level drivers vs aggregated growth; complete teaching package"
+      }
     }
   ]
 }

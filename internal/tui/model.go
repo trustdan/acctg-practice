@@ -42,6 +42,7 @@ const (
 	StateQuitting
 	StateTitle
 	StateSavedExplanations
+	StateModuleSelect
 )
 
 // StageHistoryItem records the learner's response and explanation for a completed stage.
@@ -88,6 +89,12 @@ type Model struct {
 	Generator *drill.Generator
 	Scheduler *mastery.Scheduler
 	Questions []bank.QuestionJSON
+
+	// Module selection & filtering
+	AllQuestions    []bank.QuestionJSON
+	SelectedModules map[int]bool
+	ModuleCursor    int
+	ModuleNotice    string
 
 	// Session state
 	SessionID            string
@@ -227,8 +234,9 @@ type Config struct {
 	OAuthClientID  string
 	ExamMode       bool
 	ExamTimeLimit  time.Duration
-	ResumeExam     bool
-	Intro          bool
+	ResumeExam      bool
+	Intro           bool
+	SelectedModules []int
 }
 
 // NewModel constructs and initializes a new TUI Model.
@@ -288,27 +296,52 @@ func NewModel(cfg Config) (*Model, error) {
 
 	sessID := fmt.Sprintf("sess-%d", time.Now().Unix())
 
+	allQuestions := cfg.Questions
+	selectedModules := make(map[int]bool)
+	if len(cfg.SelectedModules) > 0 {
+		for _, mNum := range cfg.SelectedModules {
+			if mNum >= 1 && mNum <= 10 {
+				selectedModules[mNum] = true
+			}
+		}
+	} else {
+		for i := 1; i <= 10; i++ {
+			selectedModules[i] = true
+		}
+	}
+
+	activeQuestions := allQuestions
+	if len(cfg.SelectedModules) > 0 {
+		filtered := bank.FilterQuestionsByModules(allQuestions, cfg.SelectedModules)
+		if len(filtered) > 0 {
+			activeQuestions = filtered
+		}
+	}
+
 	m := &Model{
-		State:          StateDrill,
-		PreviousState:  StateDrill,
-		DB:             cfg.DB,
-		Catalog:        cfg.Catalog,
-		Engine:         eng,
-		Generator:      gen,
-		Scheduler:      sched,
-		Questions:      cfg.Questions,
-		Tutor:          cfg.Tutor,
-		TutorTimeout:   cfg.TutorTimeout,
-		AuthStore:      cfg.AuthStore,
-		ModelCache:     modelCache,
-		SessionID:      sessID,
-		TotalQuestions: cfg.TotalQuestions,
-		RNG:            rng,
-		Seed:           cfg.Seed,
-		Clock:          cfg.Clock,
-		Styles:         DefaultStyles(),
-		Width:          80,
-		Height:         24,
+		State:           StateDrill,
+		PreviousState:   StateDrill,
+		DB:              cfg.DB,
+		Catalog:         cfg.Catalog,
+		Engine:          eng,
+		Generator:       gen,
+		Scheduler:       sched,
+		AllQuestions:    allQuestions,
+		Questions:       activeQuestions,
+		SelectedModules: selectedModules,
+		ModuleCursor:    0,
+		Tutor:           cfg.Tutor,
+		TutorTimeout:    cfg.TutorTimeout,
+		AuthStore:       cfg.AuthStore,
+		ModelCache:      modelCache,
+		SessionID:       sessID,
+		TotalQuestions:  cfg.TotalQuestions,
+		RNG:             rng,
+		Seed:            cfg.Seed,
+		Clock:           cfg.Clock,
+		Styles:          DefaultStyles(),
+		Width:           80,
+		Height:          24,
 	}
 
 	// Persist session if DB is provided
@@ -758,6 +791,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateIntro(key)
 		case StateSavedExplanations:
 			return m.updateSavedExplanations(key)
+		case StateModuleSelect:
+			return m.updateModuleSelect(key)
 
 		case StateQuitting:
 			return m, tea.Quit
@@ -1058,6 +1093,13 @@ func (m *Model) updateDrill(key string) (tea.Model, tea.Cmd) {
 		m.TutorAuthNotice = ""
 		return m, nil
 
+	case "m", "M":
+		m.cancelTutor()
+		m.PreviousState = StateDrill
+		m.State = StateModuleSelect
+		m.ModuleNotice = ""
+		return m, nil
+
 	case "J", "ctrl+j":
 		m.cancelTutor()
 		m.PreviousState = StateDrill
@@ -1290,6 +1332,13 @@ func (m *Model) updateFeedback(key string) (tea.Model, tea.Cmd) {
 		m.TutorAuthNotice = ""
 		return m, nil
 
+	case "m", "M":
+		m.cancelTutor()
+		m.PreviousState = StateFeedback
+		m.State = StateModuleSelect
+		m.ModuleNotice = ""
+		return m, nil
+
 	case "h", "f1":
 		m.PreviousState = StateFeedback
 		m.State = StateHelp
@@ -1374,6 +1423,12 @@ func (m *Model) updateRecap(key string) (tea.Model, tea.Cmd) {
 		m.PreviousState = StateRecap
 		m.State = StateTutorConfig
 		m.TutorAuthNotice = ""
+		return m, nil
+
+	case "m", "M":
+		m.PreviousState = StateRecap
+		m.State = StateModuleSelect
+		m.ModuleNotice = ""
 		return m, nil
 
 	case "J", "ctrl+j":
@@ -1549,6 +1604,12 @@ func (m *Model) updateSessionComplete(key string) (tea.Model, tea.Cmd) {
 		m.TutorAuthNotice = ""
 		return m, nil
 
+	case "m", "M":
+		m.PreviousState = StateSessionComplete
+		m.State = StateModuleSelect
+		m.ModuleNotice = ""
+		return m, nil
+
 	case "h", "f1":
 		m.PreviousState = StateSessionComplete
 		m.State = StateHelp
@@ -1584,6 +1645,122 @@ func (m *Model) updateSessionComplete(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	return m, nil
+}
+
+func (m *Model) updateModuleSelect(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "up", "k":
+		if m.ModuleCursor > 0 {
+			m.ModuleCursor--
+		} else {
+			m.ModuleCursor = 9
+		}
+		return m, nil
+
+	case "down", "j":
+		if m.ModuleCursor < 9 {
+			m.ModuleCursor++
+		} else {
+			m.ModuleCursor = 0
+		}
+		return m, nil
+
+	case " ", "space":
+		modNum := m.ModuleCursor + 1
+		m.SelectedModules[modNum] = !m.SelectedModules[modNum]
+		m.ModuleNotice = ""
+		return m, nil
+
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		modNum := int(key[0] - '0')
+		m.SelectedModules[modNum] = !m.SelectedModules[modNum]
+		m.ModuleNotice = ""
+		return m, nil
+
+	case "0":
+		modNum := 10
+		m.SelectedModules[modNum] = !m.SelectedModules[modNum]
+		m.ModuleNotice = ""
+		return m, nil
+
+	case "a":
+		for i := 1; i <= 10; i++ {
+			m.SelectedModules[i] = true
+		}
+		m.ModuleNotice = "All 10 modules selected."
+		return m, nil
+
+	case "c":
+		for i := 1; i <= 10; i++ {
+			m.SelectedModules[i] = false
+		}
+		m.ModuleNotice = "All modules deselected. Press [1-9, 0] or [Space] to select modules."
+		return m, nil
+
+	case "enter":
+		return m.applyModuleFilterAndRefresh()
+
+	case "esc", "q":
+		m.ModuleNotice = ""
+		m.State = m.PreviousState
+		if m.State == StateModuleSelect {
+			m.State = StateDrill
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m *Model) applyModuleFilterAndRefresh() (tea.Model, tea.Cmd) {
+	var selectedList []int
+	for i := 1; i <= 10; i++ {
+		if m.SelectedModules[i] {
+			selectedList = append(selectedList, i)
+		}
+	}
+
+	if len(selectedList) == 0 {
+		m.ModuleNotice = "Please select at least one module (or press [a] for all)."
+		return m, nil
+	}
+
+	filtered := bank.FilterQuestionsByModules(m.AllQuestions, selectedList)
+	if len(filtered) == 0 {
+		m.ModuleNotice = "No active questions currently available for selected module(s)."
+		return m, nil
+	}
+
+	m.Questions = filtered
+	m.SessionID = fmt.Sprintf("sess-%d", time.Now().Unix())
+	m.CurrentQuestionIndex = 0
+	m.QuestionHistory = nil
+	m.QuestionsCompleted = 0
+	m.FirstTrySuccesses = 0
+	m.SessionAttempts = 0
+	m.CurrentStreak = 0
+	m.SelectedOptionIndex = 0
+	m.LastFeedback = nil
+	m.ViewingStageIndex = 0
+	m.StageHistory = make(map[int]*StageHistoryItem)
+
+	if m.DB != nil {
+		_ = m.DB.SaveSession(storage.SessionRecord{
+			ID:        m.SessionID,
+			Mode:      "drill",
+			StartedAt: m.Clock.Now(),
+		})
+	}
+
+	if err := m.loadNextQuestion(); err != nil {
+		m.ModuleNotice = "Failed loading question: " + err.Error()
+		return m, nil
+	}
+
+	m.ModuleNotice = ""
+	m.State = StateDrill
+	m.PreviousState = StateDrill
 	return m, nil
 }
 

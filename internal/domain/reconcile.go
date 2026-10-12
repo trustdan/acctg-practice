@@ -105,8 +105,18 @@ func ReconcileTransaction(entry Entry, catalog *AccountCatalog) (*TransactionRec
 				netAssets = netAssets.Add(ta.TotalDebits.Sub(ta.TotalCredits))
 			}
 		case CategoryLiability:
-			netLiab = netLiab.Add(ta.TotalCredits.Sub(ta.TotalDebits))
-		case CategoryEquity, CategoryRevenue:
+			if acc.ContraOf != "" {
+				netLiab = netLiab.Sub(ta.TotalDebits.Sub(ta.TotalCredits))
+			} else {
+				netLiab = netLiab.Add(ta.TotalCredits.Sub(ta.TotalDebits))
+			}
+		case CategoryEquity:
+			if acc.ContraOf != "" {
+				netEquity = netEquity.Sub(ta.TotalDebits.Sub(ta.TotalCredits))
+			} else {
+				netEquity = netEquity.Add(ta.TotalCredits.Sub(ta.TotalDebits))
+			}
+		case CategoryRevenue:
 			netEquity = netEquity.Add(ta.TotalCredits.Sub(ta.TotalDebits))
 		case CategoryExpense, CategoryDividends:
 			netEquity = netEquity.Sub(ta.TotalDebits.Sub(ta.TotalCredits))

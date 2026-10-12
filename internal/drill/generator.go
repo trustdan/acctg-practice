@@ -104,6 +104,38 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 		buildRepayNotePrincipalStages(instance, money, seed, processed)
 	case bank.FamilyDividendCash:
 		buildDividendCashStages(instance, money, seed, processed)
+	case bank.FamilyBadDebtAllowance:
+		buildBadDebtAllowanceStages(instance, money, seed, processed)
+	case bank.FamilyIssueBondsPar:
+		buildIssueBondsParStages(instance, money, seed, processed)
+	case bank.FamilyAcquireGoodwill:
+		buildAcquireGoodwillStages(instance, money, seed, processed)
+	case bank.FamilyCreditSalesCashFlow:
+		buildCreditSalesCashFlowStages(instance, money, seed, processed)
+	case bank.FamilyWriteOffReceivable:
+		buildWriteOffReceivableStages(instance, money, seed, processed)
+	case bank.FamilyIssueBondsDiscount:
+		buildIssueBondsDiscountStages(instance, money, seed, processed)
+	case bank.FamilyCapitalizeSoftwareFeasibility:
+		buildCapitalizeSoftwareFeasibilityStages(instance, money, seed, processed)
+	case bank.FamilyCurrentRatioAnalysis:
+		buildCurrentRatioAnalysisStages(instance, money, seed, processed)
+	case bank.FamilyRepurchaseTreasuryStock:
+		buildRepurchaseTreasuryStockStages(instance, money, seed, processed)
+	case bank.FamilyPayBondInterest:
+		buildPayBondInterestStages(instance, money, seed, processed)
+	case bank.FamilyRepo105Analysis:
+		buildRepo105AnalysisStages(instance, money, seed, processed)
+	case bank.FamilyAppleMultiElementRevenue:
+		buildAppleMultiElementRevenueStages(instance, money, seed, processed)
+	case bank.FamilyGoodwillImpairment:
+		buildGoodwillImpairmentStages(instance, money, seed, processed)
+	case bank.FamilyDigitalAssetAccounting:
+		buildDigitalAssetAccountingStages(instance, money, seed, processed)
+	case bank.FamilyReportingPolicyChoice:
+		buildReportingPolicyChoiceStages(instance, money, seed, processed)
+	case bank.FamilyFinancialForecasting:
+		buildFinancialForecastingStages(instance, money, seed, processed)
 	default:
 		buildGenericStages(instance, money, seed, processed)
 	}
@@ -1686,3 +1718,1805 @@ func buildGenericStages(inst *domain.QuestionInstance, amt domain.Money, seed in
 		RelevantConceptID: "debit_credit_translation",
 	}
 }
+
+func buildBadDebtAllowanceStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_bad_debt_expense", Text: "Bad Debt Expense"},
+		{ID: "opt_accounts_receivable", Text: "Accounts Receivable", ErrorTag: engine.TagDirectWriteOffExpense},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagWrongAccount},
+	}, seed, 1401)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Which account records the estimated uncollectible customer receivables for the period?",
+		CorrectOptionID:   "opt_bad_debt_expense",
+		Options:           stage1Opts,
+		CausalHint:        "Under the matching principle, which expense account captures the cost of credit customers failing to pay?",
+		Explanation:       "Bad Debt Expense records the estimated uncollectible accounts in the period the sales occurred. Offsetting Accounts Receivable directly would use the direct write-off method, which is not GAAP.",
+		RelevantConceptID: "bad_debt_allowance",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_expense", Text: "Expense"},
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 1402)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Bad Debt Expense?",
+		CorrectOptionID:   "opt_expense",
+		Options:           stage2Opts,
+		CausalHint:        "Does this account track a business operating cost, a resource, or an obligation?",
+		Explanation:       "Bad Debt Expense is an Expense that reduces net income and Stockholders' Equity.",
+		RelevantConceptID: "bad_debt_allowance",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 1403)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Bad Debt Expense increase or decrease when recording this year-end estimate?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Does recording an expense add to the expenses accumulated this period?",
+		Explanation:       "Bad Debt Expense increases as additional estimated uncollectible costs are recorded for the period.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 1404)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is an increase in an Expense recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Expenses have a normal debit balance. Which side records an increase?",
+		Explanation:       "Expenses increase on the Debit (left) side, which in turn reduces Stockholders' Equity.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_allowance", Text: "Allowance for Doubtful Accounts (Contra-Asset)"},
+		{ID: "opt_accounts_receivable", Text: "Accounts Receivable (Asset)", ErrorTag: engine.TagDirectWriteOffExpense},
+		{ID: "opt_cash", Text: "Cash (Asset)", ErrorTag: engine.TagWrongAccount},
+	}, seed, 1405)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which account balances Bad Debt Expense under the allowance method?",
+		CorrectOptionID:   "opt_allowance",
+		Options:           stage5Opts,
+		CausalHint:        "We do not yet know which specific customers will not pay. Which contra-asset reserve account is credited?",
+		Explanation:       "Allowance for Doubtful Accounts is credited. It is a contra-asset that offsets Accounts Receivable on the balance sheet without removing specific customer balances before they default.",
+		RelevantConceptID: "bad_debt_allowance",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_exp_cr_allow", Text: fmt.Sprintf("Debit Bad Debt Expense %s / Credit Allowance for Doubtful Accounts %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_exp_cr_ar", Text: fmt.Sprintf("Debit Bad Debt Expense %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagDirectWriteOffExpense},
+		{ID: "opt_dr_allow_cr_exp", Text: fmt.Sprintf("Debit Allowance for Doubtful Accounts %s / Credit Bad Debt Expense %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 1406)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced adjusting entry under the allowance method?",
+		CorrectOptionID:   "opt_dr_exp_cr_allow",
+		Options:           stage6Opts,
+		CausalHint:        "Under the allowance method, debit the expense and credit the contra-asset reserve.",
+		Explanation:       fmt.Sprintf("Debit Bad Debt Expense %s and Credit Allowance for Doubtful Accounts %s. Direct write-off to Accounts Receivable is rejected by GAAP matching.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "bad_debt_allowance",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does recording estimated uncollectible accounts affect the balance sheet equation?",
+		CorrectOptionID: "opt_assets_down_eq_down",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Allowance for Doubtful Accounts); Equity decreases by %s (-Bad Debt Expense); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_no_net_change", Text: "No net change in assets; expenses only affect net income.", ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 1407),
+		CausalHint:        "The allowance is a contra-asset (credit decreases total assets), and expense reduces equity.",
+		Explanation:       fmt.Sprintf("Net assets decrease by %s through the contra-asset Allowance for Doubtful Accounts, and Equity decreases by %s via Bad Debt Expense.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "bad_debt_allowance",
+	}
+}
+
+func buildIssueBondsParStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash"},
+		{ID: "opt_bonds_payable", Text: "Bonds Payable", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_common_stock", Text: "Common Stock", ErrorTag: engine.TagStockIssuedInsteadOfBond},
+	}, seed, 1501)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "What did the company receive today from bondholders, and which account records it?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage1Opts,
+		CausalHint:        "What liquid resource entered the business upon issuing the bonds?",
+		Explanation:       "Cash records the money received from issuing bonds to investors.",
+		RelevantConceptID: "cash_classification",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 1502)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Cash?",
+		CorrectOptionID:   "opt_asset",
+		Options:           stage2Opts,
+		CausalHint:        "Is cash a resource the company owns and controls?",
+		Explanation:       "Cash is an Asset because the company owns and can use it.",
+		RelevantConceptID: "cash_classification",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 1503)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Cash increase or decrease upon issuing bonds for cash?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Did money flow into the company from bond investors?",
+		Explanation:       "Cash increases because the company received funds from the bond issue.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 1504)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is an increase to an Asset (Cash) recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Assets have a normal debit balance. Which side records an increase?",
+		Explanation:       "Assets increase on the Debit (left side).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_bonds_payable", Text: "Bonds Payable (Liability)"},
+		{ID: "opt_common_stock", Text: "Common Stock (Equity)", ErrorTag: engine.TagStockIssuedInsteadOfBond},
+		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)", ErrorTag: engine.TagRevenueRecordedOnBorrowing},
+	}, seed, 1505)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which account balances the cash received from bond investors?",
+		CorrectOptionID:   "opt_bonds_payable",
+		Options:           stage5Opts,
+		CausalHint:        "Did investors purchase debt notes with repayment obligations or equity ownership shares?",
+		Explanation:       "Bonds Payable is a long-term liability recording the principal obligation owed to bondholders. Common Stock represents equity ownership, not debt.",
+		RelevantConceptID: "bonds_payable_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_cash_cr_bonds", Text: fmt.Sprintf("Debit Cash %s / Credit Bonds Payable %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_cash_cr_stock", Text: fmt.Sprintf("Debit Cash %s / Credit Common Stock %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagStockIssuedInsteadOfBond},
+		{ID: "opt_dr_bonds_cr_cash", Text: fmt.Sprintf("Debit Bonds Payable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 1506)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for issuing bonds at par?",
+		CorrectOptionID:   "opt_dr_cash_cr_bonds",
+		Options:           stage6Opts,
+		CausalHint:        "Debit the asset received and credit the long-term liability obligation incurred.",
+		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Bonds Payable %s. Bonds are debt financing, not equity.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "bonds_payable_classification",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does issuing bonds at par affect the accounting equation?",
+		CorrectOptionID: "opt_assets_up_liab_up",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Bonds Payable); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s; Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_liab_up_eq_down", Text: fmt.Sprintf("Liabilities increase by %s; Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 1507),
+		CausalHint:        "Cash increases assets, and Bonds Payable increases liabilities. No equity changes occur upon borrowing.",
+		Explanation:       fmt.Sprintf("Assets increase by %s (+Cash) and liabilities increase by %s (+Bonds Payable). Equity is unaffected by borrowing principal.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "bonds_payable_classification",
+	}
+}
+
+func buildAcquireGoodwillStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_goodwill", Text: "Goodwill"},
+		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagGoodwillExpensed},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
+	}, seed, 1601)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Which asset account records the excess purchase price paid over the fair value of net identifiable assets acquired?",
+		CorrectOptionID:   "opt_goodwill",
+		Options:           stage1Opts,
+		CausalHint:        "What intangible asset account captures the premium paid for an established business's reputation, workforce, and synergies?",
+		Explanation:       "Goodwill is capitalized as an intangible asset representing the premium paid over the fair value of identifiable net assets acquired.",
+		RelevantConceptID: "goodwill_classification",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagGoodwillExpensed},
+		{ID: "opt_equity", Text: "Equity"},
+		{ID: "opt_liability", Text: "Liability"},
+	}, seed, 1602)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Goodwill?",
+		CorrectOptionID:   "opt_asset",
+		Options:           stage2Opts,
+		CausalHint:        "Is Goodwill an economic resource expected to provide future benefits, or an immediate period expense?",
+		Explanation:       "Goodwill is an indefinite-lived intangible Asset, not an immediate operating expense.",
+		RelevantConceptID: "goodwill_classification",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 1603)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Goodwill increase or decrease upon completing this business acquisition?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Was a new intangible asset acquired today?",
+		Explanation:       "Goodwill increases because the company acquired a new business unit.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 1604)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is an increase to an Asset (Goodwill) recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Which side is an asset's normal balance?",
+		Explanation:       "Assets increase by Debit (left side).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+		{ID: "opt_common_stock", Text: "Common Stock (Equity)"},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable (Liability)"},
+	}, seed, 1605)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which other account changes when cash is paid to complete the acquisition?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage5Opts,
+		CausalHint:        "What resource did the buyer transfer to the seller to complete the purchase?",
+		Explanation:       "Cash decreases because the purchase was paid in cash, so Cash is credited.",
+		RelevantConceptID: "goodwill_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_goodwill_cr_cash", Text: fmt.Sprintf("Debit Goodwill %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_expense_cr_cash", Text: fmt.Sprintf("Debit an expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagGoodwillExpensed},
+		{ID: "opt_dr_cash_cr_goodwill", Text: fmt.Sprintf("Debit Cash %s / Credit Goodwill %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 1606)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for acquiring Goodwill paid in cash?",
+		CorrectOptionID:   "opt_dr_goodwill_cr_cash",
+		Options:           stage6Opts,
+		CausalHint:        "Debit the new intangible asset acquired and credit the cash resource paid.",
+		Explanation:       fmt.Sprintf("Debit Goodwill %s and Credit Cash %s. Goodwill is capitalized, not expensed.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "goodwill_classification",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does acquiring goodwill for cash affect the balance sheet equation?",
+		CorrectOptionID: "opt_asset_swap",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_asset_swap", Text: fmt.Sprintf("Net Assets change is $0 (+Goodwill %s, -Cash %s); Liabilities and Equity are unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s; Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s; Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 1607),
+		CausalHint:        "One asset (Goodwill) increased while another asset (Cash) decreased by the same amount.",
+		Explanation:       fmt.Sprintf("This is an asset swap: Goodwill increases by %s and Cash decreases by %s. Net Assets, Liabilities, and Equity remain completely unchanged.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "goodwill_classification",
+	}
+}
+
+func buildCreditSalesCashFlowStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_ar", Text: "Accounts Receivable"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
+		{ID: "opt_service_rev", Text: "Service Revenue"},
+	}, seed, 1701)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Which account records the customer claim when services are completed on credit?",
+		CorrectOptionID:   "opt_ar",
+		Options:           stage1Opts,
+		CausalHint:        "The customer was billed but has not paid. Which account tracks uncollected customer receivables?",
+		Explanation:       "Accounts Receivable records the claim to future cash. No cash was received today.",
+		RelevantConceptID: "accounts_receivable_classification",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_revenue", Text: "Revenue"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 1702)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Accounts Receivable?",
+		CorrectOptionID:   "opt_asset",
+		Options:           stage2Opts,
+		CausalHint:        "Is a claim to future cash an economic resource owned by the company?",
+		Explanation:       "Accounts Receivable is an Asset representing future economic benefits.",
+		RelevantConceptID: "accounts_receivable_classification",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 1703)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Accounts Receivable increase or decrease when performing services on account?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Does completing unpaid work add to the customer claims owed to the company?",
+		Explanation:       "Accounts Receivable increases as a new customer invoice is issued.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 1704)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is an increase to an Asset (Accounts Receivable) recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Assets have a normal debit balance. Which side records an increase?",
+		Explanation:       "Assets increase by Debit (left side).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_service_rev", Text: "Service Revenue (Revenue)"},
+		{ID: "opt_unearned_revenue", Text: "Unearned Revenue (Liability)"},
+		{ID: "opt_cash", Text: "Cash (Asset)", ErrorTag: engine.TagCashRecordedWhenUncollected},
+	}, seed, 1705)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which account balances Accounts Receivable when service performance is complete today?",
+		CorrectOptionID:   "opt_service_rev",
+		Options:           stage5Opts,
+		CausalHint:        "The service work is done today. Which account records earning from completed work?",
+		Explanation:       "Service Revenue is credited because the performance obligation was satisfied today.",
+		RelevantConceptID: "service_revenue_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_ar_cr_rev", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedWhenUncollected},
+		{ID: "opt_dr_rev_cr_ar", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 1706)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for services performed on credit?",
+		CorrectOptionID:   "opt_dr_ar_cr_rev",
+		Options:           stage6Opts,
+		CausalHint:        "Debit the receivable claim and credit earned revenue.",
+		Explanation:       fmt.Sprintf("Debit Accounts Receivable %s and Credit Service Revenue %s.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "service_revenue_classification",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does this affect the equation, and how is it treated on the indirect Statement of Cash Flows?",
+		CorrectOptionID: "opt_cf_deduct",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_cf_deduct", Text: fmt.Sprintf("Assets increase (+A/R %s); Equity increases (+Revenue %s). In the indirect SCF, +A/R is deducted from Net Income because no cash was collected.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_cf_add", Text: fmt.Sprintf("Operating cash flow increases by %s because revenue was earned.", amt.FormatDollars()), ErrorTag: engine.TagCashFlowOperatingWrongDirection},
+			{ID: "opt_no_effect", Text: "No effect on the Statement of Cash Flows because no cash moved.", ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 1707),
+		CausalHint:        "Net Income includes this revenue, but no cash came in. In the indirect method operating section, do you add or subtract the increase in receivables?",
+		Explanation:       fmt.Sprintf("Assets increase by %s (+A/R) and Equity increases by %s (+Revenue). On the Statement of Cash Flows (indirect method), because Net Income includes this %s of revenue but no cash was received, the increase in Accounts Receivable must be DEDUCTED from Net Income to calculate Operating Cash Flow.", amt.FormatDollars(), amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "statement_of_cash_flows_indirect",
+	}
+}
+
+func buildWriteOffReceivableStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_allowance", Text: "Allowance for Doubtful Accounts"},
+		{ID: "opt_bad_debt_expense", Text: "Bad Debt Expense", ErrorTag: engine.TagWriteOffExpensedAgain},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
+	}, seed, 1801)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Which contra-asset account is debited when writing off a specific uncollectible customer balance under the allowance method?",
+		CorrectOptionID:   "opt_allowance",
+		Options:           stage1Opts,
+		CausalHint:        "Bad Debt Expense was already recognized when estimating uncollectibles at period end. Which reserve account is debited to absorb this specific customer default?",
+		Explanation:       "Allowance for Doubtful Accounts is the contra-asset reserve that absorbs specific customer defaults under the allowance method, matching bad debt expense in advance.",
+		RelevantConceptID: "allowance_write_off",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_asset", Text: "Asset (Contra-Asset)"},
+		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagWriteOffExpensedAgain},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 1802)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Allowance for Doubtful Accounts?",
+		CorrectOptionID:   "opt_asset",
+		Options:           stage2Opts,
+		CausalHint:        "Is the allowance an immediate income statement expense, or a balance sheet reserve that offsets Accounts Receivable?",
+		Explanation:       "Allowance for Doubtful Accounts is a contra-asset account offsetting Accounts Receivable on the balance sheet.",
+		RelevantConceptID: "allowance_write_off",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_decrease", Text: "Decrease"},
+		{ID: "opt_increase", Text: "Increase"},
+	}, seed, 1803)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does the Allowance for Doubtful Accounts reserve increase or decrease when absorbing this write-off?",
+		CorrectOptionID:   "opt_decrease",
+		Options:           stage3Opts,
+		CausalHint:        "Does writing off an uncollectible customer account reduce the balance of the previously accumulated allowance reserve?",
+		Explanation:       "Allowance for Doubtful Accounts decreases because the reserve is being used to write off a specific default.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 1804)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is a decrease to a Contra-Asset (Allowance for Doubtful Accounts) recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Contra-assets have a normal credit balance. Which side records a decrease to a contra-asset?",
+		Explanation:       "Contra-assets have a normal credit balance, so a decrease is recorded with a Debit (left side).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_ar", Text: "Accounts Receivable (Asset)"},
+		{ID: "opt_bad_debt_expense", Text: "Bad Debt Expense (Expense)", ErrorTag: engine.TagWriteOffExpensedAgain},
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+	}, seed, 1805)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which account is credited to remove the specific customer's uncollectible balance from the books?",
+		CorrectOptionID:   "opt_ar",
+		Options:           stage5Opts,
+		CausalHint:        "The customer will never pay. Which account tracked the specific uncollected invoice that must now be removed?",
+		Explanation:       "Accounts Receivable is credited to eliminate the uncollectible customer account from the company's ledger.",
+		RelevantConceptID: "allowance_write_off",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_allowance_cr_ar", Text: fmt.Sprintf("Debit Allowance for Doubtful Accounts %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_expense_cr_ar", Text: fmt.Sprintf("Debit Bad Debt Expense %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagWriteOffExpensedAgain},
+		{ID: "opt_dr_ar_cr_allowance", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Allowance for Doubtful Accounts %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 1806)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry to write off the specific uncollectible account?",
+		CorrectOptionID:   "opt_dr_allowance_cr_ar",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry reduces the contra-asset reserve and eliminates the uncollectible customer account?",
+		Explanation:       fmt.Sprintf("Debit Allowance for Doubtful Accounts %s and Credit Accounts Receivable %s. Do not debit Bad Debt Expense again.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "allowance_write_off",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does writing off an uncollectible account affect the accounting equation and Net Realizable A/R?",
+		CorrectOptionID: "opt_net_ar_unchanged",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_net_ar_unchanged", Text: fmt.Sprintf("Total Assets, Liabilities, and Equity change by $0. Gross A/R decreases by %s and the contra-asset decreases by %s, leaving Net Realizable A/R and Net Income completely unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s; Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagWriteOffExpensedAgain},
+			{ID: "opt_liab_down_assets_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 1807),
+		CausalHint:        "Gross A/R went down, but the offsetting allowance also went down by the same amount. Did Net Realizable Value change?",
+		Explanation:       fmt.Sprintf("This entry has a $0 net effect on total assets: Gross A/R decreases by %s, and Allowance for Doubtful Accounts decreases by %s. Net Realizable Accounts Receivable and Net Income are completely unchanged upon write-off.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "allowance_write_off",
+	}
+}
+
+func buildIssueBondsDiscountStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	discountAmt := domain.NewMoney(amt.Cents() * 5 / 100)
+	cashAmt := amt.Sub(discountAmt)
+
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_discount", Text: "Discount on Bonds Payable"},
+		{ID: "opt_interest_expense", Text: "Interest Expense", ErrorTag: engine.TagDiscountRecordedAsLoss},
+		{ID: "opt_common_stock", Text: "Common Stock", ErrorTag: engine.TagStockIssuedInsteadOfBond},
+	}, seed, 1901)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Which contra-liability account records the difference when bonds are issued for cash proceeds below face value?",
+		CorrectOptionID:   "opt_discount",
+		Options:           stage1Opts,
+		CausalHint:        "Does issuing bonds at a discount represent an immediate loss, or a contra-liability account that offsets Bonds Payable to carrying value?",
+		Explanation:       "Discount on Bonds Payable is a contra-liability account recording the discount below par value.",
+		RelevantConceptID: "bond_discount_issuance",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_liability", Text: "Liability (Contra-Liability)"},
+		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagDiscountRecordedAsLoss},
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 1902)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Discount on Bonds Payable?",
+		CorrectOptionID:   "opt_liability",
+		Options:           stage2Opts,
+		CausalHint:        "Is this account an immediate expense, or a valuation contra-account paired with the Bonds Payable liability?",
+		Explanation:       "Discount on Bonds Payable is a Contra-Liability that offsets Bonds Payable on the balance sheet.",
+		RelevantConceptID: "bond_discount_issuance",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 1903)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Discount on Bonds Payable increase or decrease upon bond issuance at a discount?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "A new bond contract is issued below par. Does the accumulated bond discount increase or decrease?",
+		Explanation:       "Discount on Bonds Payable increases as the new discount is recorded upon issuance.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 1904)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is an increase to a Contra-Liability (Discount on Bonds Payable) recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Liabilities have a normal credit balance. Which side is the normal balance of a contra-liability?",
+		Explanation:       "Contra-liabilities have a normal Debit balance, the opposite of the normal credit balance of liabilities.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_bonds_payable", Text: "Bonds Payable (Liability)"},
+		{ID: "opt_common_stock", Text: "Common Stock (Equity)", ErrorTag: engine.TagStockIssuedInsteadOfBond},
+		{ID: "opt_service_revenue", Text: "Service Revenue (Revenue)"},
+	}, seed, 1905)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which liability account is credited for the full face maturity value of the issued bonds?",
+		CorrectOptionID:   "opt_bonds_payable",
+		Options:           stage5Opts,
+		CausalHint:        "Which long-term liability account records the principal maturity repayment obligation owed to bondholders?",
+		Explanation:       "Bonds Payable is credited for the full par/face value of the debt obligation owed at maturity.",
+		RelevantConceptID: "bond_discount_issuance",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_cash_disc_cr_bonds", Text: fmt.Sprintf("Debit Cash %s, Debit Discount on Bonds Payable %s / Credit Bonds Payable %s", cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_cash_exp_cr_bonds", Text: fmt.Sprintf("Debit Cash %s, Debit Interest Expense %s / Credit Bonds Payable %s", cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagDiscountRecordedAsLoss},
+		{ID: "opt_dr_cash_cr_bonds", Text: fmt.Sprintf("Debit Cash %s / Credit Bonds Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+	}, seed, 1906)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for issuing bonds at a discount?",
+		CorrectOptionID:   "opt_dr_cash_disc_cr_bonds",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the cash proceeds, the contra-liability discount, and the full face value debt obligation?",
+		Explanation:       fmt.Sprintf("Debit Cash %s, Debit Discount on Bonds Payable %s, and Credit Bonds Payable %s. The discount is amortized over time, not expensed at issuance.", cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "bond_discount_issuance",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does issuing bonds at a discount affect the balance sheet equation?",
+		CorrectOptionID: "opt_assets_up_net_liab_up",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_up_net_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Net Liabilities increase by %s (+Bonds Payable %s, -Discount %s); Equity is unchanged.", cashAmt.FormatDollars(), cashAmt.FormatDollars(), amt.FormatDollars(), discountAmt.FormatDollars())},
+			{ID: "opt_assets_up_eq_down", Text: fmt.Sprintf("Assets increase by %s; Equity decreases by %s; Liabilities increase by %s.", cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagDiscountRecordedAsLoss},
+			{ID: "opt_assets_up_liab_up_par", Text: fmt.Sprintf("Assets increase by %s; Liabilities increase by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 1907),
+		CausalHint:        "Cash received increases Assets. Bonds Payable increases liabilities, but Discount offsets it. Is Equity affected upon borrowing?",
+		Explanation:       fmt.Sprintf("Assets increase by %s (+Cash); Net Liabilities increase by the net carrying value of %s (+Bonds Payable %s minus -Discount %s); Equity is completely unaffected by debt issuance proceeds.", cashAmt.FormatDollars(), cashAmt.FormatDollars(), amt.FormatDollars(), discountAmt.FormatDollars()),
+		RelevantConceptID: "bond_discount_issuance",
+	}
+}
+
+func buildCapitalizeSoftwareFeasibilityStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cap_software", Text: "Capitalized Software Costs"},
+		{ID: "opt_rent_expense", Text: "Operating Expense / R&D Expense", ErrorTag: engine.TagExpensingFeasibleSoftware},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2001)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Under US GAAP (ASC 985-20), which intangible asset account capitalizes software development coding costs incurred after technological feasibility?",
+		CorrectOptionID:   "opt_cap_software",
+		Options:           stage1Opts,
+		CausalHint:        "Costs incurred AFTER technological feasibility is established are capitalized as an asset. Which account captures capitalized software costs?",
+		Explanation:       "Capitalized Software Costs is an intangible asset account capturing software development costs incurred between technological feasibility and general commercial release.",
+		RelevantConceptID: "software_capitalization",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_asset", Text: "Asset (Intangible Asset)"},
+		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagExpensingFeasibleSoftware},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 2002)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Capitalized Software Costs?",
+		CorrectOptionID:   "opt_asset",
+		Options:           stage2Opts,
+		CausalHint:        "Does capitalized software represent an economic resource providing future revenue, or an immediate period expense?",
+		Explanation:       "Capitalized Software Costs is an intangible Asset, not an immediate operating expense.",
+		RelevantConceptID: "software_capitalization",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2003)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Capitalized Software Costs increase or decrease as development expenditures are capitalized?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Does the capitalized software asset balance increase as coding and testing costs are capitalized?",
+		Explanation:       "Capitalized Software Costs increases as qualifying development costs are capitalized.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 2004)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is an increase to an Asset (Capitalized Software Costs) recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Assets have a normal debit balance. Which side increases an asset?",
+		Explanation:       "Assets increase by Debit (left side).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+		{ID: "opt_common_stock", Text: "Common Stock (Equity)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue (Revenue)"},
+	}, seed, 2005)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which account is credited when development costs are paid in cash?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage5Opts,
+		CausalHint:        "What liquid resource did the company pay out for developer compensation?",
+		Explanation:       "Cash is credited because cash was paid to fund the development expenditures.",
+		RelevantConceptID: "software_capitalization",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_cap_cr_cash", Text: fmt.Sprintf("Debit Capitalized Software Costs %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_exp_cr_cash", Text: fmt.Sprintf("Debit an expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpensingFeasibleSoftware},
+		{ID: "opt_dr_cash_cr_cap", Text: fmt.Sprintf("Debit Cash %s / Credit Capitalized Software Costs %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 2006)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry to record software coding costs incurred post-feasibility?",
+		CorrectOptionID:   "opt_dr_cap_cr_cash",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry capitalizes the software development asset and records the cash paid for development?",
+		Explanation:       fmt.Sprintf("Debit Capitalized Software Costs %s and Credit Cash %s. Under US GAAP, feasibility mandates capitalization rather than immediate R&D expensing.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "software_capitalization",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does capitalizing software development costs affect the accounting equation?",
+		CorrectOptionID: "opt_asset_swap_soft",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_asset_swap_soft", Text: fmt.Sprintf("Asset swap: Capitalized Software Costs increases (+A %s) and Cash decreases (-A %s); Total Assets, Liabilities, and Equity remain unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s; Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpensingFeasibleSoftware},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s; Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2007),
+		CausalHint:        "One asset increased while another asset decreased by the exact same amount. How does this asset exchange affect the accounting equation?",
+		Explanation:       fmt.Sprintf("This is an asset swap: Capitalized Software Costs increases by %s and Cash decreases by %s. Net Assets, Liabilities, and Equity remain completely unchanged.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "software_capitalization",
+	}
+}
+
+func buildCurrentRatioAnalysisStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_ap", Text: "Accounts Payable"},
+		{ID: "opt_rent_expense", Text: "Operating Expense", ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
+		{ID: "opt_unearned_revenue", Text: "Unearned Revenue"},
+	}, seed, 2101)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Which liability account decreases when a retail company pays cash to satisfy outstanding supplier invoices?",
+		CorrectOptionID:   "opt_ap",
+		Options:           stage1Opts,
+		CausalHint:        "Trade debts owed to suppliers for inventory or supplies are recorded in which current liability account?",
+		Explanation:       "Accounts Payable records amounts owed to trade suppliers; paying supplier invoices settles this liability.",
+		RelevantConceptID: "current_ratio_liquidity",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_liability", Text: "Liability (Current Liability)"},
+		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 2102)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Accounts Payable?",
+		CorrectOptionID:   "opt_liability",
+		Options:           stage2Opts,
+		CausalHint:        "Is an obligation owed to trade suppliers an Asset, a Liability, or an Equity account?",
+		Explanation:       "Accounts Payable is a Current Liability representing short-term claims by trade creditors.",
+		RelevantConceptID: "current_ratio_liquidity",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_decrease", Text: "Decrease"},
+		{ID: "opt_increase", Text: "Increase"},
+	}, seed, 2103)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Accounts Payable increase or decrease when the company pays supplier balances in cash?",
+		CorrectOptionID:   "opt_decrease",
+		Options:           stage3Opts,
+		CausalHint:        "Does paying supplier bills reduce the outstanding trade liability owed to creditors?",
+		Explanation:       "Accounts Payable decreases as the debt to suppliers is satisfied.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+	}, seed, 2104)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "How is a decrease to a Liability (Accounts Payable) recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Liabilities increase by Credit. Which side records a decrease?",
+		Explanation:       "Liabilities decrease by Debit (left side).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+		{ID: "opt_accounts_receivable", Text: "Accounts Receivable (Asset)"},
+		{ID: "opt_common_stock", Text: "Common Stock (Equity)"},
+	}, seed, 2105)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which current asset account decreases when supplier bills are paid?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage5Opts,
+		CausalHint:        "What liquid payment medium was transferred to suppliers to satisfy the invoice?",
+		Explanation:       "Cash is credited because cash was disbursed to pay the suppliers.",
+		RelevantConceptID: "current_ratio_liquidity",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_ap_cr_cash", Text: fmt.Sprintf("Debit Accounts Payable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_exp_cr_cash", Text: fmt.Sprintf("Debit an expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
+		{ID: "opt_dr_cash_cr_ap", Text: fmt.Sprintf("Debit Cash %s / Credit Accounts Payable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 2106)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for paying Accounts Payable in cash?",
+		CorrectOptionID:   "opt_dr_ap_cr_cash",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the reduction to Accounts Payable alongside the cash outflow?",
+		Explanation:       fmt.Sprintf("Debit Accounts Payable %s and Credit Cash %s. Settle the liability without recording a second expense.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "current_ratio_liquidity",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does paying Accounts Payable affect the equation, Working Capital, and the Current Ratio (assuming Current Ratio > 1.0)?",
+		CorrectOptionID: "opt_cr_increases",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_cr_increases", Text: fmt.Sprintf("Assets decrease by %s (-Cash) and Liabilities decrease by %s (-Accounts Payable). Working Capital is unchanged, and the Current Ratio increases.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_cr_decreases", Text: fmt.Sprintf("Assets decrease by %s; the Current Ratio decreases because liquid cash was spent.", amt.FormatDollars()), ErrorTag: engine.TagCurrentRatioWrongDirection},
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s; Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
+		}, seed, 2107),
+		CausalHint:        "If a company has a Current Ratio greater than 1.0, what happens to the ratio when equal amounts are subtracted from both Current Assets and Current Liabilities?",
+		Explanation:       fmt.Sprintf("Assets decrease (-Cash %s) and Liabilities decrease (-A/P %s). Working Capital (CA - CL) is unchanged. For any firm with Current Ratio > 1.0, subtracting equal amounts from numerator and denominator increases the Current Ratio.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "current_ratio_liquidity",
+	}
+}
+
+func buildRepurchaseTreasuryStockStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_treasury_stock", Text: "Treasury Stock"},
+		{ID: "opt_investment", Text: "Marketable Securities / Investment Asset", ErrorTag: engine.TagTreasuryStockRecordedAsAsset},
+		{ID: "opt_common_stock", Text: "Common Stock", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2201)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "When a corporation buys back its own shares to hold in treasury, which contra-equity account is debited?",
+		CorrectOptionID:   "opt_treasury_stock",
+		Options:           stage1Opts,
+		CausalHint:        "Does buying back company shares create an outside asset investment, or a contra-equity balance reducing stockholders' equity?",
+		Explanation:       "Treasury Stock records the cost of the corporation's own shares repurchased from stockholders to hold in treasury.",
+		RelevantConceptID: "treasury_stock_accounting",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_equity", Text: "Equity (Contra-Equity)"},
+		{ID: "opt_asset", Text: "Asset", ErrorTag: engine.TagTreasuryStockRecordedAsAsset},
+		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagExpenseRecordedOnLoanRepayment},
+		{ID: "opt_liability", Text: "Liability"},
+	}, seed, 2202)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Treasury Stock?",
+		CorrectOptionID:   "opt_equity",
+		Options:           stage2Opts,
+		CausalHint:        "Can a corporation own an asset representing an ownership claim on itself, or does treasury stock offset total stockholders' equity?",
+		Explanation:       "Treasury Stock is a contra-equity account that offsets stockholders' equity on the balance sheet.",
+		RelevantConceptID: "treasury_stock_accounting",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2203)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does the Treasury Stock account balance increase or decrease when shares are repurchased?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Does buying back more shares increase the accumulated cost of shares held in treasury?",
+		Explanation:       "Treasury Stock increases because additional treasury shares are acquired at cost.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2204)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "To increase a contra-equity account with a normal debit balance, which side is recorded?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Treasury Stock has a normal debit balance (opposite to regular equity). To increase it, do you record on the left or right?",
+		Explanation:       "Treasury Stock increases on the left side (Debit), which has the effect of reducing total stockholders' equity.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+		{ID: "opt_retained_earnings", Text: "Retained Earnings (Equity)", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_notes_payable", Text: "Notes Payable (Liability)", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2205)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "What asset account is credited for the cash disbursed to repurchase the shares?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage5Opts,
+		CausalHint:        "What liquid asset was paid out to buy the shares back from market investors?",
+		Explanation:       "Cash is credited because cash was disbursed to purchase the treasury shares.",
+		RelevantConceptID: "cash_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_ts_cr_cash", Text: fmt.Sprintf("Debit Treasury Stock %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_cash_cr_ts", Text: fmt.Sprintf("Debit Cash %s / Credit Treasury Stock %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_dr_asset_cr_cash", Text: fmt.Sprintf("Debit Investment in Stock (Asset) %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagTreasuryStockRecordedAsAsset},
+	}, seed, 2206)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for repurchasing common stock into treasury?",
+		CorrectOptionID:   "opt_dr_ts_cr_cash",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the acquisition of treasury stock and the cash outflow?",
+		Explanation:       fmt.Sprintf("Debit Treasury Stock %s and Credit Cash %s. Treasury shares are recorded at cost as contra-equity, not as an asset.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "treasury_stock_accounting",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does repurchasing treasury stock affect the balance sheet equation?",
+		CorrectOptionID: "opt_assets_down_eq_down",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Treasury Stock); Liabilities are unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_asset_swap", Text: fmt.Sprintf("Asset swap: Cash decreases by %s and Investments increase by %s; Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagTreasuryStockRecordedAsAsset},
+			{ID: "opt_liab_up", Text: fmt.Sprintf("Liabilities increase by %s; Assets decrease by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2207),
+		CausalHint:        "Cash paid reduces Assets. What happens to total Stockholders' Equity when Treasury Stock (a contra-equity account) increases?",
+		Explanation:       fmt.Sprintf("Assets decrease (-Cash %s) and Equity decreases (-Treasury Stock %s); Liabilities are unaffected. Treasury stock reduces total stockholders' equity.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "accounting_equation_invariants",
+	}
+}
+
+func buildPayBondInterestStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	discountVal := inst.Parameters["discount_minor_units"]
+	if discountVal <= 0 {
+		discountVal = amt.Cents() * 20 / 100
+	}
+	cashVal := inst.Parameters["cash_minor_units"]
+	if cashVal <= 0 {
+		cashVal = amt.Cents() - discountVal
+	}
+	cashAmt := domain.NewMoney(cashVal)
+	discountAmt := domain.NewMoney(discountVal)
+
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_interest_expense", Text: "Interest Expense"},
+		{ID: "opt_bonds_payable", Text: "Bonds Payable", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2301)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Which expense account records the total cost of borrowing, including cash interest and discount amortization?",
+		CorrectOptionID:   "opt_interest_expense",
+		Options:           stage1Opts,
+		CausalHint:        "Does paying semi-annual bond interest reduce the principal liability owed at maturity, or record the periodic cost of borrowing as an expense?",
+		Explanation:       "Interest Expense records the total cost of borrowed funds for the period, combining cash coupon paid and discount amortized.",
+		RelevantConceptID: "bond_interest_expense",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_expense", Text: "Expense"},
+		{ID: "opt_liability", Text: "Liability", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 2302)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Interest Expense?",
+		CorrectOptionID:   "opt_expense",
+		Options:           stage2Opts,
+		CausalHint:        "Does the periodic cost of debt borrowing reduce equity as an expense, or represent the principal liability itself?",
+		Explanation:       "Interest Expense is an expense account that reduces net income and retained earnings.",
+		RelevantConceptID: "bond_interest_expense",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2303)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Interest Expense increase or decrease for the semi-annual period?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Does recognizing financing costs for the period increase accumulated interest expense?",
+		Explanation:       "Interest Expense increases as borrowing costs for the period are recognized.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2304)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "Which side is recorded to increase an Expense account?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Expenses reduce equity and have normal debit balances. Do they increase on the left or right side?",
+		Explanation:       "Expenses increase on the left side (Debit).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash_and_discount", Text: "Cash and Discount on Bonds Payable"},
+		{ID: "opt_cash_only", Text: "Cash only (omitting discount)", ErrorTag: engine.TagIgnoringBondAmortization},
+		{ID: "opt_bonds_payable", Text: "Bonds Payable", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2305)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which accounts are credited when paying the coupon and amortizing the bond discount?",
+		CorrectOptionID:   "opt_cash_and_discount",
+		Options:           stage5Opts,
+		CausalHint:        "What liquid asset is paid to bondholders, and which contra-liability account is amortized toward par?",
+		Explanation:       "Cash is credited for the cash coupon paid, and Discount on Bonds Payable is credited to amortize the contra-liability toward face value.",
+		RelevantConceptID: "discount_amortization",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_int_cr_cash_disc", Text: fmt.Sprintf("Debit Interest Expense %s, Credit Cash %s, and Credit Discount on Bonds Payable %s", amt.FormatDollars(), cashAmt.FormatDollars(), discountAmt.FormatDollars())},
+		{ID: "opt_dr_int_cr_cash_only", Text: fmt.Sprintf("Debit Interest Expense %s and Credit Cash %s (omitting amortization)", cashAmt.FormatDollars(), cashAmt.FormatDollars()), ErrorTag: engine.TagIgnoringBondAmortization},
+		{ID: "opt_reversed", Text: fmt.Sprintf("Debit Cash %s, Debit Discount %s, Credit Interest Expense %s", cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 2306)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for paying the bond coupon and amortizing the discount?",
+		CorrectOptionID:   "opt_dr_int_cr_cash_disc",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records total interest expense, cash paid, and discount amortization?",
+		Explanation:       fmt.Sprintf("Debit Interest Expense %s, Credit Cash %s, and Credit Discount on Bonds Payable %s. Total interest expense exceeds the cash coupon by the amount of discount amortized.", amt.FormatDollars(), cashAmt.FormatDollars(), discountAmt.FormatDollars()),
+		RelevantConceptID: "bond_interest_expense",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does the bond interest payment and discount amortization affect the balance sheet equation?",
+		CorrectOptionID: "opt_assets_down_liab_up_eq_down",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_down_liab_up_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Net Liabilities increase by %s (+Amortization); Equity decreases by %s (-Interest Expense).", cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_down_eq_down_cash_only", Text: fmt.Sprintf("Assets decrease by %s (-Cash); Equity decreases by %s (-Expense); Liabilities are unchanged.", cashAmt.FormatDollars(), cashAmt.FormatDollars()), ErrorTag: engine.TagIgnoringBondAmortization},
+			{ID: "opt_no_liab_effect", Text: fmt.Sprintf("Assets decrease by %s; Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2307),
+		CausalHint:        "Cash paid reduces Assets. Interest expense reduces Equity. Crediting the contra-liability discount increases carrying liabilities. Do both sides balance?",
+		Explanation:       fmt.Sprintf("Assets decrease by %s (-Cash); Net Liabilities increase by %s (+carrying value as discount shrinks); Equity decreases by %s (-Interest Expense). Equation balances: -%s = +%s + (-%s).", cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars(), cashAmt.FormatDollars(), discountAmt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "accounting_equation_invariants",
+	}
+}
+
+func buildRepo105AnalysisStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_notes_payable", Text: "Notes Payable / Short-Term Financing Liability"},
+		{ID: "opt_revenue", Text: "Sales Revenue", ErrorTag: engine.TagRepoTreatedAsSale},
+		{ID: "opt_trading_securities", Text: "Trading Securities (Asset Sale)", ErrorTag: engine.TagRepoTreatedAsSale},
+	}, seed, 2401)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "Under US GAAP economic substance, which liability account records the obligation to repay cash borrowed under a repurchase agreement?",
+		CorrectOptionID:   "opt_notes_payable",
+		Options:           stage1Opts,
+		CausalHint:        "Under economic reality, does pledging collateral for short-term cash represent an asset sale or a collateralized financing loan (Notes Payable)?",
+		Explanation:       "Notes Payable records the contractual obligation to repay the borrowed cash, reflecting economic substance as collateralized financing.",
+		RelevantConceptID: "repurchase_agreements",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_revenue", Text: "Revenue", ErrorTag: engine.TagRepoTreatedAsSale},
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 2402)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Notes Payable in a repurchase agreement?",
+		CorrectOptionID:   "opt_liability",
+		Options:           stage2Opts,
+		CausalHint:        "Does an obligation to repurchase securities and repay cash represent a liability to creditors?",
+		Explanation:       "Notes Payable is a Liability representing the obligation to repay the counterparty.",
+		RelevantConceptID: "repurchase_agreements",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2403)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does the Notes Payable debt obligation increase or decrease upon receiving borrowing proceeds?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Does borrowing cash under a repo contract increase outstanding debt liabilities?",
+		Explanation:       "Notes Payable increases because a new borrowing obligation has been incurred.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+		{ID: "opt_debit", Text: "Debit (Left side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2404)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "Which side is recorded to increase a Liability account with a normal credit balance?",
+		CorrectOptionID:   "opt_credit",
+		Options:           stage4Opts,
+		CausalHint:        "Liabilities have normal credit balances. Do they increase on the left or right side?",
+		Explanation:       "Liabilities increase on the right side (Credit).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+		{ID: "opt_revenue", Text: "Sales Revenue", ErrorTag: engine.TagRepoTreatedAsSale},
+		{ID: "opt_securities", Text: "Investment Securities", ErrorTag: engine.TagRepoTreatedAsSale},
+	}, seed, 2405)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which asset account is debited for the cash received from the counterparty?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage5Opts,
+		CausalHint:        "What liquid asset was received from the counterparty upon pledging the collateral?",
+		Explanation:       "Cash is debited because liquid cash funds were received.",
+		RelevantConceptID: "cash_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_cash_cr_notes", Text: fmt.Sprintf("Debit Cash %s / Credit Notes Payable %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_cash_cr_securities", Text: fmt.Sprintf("Debit Cash %s / Credit Investment Securities (Sale) %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagRepoTreatedAsSale},
+		{ID: "opt_reversed", Text: fmt.Sprintf("Debit Notes Payable %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 2406)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry for recording the repurchase agreement under collateralized financing?",
+		CorrectOptionID:   "opt_dr_cash_cr_notes",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the cash borrowing and the secured debt liability under collateralized financing?",
+		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Notes Payable %s. In Repo 105, Lehman aggressively booked this as a sale to temporarily remove assets and hide leverage.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "repurchase_agreements",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does transparently recording this borrowing affect the balance sheet and financial leverage?",
+		CorrectOptionID: "opt_assets_up_liab_up",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_up_liab_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Notes Payable); Equity is unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_asset_swap_hidden_leverage", Text: fmt.Sprintf("Asset swap: Cash increases and Securities decrease by %s; Liabilities and leverage appear reduced.", amt.FormatDollars()), ErrorTag: engine.TagRepoTreatedAsSale},
+			{ID: "opt_equity_up", Text: fmt.Sprintf("Assets increase by %s and Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2407),
+		CausalHint:        "Assets increase (+Cash) and Liabilities increase (+Notes Payable). How does transparently recognizing this borrowing affect the financial leverage ratio (Assets/Equity)?",
+		Explanation:       fmt.Sprintf("Assets increase (+Cash %s) and Liabilities increase (+Notes Payable %s); Equity is unchanged. Total Assets expand, maintaining true leverage, unlike Lehman's off-balance-sheet sale treatment which cosmetically depressed reported leverage before quarter-end.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "leverage_ratio_analysis",
+	}
+}
+
+func buildAppleMultiElementRevenueStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	deliveredVal := inst.Parameters["delivered_revenue_minor_units"]
+	if deliveredVal <= 0 {
+		deliveredVal = amt.Cents() * 80 / 100
+	}
+	unearnedVal := inst.Parameters["unearned_revenue_minor_units"]
+	if unearnedVal <= 0 {
+		unearnedVal = amt.Cents() - deliveredVal
+	}
+	deliveredAmt := domain.NewMoney(deliveredVal)
+	unearnedAmt := domain.NewMoney(unearnedVal)
+
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_unearned_revenue", Text: "Unearned Revenue (Deferred Revenue)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue (100% Immediate)", ErrorTag: engine.TagPrematureRevenueRecognition},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2501)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "When selling bundled hardware with future multi-year software updates, which liability account records the deferred portion for undelivered software?",
+		CorrectOptionID:   "opt_unearned_revenue",
+		Options:           stage1Opts,
+		CausalHint:        "When a portion of the bundle price covers future performance obligations (software updates over 2 years), which liability account records that unearned portion?",
+		Explanation:       "Unearned Revenue records the consideration allocated to undelivered performance obligations until future software updates are delivered over time.",
+		RelevantConceptID: "unearned_revenue_liability",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_revenue", Text: "Revenue", ErrorTag: engine.TagPrematureRevenueRecognition},
+		{ID: "opt_equity", Text: "Equity"},
+		{ID: "opt_asset", Text: "Asset"},
+	}, seed, 2502)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Unearned Revenue?",
+		CorrectOptionID:   "opt_liability",
+		Options:           stage2Opts,
+		CausalHint:        "Does receiving customer cash in advance for undelivered future software updates create an obligation (liability) to deliver?",
+		Explanation:       "Unearned Revenue is a Liability representing the obligation to perform future services or provide software updates.",
+		RelevantConceptID: "unearned_revenue_liability",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2503)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Unearned Revenue increase or decrease when the bundled sales cash is collected?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "When customer cash is received for undelivered future software updates, does the Unearned Revenue liability increase or decrease?",
+		Explanation:       "Unearned Revenue increases because the company assumed a new obligation to deliver updates.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+		{ID: "opt_debit", Text: "Debit (Left side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2504)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "Which side is recorded to increase a Liability account with a normal credit balance?",
+		CorrectOptionID:   "opt_credit",
+		Options:           stage4Opts,
+		CausalHint:        "Liabilities have normal credit balances. Do they increase on the left or right side?",
+		Explanation:       "Liabilities increase on the right side (Credit).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash_and_revenue", Text: "Cash (Asset) and Service Revenue (Earned)"},
+		{ID: "opt_cash_only", Text: "Cash only (crediting all to Service Revenue)", ErrorTag: engine.TagPrematureRevenueRecognition},
+		{ID: "opt_accounts_receivable", Text: "Accounts Receivable", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2505)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which accounts record the cash inflow and the point-of-sale revenue for delivered hardware?",
+		CorrectOptionID:   "opt_cash_and_revenue",
+		Options:           stage5Opts,
+		CausalHint:        "Which revenue account records the earned portion allocated to the delivered hardware device?",
+		Explanation:       "Cash is debited for the full proceeds, and Service Revenue is credited for the portion allocated to the delivered hardware.",
+		RelevantConceptID: "point_of_sale_revenue",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_cash_cr_rev_unearned", Text: fmt.Sprintf("Debit Cash %s, Credit Service Revenue %s, Credit Unearned Revenue %s", amt.FormatDollars(), deliveredAmt.FormatDollars(), unearnedAmt.FormatDollars())},
+		{ID: "opt_dr_cash_cr_rev_100", Text: fmt.Sprintf("Debit Cash %s and Credit Service Revenue %s (100%% Immediate)", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagPrematureRevenueRecognition},
+		{ID: "opt_reversed", Text: fmt.Sprintf("Debit Service Revenue %s, Debit Unearned Revenue %s, Credit Cash %s", deliveredAmt.FormatDollars(), unearnedAmt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 2506)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry allocating consideration between delivered hardware and deferred software updates?",
+		CorrectOptionID:   "opt_dr_cash_cr_rev_unearned",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the cash proceeds, point-of-sale revenue for delivered hardware, and deferred revenue for software obligations?",
+		Explanation:       fmt.Sprintf("Debit Cash %s, Credit Service Revenue %s, and Credit Unearned Revenue %s. Consideration is allocated between delivered and undelivered performance obligations.", amt.FormatDollars(), deliveredAmt.FormatDollars(), unearnedAmt.FormatDollars()),
+		RelevantConceptID: "multi_element_revenue_recognition",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does this multi-element revenue allocation affect the balance sheet equation?",
+		CorrectOptionID: "opt_assets_up_liab_up_eq_up",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_up_liab_up_eq_up", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Unearned Rev); Equity increases by %s (+Service Rev).", amt.FormatDollars(), unearnedAmt.FormatDollars(), deliveredAmt.FormatDollars())},
+			{ID: "opt_assets_up_eq_up_100", Text: fmt.Sprintf("Assets increase by %s (+Cash) and Equity increases by %s (+Revenue 100%%); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagPrematureRevenueRecognition},
+			{ID: "opt_no_liab", Text: fmt.Sprintf("Assets increase by %s; Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2507),
+		CausalHint:        "Cash received increases Assets. How does splitting the transaction between earned revenue and unearned liability affect Liabilities and Equity?",
+		Explanation:       fmt.Sprintf("Assets increase (+Cash %s), Liabilities increase (+Unearned Revenue %s), and Equity increases (+Service Revenue %s). Equation balances: +%s = +%s + %s.", amt.FormatDollars(), unearnedAmt.FormatDollars(), deliveredAmt.FormatDollars(), amt.FormatDollars(), unearnedAmt.FormatDollars(), deliveredAmt.FormatDollars()),
+		RelevantConceptID: "accounting_equation_invariants",
+	}
+}
+
+func buildGoodwillImpairmentStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_loss_on_impairment", Text: "Loss on Impairment"},
+		{ID: "opt_rent_expense", Text: "Rent Expense", ErrorTag: engine.TagWrongAccount},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
+	}, seed, 2601)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "When testing goodwill for impairment at year-end and reporting unit carrying value exceeds fair value, which expense/loss account records the asset write-down?",
+		CorrectOptionID:   "opt_loss_on_impairment",
+		Options:           stage1Opts,
+		CausalHint:        "When a reporting unit's fair value drops below its carrying value, which loss account absorbs this non-cash asset impairment write-down?",
+		Explanation:       "Loss on Impairment is recognized in operating earnings to record the drop in goodwill value below carrying value.",
+		RelevantConceptID: "goodwill_impairment",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_expense", Text: "Expense (Loss)"},
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 2602)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Loss on Impairment?",
+		CorrectOptionID:   "opt_expense",
+		Options:           stage2Opts,
+		CausalHint:        "Does an impairment loss reduce current period earnings and equity, or represent a future resource or debt?",
+		Explanation:       "Loss on Impairment is an Expense/Loss account that reduces Net Income and Stockholders' Equity on the income statement.",
+		RelevantConceptID: "goodwill_impairment",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2603)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Loss on Impairment increase or decrease when recognizing this asset write-down?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "Does recognizing a new impairment loss increase or decrease the accumulated loss recorded for the period?",
+		Explanation:       "Loss on Impairment increases as the asset write-down is recognized.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2604)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "Which side is recorded to increase an Expense/Loss account?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Expenses and losses reduce equity and have normal debit balances. Do they increase on the left or right side?",
+		Explanation:       "Expenses and losses have normal debit balances, increasing on the left side (Debit).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_goodwill", Text: "Goodwill (Asset)"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
+		{ID: "opt_common_stock", Text: "Common Stock", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2605)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which intangible asset account is credited to write down the unrecoverable carrying value?",
+		CorrectOptionID:   "opt_goodwill",
+		Options:           stage5Opts,
+		CausalHint:        "Which recorded intangible asset became impaired and must be written down on the balance sheet?",
+		Explanation:       "Goodwill is credited to reduce its balance sheet carrying value down to implied recoverable value.",
+		RelevantConceptID: "goodwill_impairment",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_loss_cr_gw", Text: fmt.Sprintf("Debit Loss on Impairment %s / Credit Goodwill %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_gw_cr_loss", Text: fmt.Sprintf("Debit Goodwill %s / Credit Loss on Impairment %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_dr_loss_cr_cash", Text: fmt.Sprintf("Debit Loss on Impairment %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedWhenUncollected},
+	}, seed, 2606)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry to record the goodwill impairment loss?",
+		CorrectOptionID:   "opt_dr_loss_cr_gw",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the impairment loss in earnings and writes down the goodwill asset?",
+		Explanation:       fmt.Sprintf("Debit Loss on Impairment %s and Credit Goodwill %s. Goodwill impairment is a non-cash write-down that directly reduces asset carrying value.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "goodwill_impairment",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does recording goodwill impairment affect the balance sheet equation?",
+		CorrectOptionID: "opt_assets_down_eq_down",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s (-Goodwill); Equity decreases by %s (-Loss on Impairment); Liabilities unchanged.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_down_liab_down", Text: fmt.Sprintf("Assets decrease by %s; Liabilities decrease by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_no_effect", Text: fmt.Sprintf("Total Assets and Equity remain completely unchanged."), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2607),
+		CausalHint:        "Goodwill decreased and an impairment loss reduced net income. How does this write-down affect total Assets and Equity?",
+		Explanation:       fmt.Sprintf("Assets decrease (-Goodwill %s) and Equity decreases (-Loss on Impairment %s); Liabilities are unchanged. Under US GAAP (ASC 350), goodwill impairment cannot be reversed even if fair value subsequently recovers.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "accounting_equation_invariants",
+	}
+}
+
+func buildDigitalAssetAccountingStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_digital_assets", Text: "Digital Assets (Cryptocurrency)"},
+		{ID: "opt_cash_equivalents", Text: "Cash Equivalents", ErrorTag: engine.TagCryptoRecordedAsCashEquivalent},
+		{ID: "opt_rent_expense", Text: "Operating Expense", ErrorTag: engine.TagCryptoRecordedAsCashEquivalent},
+	}, seed, 2701)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "When a corporation purchases cryptocurrency (such as Tesla purchasing Bitcoin) for cash, which account records this indefinite-lived intangible asset?",
+		CorrectOptionID:   "opt_digital_assets",
+		Options:           stage1Opts,
+		CausalHint:        "Under US GAAP (ASC 350), are cryptocurrencies treated as legal cash equivalents, or capitalized as indefinite-lived intangible assets?",
+		Explanation:       "Digital Assets records cryptocurrency holdings, classified as indefinite-lived intangible assets under US GAAP.",
+		RelevantConceptID: "digital_asset_accounting",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_asset", Text: "Asset (Intangible Asset)"},
+		{ID: "opt_expense", Text: "Expense", ErrorTag: engine.TagCryptoRecordedAsCashEquivalent},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 2702)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Digital Assets?",
+		CorrectOptionID:   "opt_asset",
+		Options:           stage2Opts,
+		CausalHint:        "Does purchasing cryptocurrency represent an immediate expense, or a productive intangible resource owned by the company?",
+		Explanation:       "Digital Assets is an Intangible Asset with an indefinite useful life.",
+		RelevantConceptID: "digital_asset_accounting",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2703)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Digital Assets increase or decrease when the corporation acquires cryptocurrency?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "When the company buys and takes custody of cryptocurrency, does its digital asset balance increase or decrease?",
+		Explanation:       "Digital Assets increases as new digital holdings are acquired.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2704)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "Which side is recorded to increase an Asset account?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Assets have normal debit balances. Which side increases an asset?",
+		Explanation:       "Assets increase on the left side (Debit).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue", ErrorTag: engine.TagCryptoRecordedAsCashEquivalent},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable"},
+	}, seed, 2705)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which liquid asset account is credited for the funds paid to purchase the cryptocurrency?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage5Opts,
+		CausalHint:        "What liquid payment medium was transferred from bank reserves to purchase the digital tokens?",
+		Explanation:       "Cash is credited because cash was disbursed to execute the purchase.",
+		RelevantConceptID: "cash_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_digital_cr_cash", Text: fmt.Sprintf("Debit Digital Assets %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_cash_cr_digital", Text: fmt.Sprintf("Debit Cash %s / Credit Digital Assets %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_dr_exp_cr_cash", Text: fmt.Sprintf("Debit Operating Expense %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCryptoRecordedAsCashEquivalent},
+	}, seed, 2706)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry to record the cash purchase of cryptocurrency?",
+		CorrectOptionID:   "opt_dr_digital_cr_cash",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the acquisition of the intangible digital asset and the cash outflow?",
+		Explanation:       fmt.Sprintf("Debit Digital Assets %s and Credit Cash %s. The purchase is an asset exchange, not an immediate operating expense.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "digital_asset_accounting",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does this acquisition affect the accounting equation, and how are subsequent market fluctuations treated under US GAAP?",
+		CorrectOptionID: "opt_asset_swap_crypto",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_asset_swap_crypto", Text: fmt.Sprintf("Asset swap: Digital Assets increases by %s (+A), Cash decreases by %s (-A); Liabilities and Equity unchanged. Subsequent price declines require impairment losses, but price increases cannot be recognized as gains until sale.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s and Equity increases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_assets_down_eq_down", Text: fmt.Sprintf("Assets decrease by %s and Equity decreases by %s.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2707),
+		CausalHint:        "One asset increased while another asset decreased by the exact same amount. How does this asset exchange affect the accounting equation?",
+		Explanation:       fmt.Sprintf("Asset swap: Digital Assets increases (+A %s) and Cash decreases (-A %s); Total Assets, Liabilities, and Equity remain unchanged. Under US GAAP (ASC 350), digital assets are tested for impairment whenever market prices drop below carrying value, but price appreciation cannot be recognized as a gain until realized upon sale.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "digital_asset_accounting",
+	}
+}
+
+func buildReportingPolicyChoiceStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_unearned_revenue", Text: "Unearned Revenue (Deferred Revenue)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue (Aggressive Immediate Recognition)", ErrorTag: engine.TagAggressiveRevenueAcceleration},
+		{ID: "opt_accounts_payable", Text: "Accounts Payable", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2801)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "When receiving customer cash for service contracts with pending performance obligations, which liability account is credited under a conservative revenue recognition policy?",
+		CorrectOptionID:   "opt_unearned_revenue",
+		Options:           stage1Opts,
+		CausalHint:        "Under a conservative financial reporting policy, when cash is collected before all performance obligations are complete, which liability account defers the revenue?",
+		Explanation:       "Unearned Revenue records customer consideration received before performance obligations are fully satisfied, adhering to conservative accrual principles.",
+		RelevantConceptID: "reporting_strategy",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_revenue", Text: "Revenue", ErrorTag: engine.TagAggressiveRevenueAcceleration},
+		{ID: "opt_equity", Text: "Equity"},
+		{ID: "opt_asset", Text: "Asset"},
+	}, seed, 2802)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Unearned Revenue?",
+		CorrectOptionID:   "opt_liability",
+		Options:           stage2Opts,
+		CausalHint:        "Does receiving customer money in advance create an obligation to perform future services?",
+		Explanation:       "Unearned Revenue is a Liability representing the obligation to deliver future services or goods.",
+		RelevantConceptID: "reporting_strategy",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2803)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does Unearned Revenue increase or decrease when the advance payment is received?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "When a new advance customer receipt arrives with pending work, does the unearned obligation increase or decrease?",
+		Explanation:       "Unearned Revenue increases as the new customer advance obligation is recognized.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_credit", Text: "Credit (Right side)"},
+		{ID: "opt_debit", Text: "Debit (Left side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2804)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "Which side is recorded to increase a Liability account?",
+		CorrectOptionID:   "opt_credit",
+		Options:           stage4Opts,
+		CausalHint:        "Liabilities have normal credit balances. Which side increases a liability?",
+		Explanation:       "Liabilities increase on the right side (Credit).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_cash", Text: "Cash (Asset)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue", ErrorTag: engine.TagAggressiveRevenueAcceleration},
+		{ID: "opt_accounts_receivable", Text: "Accounts Receivable"},
+	}, seed, 2805)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which liquid asset account is debited for the cash received from the customer?",
+		CorrectOptionID:   "opt_cash",
+		Options:           stage5Opts,
+		CausalHint:        "What liquid payment medium was received from the customer today?",
+		Explanation:       "Cash is debited because cash proceeds were received.",
+		RelevantConceptID: "cash_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_cash_cr_unearned", Text: fmt.Sprintf("Debit Cash %s / Credit Unearned Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s (Aggressive Acceleration)", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagAggressiveRevenueAcceleration},
+		{ID: "opt_dr_unearned_cr_cash", Text: fmt.Sprintf("Debit Unearned Revenue %s / Credit Cash %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+	}, seed, 2806)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry recording the receipt under a conservative reporting policy?",
+		CorrectOptionID:   "opt_dr_cash_cr_unearned",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry records the cash receipt and defers revenue recognition until performance obligations are satisfied?",
+		Explanation:       fmt.Sprintf("Debit Cash %s and Credit Unearned Revenue %s. Deferring revenue until earned preserves earnings quality and prevents premature revenue recognition.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "reporting_strategy",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does this conservative policy choice affect the balance sheet equation compared to an aggressive policy?",
+		CorrectOptionID: "opt_assets_up_liab_up_conservative",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_up_liab_up_conservative", Text: fmt.Sprintf("Assets increase by %s (+Cash); Liabilities increase by %s (+Unearned Rev); Equity unchanged. Conservative policy defers earnings, whereas aggressive policy would prematurely inflate Equity.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_assets_up_eq_up", Text: fmt.Sprintf("Assets increase by %s and Equity increases by %s immediately.", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagAggressiveRevenueAcceleration},
+			{ID: "opt_asset_swap", Text: fmt.Sprintf("Asset swap: Cash increases and receivables decrease by %s.", amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+		}, seed, 2807),
+		CausalHint:        "Cash increased and an unearned liability was recognized. How does this conservative choice affect Liabilities vs Equity?",
+		Explanation:       fmt.Sprintf("Assets increase (+Cash %s) and Liabilities increase (+Unearned Revenue %s); Equity is unchanged. A conservative reporting strategy defers revenue until delivery, buffering future earnings, whereas aggressive acceleration immediately inflates current-period net income.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "reporting_strategy",
+	}
+}
+
+func buildFinancialForecastingStages(inst *domain.QuestionInstance, amt domain.Money, seed int64, proc engine.ProcessedEvent) {
+	stage1Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_accounts_receivable", Text: "Accounts Receivable"},
+		{ID: "opt_cash", Text: "Cash", ErrorTag: engine.TagCashRecordedWhenUncollected},
+		{ID: "opt_notes_payable", Text: "Notes Payable", ErrorTag: engine.TagWrongAccount},
+	}, seed, 2901)
+
+	inst.StageAnswers[domain.StageIdentifyAccount] = domain.StageAnswer{
+		Stage:             domain.StageIdentifyAccount,
+		Prompt:            "In pro-forma financial statement forecasting, which asset account models projected uncollected credit sales owed by customers?",
+		CorrectOptionID:   "opt_accounts_receivable",
+		Options:           stage1Opts,
+		CausalHint:        "When forecasting credit sales that customers will pay on invoice terms, which current asset account tracks the uncollected customer claims?",
+		Explanation:       "Accounts Receivable is the asset that tracks projected uncollected customer sales in pro-forma financial statements.",
+		RelevantConceptID: "financial_forecasting",
+	}
+
+	stage2Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_asset", Text: "Asset"},
+		{ID: "opt_revenue", Text: "Revenue"},
+		{ID: "opt_liability", Text: "Liability"},
+		{ID: "opt_equity", Text: "Equity"},
+	}, seed, 2902)
+
+	inst.StageAnswers[domain.StageAccountCategory] = domain.StageAnswer{
+		Stage:             domain.StageAccountCategory,
+		Prompt:            "What category of account is Accounts Receivable?",
+		CorrectOptionID:   "opt_asset",
+		Options:           stage2Opts,
+		CausalHint:        "Does a claim against customers for future payment represent an asset, liability, or equity?",
+		Explanation:       "Accounts Receivable is a Current Asset representing customer obligations owed to the business.",
+		RelevantConceptID: "financial_forecasting",
+	}
+
+	stage3Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_increase", Text: "Increase"},
+		{ID: "opt_decrease", Text: "Decrease"},
+	}, seed, 2903)
+
+	inst.StageAnswers[domain.StageDirection] = domain.StageAnswer{
+		Stage:             domain.StageDirection,
+		Prompt:            "Does projected Accounts Receivable increase or decrease when modeling future credit sales?",
+		CorrectOptionID:   "opt_increase",
+		Options:           stage3Opts,
+		CausalHint:        "When projecting new quarterly credit sales, does the uncollected customer claim balance increase or decrease?",
+		Explanation:       "Accounts Receivable increases as new credit sales are projected.",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage4Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_debit", Text: "Debit (Left side)"},
+		{ID: "opt_credit", Text: "Credit (Right side)", ErrorTag: engine.TagReversedSides},
+	}, seed, 2904)
+
+	inst.StageAnswers[domain.StageDebitCredit] = domain.StageAnswer{
+		Stage:             domain.StageDebitCredit,
+		Prompt:            "Which side is recorded to increase an Asset account?",
+		CorrectOptionID:   "opt_debit",
+		Options:           stage4Opts,
+		CausalHint:        "Assets have normal debit balances. Which side increases an asset?",
+		Explanation:       "Assets increase on the left side (Debit).",
+		RelevantConceptID: "debit_credit_translation",
+	}
+
+	stage5Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_service_revenue", Text: "Service Revenue (Revenue)"},
+		{ID: "opt_cash", Text: "Cash (Asset)", ErrorTag: engine.TagCashRecordedWhenUncollected},
+		{ID: "opt_unearned_revenue", Text: "Unearned Revenue"},
+	}, seed, 2905)
+
+	inst.StageAnswers[domain.StageCounterAccount] = domain.StageAnswer{
+		Stage:             domain.StageCounterAccount,
+		Prompt:            "Which revenue account is credited for the projected sales in the pro-forma income statement?",
+		CorrectOptionID:   "opt_service_revenue",
+		Options:           stage5Opts,
+		CausalHint:        "Which income statement account captures projected earned sales from customer deliveries?",
+		Explanation:       "Service Revenue is credited for the projected earnings generated in the forecast period.",
+		RelevantConceptID: "service_revenue_classification",
+	}
+
+	stage6Opts := shuffleOptions([]domain.AnswerOption{
+		{ID: "opt_dr_ar_cr_rev", Text: fmt.Sprintf("Debit Accounts Receivable %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars())},
+		{ID: "opt_dr_rev_cr_ar", Text: fmt.Sprintf("Debit Service Revenue %s / Credit Accounts Receivable %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagReversedSides},
+		{ID: "opt_dr_cash_cr_rev", Text: fmt.Sprintf("Debit Cash %s / Credit Service Revenue %s", amt.FormatDollars(), amt.FormatDollars()), ErrorTag: engine.TagCashRecordedWhenUncollected},
+	}, seed, 2906)
+
+	inst.StageAnswers[domain.StageBalancedEntry] = domain.StageAnswer{
+		Stage:             domain.StageBalancedEntry,
+		Prompt:            "What is the complete balanced journal entry modeling projected credit sales in the pro-forma forecast?",
+		CorrectOptionID:   "opt_dr_ar_cr_rev",
+		Options:           stage6Opts,
+		CausalHint:        "Which entry projects the uncollected receivable claim and the earned sales in the pro-forma model?",
+		Explanation:       fmt.Sprintf("Debit Accounts Receivable %s and Credit Service Revenue %s. Projected credit sales expand the receivable asset and increase projected operating earnings.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "financial_forecasting",
+	}
+
+	inst.StageAnswers[domain.StageEquationEffect] = domain.StageAnswer{
+		Stage:           domain.StageEquationEffect,
+		Prompt:          "How does this entry affect the projected balance sheet equation, and why do disaggregated drivers provide superior forecasting accuracy?",
+		CorrectOptionID: "opt_assets_up_eq_up_forecasting",
+		Options: shuffleOptions([]domain.AnswerOption{
+			{ID: "opt_assets_up_eq_up_forecasting", Text: fmt.Sprintf("Assets increase by %s (+A/R); Equity increases by %s (+Service Rev); Liabilities unchanged. Disaggregated unit drivers (volume × price) isolate operational bottlenecks, unlike crude top-line percentages.", amt.FormatDollars(), amt.FormatDollars())},
+			{ID: "opt_asset_swap", Text: fmt.Sprintf("Asset swap: Cash increases and receivables decrease by %s.", amt.FormatDollars()), ErrorTag: engine.TagEquationEffectMissed},
+			{ID: "opt_aggregated_growth", Text: fmt.Sprintf("Revenue increases by %s based on simple top-line percentage growth without operational drivers.", amt.FormatDollars()), ErrorTag: engine.TagAggregatedForecastAssumption},
+		}, seed, 2907),
+		CausalHint:        "Receivables increased and revenue increased equity. Why is modeling bottom-up unit volume times price more reliable than simple percentage growth?",
+		Explanation:       fmt.Sprintf("Assets increase (+Accounts Receivable %s) and Equity increases (+Service Revenue %s); Liabilities are unchanged. In financial statement forecasting, bottom-up disaggregated unit drivers (volume × price, store count) provide structural predictive accuracy and enable working capital tie-outs, whereas crude top-line percentages obscure operational constraints.", amt.FormatDollars(), amt.FormatDollars()),
+		RelevantConceptID: "financial_forecasting",
+	}
+}
+
+

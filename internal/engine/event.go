@@ -29,6 +29,23 @@ const (
 	TagUnbalancedEntry                    = "unbalanced_entry"
 	TagWrongAccount                       = "wrong_account"
 	TagWrongAmount                        = "wrong_amount"
+	TagDirectWriteOffExpense              = "direct_write_off_expense"
+	TagWriteOffExpensedAgain              = "write_off_expensed_again"
+	TagStockIssuedInsteadOfBond           = "stock_issued_instead_of_bond"
+	TagDiscountRecordedAsLoss             = "discount_recorded_as_loss"
+	TagPremiumRecordedAsGain              = "premium_recorded_as_gain"
+	TagGoodwillExpensed                   = "goodwill_expensed"
+	TagTreasuryStockRecordedAsAsset       = "treasury_stock_recorded_as_asset"
+	TagExpensingFeasibleSoftware          = "expensing_feasible_software"
+	TagCashFlowOperatingWrongDirection    = "cash_flow_operating_wrong_direction"
+	TagCurrentRatioWrongDirection         = "current_ratio_wrong_direction"
+	TagIgnoringBondAmortization           = "ignoring_bond_amortization"
+	TagRepoTreatedAsSale                  = "repo_treated_as_sale"
+	TagPrematureRevenueRecognition        = "premature_revenue_recognition"
+	TagGoodwillAmortized                  = "goodwill_amortized"
+	TagCryptoRecordedAsCashEquivalent     = "crypto_recorded_as_cash_equivalent"
+	TagAggressiveRevenueAcceleration      = "aggressive_revenue_acceleration"
+	TagAggregatedForecastAssumption       = "aggregated_forecast_assumption"
 )
 
 // TransactionEvent describes an economic event to be processed by the engine.

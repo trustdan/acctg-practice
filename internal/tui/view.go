@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/trustdan/acctg-practice/internal/bank"
 	"github.com/trustdan/acctg-practice/internal/domain"
 	"github.com/trustdan/acctg-practice/internal/exam"
 	"github.com/trustdan/acctg-practice/internal/mastery"
@@ -50,6 +51,8 @@ func (m *Model) View() string {
 		content = m.renderSessionComplete(contentWidth)
 	case StateTutorConfig:
 		content = m.renderTutorConfig(contentWidth)
+	case StateModuleSelect:
+		content = m.renderModuleSelect(contentWidth)
 	case StateSavedExplanations:
 		content = m.renderSavedExplanations(contentWidth)
 	case StateCandidatePreview:
@@ -184,7 +187,7 @@ func (m *Model) renderStatusBar(contentWidth int, modeName string, modeStyle lip
 		keyHints := m.Styles.StatusKeyHints.Render("[Esc] Stop reply (partial reply kept, not saved) [u/d] Scroll [h] Help")
 		return m.renderStatusLine(contentWidth, leftSection, keyHints)
 	}
-	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move [1-4] Select [←/→] Steps [Ctrl+←/→] Questions [u/d] Scroll [Ctrl/Cmd +/-] Zoom [?] Hint [e] Explain [V] Saved Explanations [t] Tutor [p] Review New Questions [n] New from LLM [J] Entry [h] Help [s] Mastery [A] Arcade [L] Scores [q] Quit")
+	keyHints := m.Styles.StatusKeyHints.Render("[j/k] Move [1-4] Select [←/→] Steps [Ctrl+←/→] Questions [u/d] Scroll [Ctrl/Cmd +/-] Zoom [?] Hint [e] Explain [V] Saved Explanations [t] Tutor [p] Review New Questions [n] New from LLM [J] Entry [M] Modules [h] Help [s] Mastery [A] Arcade [L] Scores [q] Quit")
 
 	return m.renderStatusLine(contentWidth, leftSection, keyHints)
 }
@@ -798,6 +801,7 @@ func (m *Model) renderHelp(contentWidth int) string {
 [ / ]           Adjust session size (5, 10, 15, 20 questions)
 [h] or [F1]     Toggle this Reference & Help screen (records assistance)
 [s]             Toggle Learner Mastery Dashboard
+[M]             Select study modules & refresh active practice questions
 [A]             Launch the arcade flight game (from any non-typing screen)
 [L]             View the arcade Hall of Fame high scores
 [Esc]           Dismiss help overlay / return to practice
@@ -1132,6 +1136,73 @@ func (m *Model) renderTutorConfig(contentWidth int) string {
 
 	// Airline Status Bar in TUTOR mode
 	sections = append(sections, m.renderStatusBar(contentWidth, "TUTOR", m.Styles.StatusModeTutor))
+
+	return lipgloss.JoinVertical(lipgloss.Left, sections...)
+}
+
+func (m *Model) renderModuleSelect(contentWidth int) string {
+	var sections []string
+
+	sections = append(sections, m.renderHeader(contentWidth))
+
+	title := m.Styles.CardTitle.Render("📚  SYLLABUS STUDY MODULE SELECTION")
+	sections = append(sections, title)
+
+	if m.ModuleNotice != "" {
+		sections = append(sections, m.Styles.ExplanationBox.Width(contentWidth).Render(m.ModuleNotice))
+	}
+
+	intro := m.Styles.ScenarioBox.Width(contentWidth).Render(
+		"Select which course module(s) you would like to drill.\n" +
+			"Toggle individual modules with [1-9, 0] or [Space]. Press [Enter] to apply and refresh questions.",
+	)
+	sections = append(sections, intro)
+
+	modules := bank.AllCourseModules()
+
+	// Calculate question counts per module from AllQuestions
+	counts := make(map[int]int)
+	for _, q := range m.AllQuestions {
+		for _, modNum := range bank.QuestionModules(q) {
+			counts[modNum]++
+		}
+	}
+
+	var moduleLines []string
+	for idx, mod := range modules {
+		isSelected := m.SelectedModules[mod.Number]
+		checkMark := "[ ]"
+		if isSelected {
+			checkMark = "[✓]"
+		}
+
+		cursorMark := "  "
+		if idx == m.ModuleCursor {
+			cursorMark = "▶ "
+		}
+
+		qCount := counts[mod.Number]
+		countBadge := fmt.Sprintf("(%d available)", qCount)
+
+		lineText := fmt.Sprintf("%s%s %-38s %s\n      %s", cursorMark, checkMark, mod.Title, countBadge, mod.Description)
+
+		if idx == m.ModuleCursor {
+			moduleLines = append(moduleLines, m.Styles.OptionSelected.Width(contentWidth-4).Render(lineText))
+		} else if isSelected {
+			moduleLines = append(moduleLines, m.Styles.OptionNormal.Width(contentWidth-4).Render(lineText))
+		} else {
+			moduleLines = append(moduleLines, m.Styles.HelpGridBox.Width(contentWidth-4).Render(lineText))
+		}
+	}
+
+	sections = append(sections, lipgloss.JoinVertical(lipgloss.Left, moduleLines...))
+
+	controls := `CONTROLS:
+[1-9, 0] Toggle Module (0 = Mod 10)  •  [Space] Toggle Under Cursor  •  [↑/↓, j/k] Navigate
+[a] Select All  •  [c] Clear All  •  [Enter] Apply & Refresh  •  [Esc] Cancel`
+	sections = append(sections, m.Styles.PromptBox.Width(contentWidth).Render(controls))
+
+	sections = append(sections, m.renderStatusBar(contentWidth, "MODULES", m.Styles.StatusModeExam))
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }

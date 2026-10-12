@@ -85,6 +85,87 @@
       "name": "Dividends",
       "category": "dividends",
       "normal_side": "debit"
+    },
+    {
+      "id": "allowance_for_doubtful_accounts",
+      "name": "Allowance for Doubtful Accounts",
+      "category": "asset",
+      "normal_side": "credit",
+      "contra_of": "accounts_receivable"
+    },
+    {
+      "id": "bad_debt_expense",
+      "name": "Bad Debt Expense",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "bonds_payable",
+      "name": "Bonds Payable",
+      "category": "liability",
+      "normal_side": "credit"
+    },
+    {
+      "id": "discount_on_bonds_payable",
+      "name": "Discount on Bonds Payable",
+      "category": "liability",
+      "normal_side": "debit",
+      "contra_of": "bonds_payable"
+    },
+    {
+      "id": "premium_on_bonds_payable",
+      "name": "Premium on Bonds Payable",
+      "category": "liability",
+      "normal_side": "credit"
+    },
+    {
+      "id": "interest_expense",
+      "name": "Interest Expense",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "treasury_stock",
+      "name": "Treasury Stock",
+      "category": "equity",
+      "normal_side": "debit",
+      "contra_of": "common_stock"
+    },
+    {
+      "id": "additional_paid_in_capital",
+      "name": "Additional Paid-in Capital",
+      "category": "equity",
+      "normal_side": "credit"
+    },
+    {
+      "id": "goodwill",
+      "name": "Goodwill",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "patents",
+      "name": "Patents",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "capitalized_software_costs",
+      "name": "Capitalized Software Costs",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "loss_on_impairment",
+      "name": "Loss on Impairment",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "digital_assets",
+      "name": "Digital Assets",
+      "category": "asset",
+      "normal_side": "debit"
     }
   ]
 }

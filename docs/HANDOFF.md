@@ -1,5 +1,158 @@
 # Implementation handoff
 
+## Multi-Agent Distributed Question Expansion Architecture — 2026-10-12
+
+- Formulated and documented comprehensive durable plan for parallel multi-agent question expansion: [docs/MULTI-AGENT-QUESTION-EXPANSION-PLAN.md](MULTI-AGENT-QUESTION-EXPANSION-PLAN.md).
+- Architecture & Isolation Guarantees:
+  - Addressed all concurrency collision vectors: monolithic JSON file contention (`seed-questions.json`, `pedagogy.json`), hardcoded global test count assertions (`validator_test.go`, `expanded_bank_test.go`), 3000-line generator switch merge conflicts, and handoff log overwrites.
+  - Specified Map-Reduce operating model:
+    - Parallel Worker Agents ("Mappers"): Run concurrently in dedicated Work Streams (e.g., Stream-M03 to Stream-M10) across UW Foster 10-module syllabus and 5 financial statement categories.
+    - Zero Central File Mutations: Workers operate strictly within dedicated sandboxes (`curriculum/candidates/batch_<stream_id>.json`, `curriculum/candidates/pedagogy_<stream_id>.json`, `internal/drill/stages_<stream_id>.go`, `internal/drill/syllabus_<stream_id>_test.go`, `internal/engine/rules_<stream_id>.go`, `internal/engine/event_<stream_id>.go`, `docs/streams/STREAM-<stream_id>-*.md`, and `docs/handoffs/HANDOFF-<stream_id>.md`).
+    - Dedicated Isolated Test Harnesses: Workers validate their batches independently via `bank.LoadQuestionBankFile` without depending on or altering central question counters.
+    - Serial Integrator Pipeline ("Reducer"): Integrates verified candidate batches, updates central counters, executes global verification gate (`go test ./...`, `go vet ./...`, `acctg.exe --reconcile-all`), and rolls up stream handoffs into `docs/HANDOFF.md`.
+  - Created staging directories on disk: `curriculum/candidates/`, `docs/streams/`, and `docs/handoffs/`.
+- Files: docs/MULTI-AGENT-QUESTION-EXPANSION-PLAN.md, curriculum/candidates/.gitkeep, docs/streams/.gitkeep, docs/handoffs/.gitkeep, docs/HANDOFF.md.
+- Next: Spawn parallel worker agents using the prompt templates and stream allocations defined in docs/MULTI-AGENT-QUESTION-EXPANSION-PLAN.md.
+
+## Syllabus Interleaved Expansion: Batch 4 Cross-Module Questions (106 Active Questions, Full 10-Module Coverage) — 2026-10-12
+
+- Implemented Batch 4 cross-module questions per docs/SYLLABUS-EXPANSION-PLAN.md, completing initial interleaved practice across all 10 UW Foster syllabus modules:
+  - Question Bank Expansion & Multi-Module Coverage:
+    - goodwill_impairment_basic (Module 6): Annual goodwill impairment testing under US GAAP (ASC 350) where reporting unit carrying value exceeds fair value ($50,000 write-down), recognizing non-cash Loss on Impairment and reducing Goodwill without future reversals.
+    - digital_asset_accounting_basic (Module 8): Digital asset accounting (Tesla Bitcoin case) ($1,500,000 cash paid for cryptocurrency), classifying digital tokens as indefinite-lived intangible assets under ASC 350, recognizing impairment on price drops without recognizing unrealized holding gains until sale.
+    - reporting_policy_choice_basic (Module 9): Financial reporting strategy and policy choices ($25,000 cash received for customer contracts with ongoing obligations), following conservative revenue recognition by deferring consideration in Unearned Revenue to preserve earnings quality rather than aggressively accelerating immediate revenue.
+    - financial_forecasting_basic (Module 10): Financial statement forecasting ($40,000 projected credit sales in pro-forma statements), deriving revenue and accounts receivable from bottom-up disaggregated unit-level drivers (volume × unit price) rather than crude aggregated top-line growth percentages.
+    - Active question bank expanded from 102 to 106 active questions (107 total templates including 1 retired). Full 10-module coverage achieved.
+  - Account Catalog & Contra-Account Extensions (curriculum/accounts.json):
+    - Extended account catalog from 25 to 27 accounts: added loss_on_impairment (expense, normal debit) and digital_assets (asset, normal debit).
+  - Deterministic Rules Engine, Distractor Tags & Pedagogy:
+    - Registered new error tags: TagGoodwillAmortized, TagCryptoRecordedAsCashEquivalent, TagAggressiveRevenueAcceleration, TagAggregatedForecastAssumption.
+    - Registered family constants: FamilyGoodwillImpairment (modules [1, 2, 6]), FamilyDigitalAssetAccounting (modules [1, 2, 8]), FamilyReportingPolicyChoice (modules [1, 2, 9]), FamilyFinancialForecasting (modules [1, 2, 10]).
+    - Implemented engine rules: GoodwillImpairmentRule, DigitalAssetAccountingRule, ReportingPolicyChoiceRule, FinancialForecastingRule in internal/engine/rules.go and registered in internal/engine/engine.go.
+    - Added Socratic hints in OfflineTutor, contrast explanations, and remediation explanations in DistractorExplanation for each new tag.
+  - Drill Generator Stage Builders & Unit Tests:
+    - Implemented buildGoodwillImpairmentStages, buildDigitalAssetAccountingStages, buildReportingPolicyChoiceStages, and buildFinancialForecastingStages in internal/drill/generator.go.
+    - Verified all Stage 1 IdentifyAccount explanations omit debit/credit side cues and all CausalHints end in question marks (`?`).
+    - Added comprehensive unit test suites in internal/drill/syllabus_batch4_test.go and internal/engine/engine_test.go.
+  - Test Suite Updates:
+    - Updated bank, pedagogy, exam, mastery, and TUI tests for 106 active questions (107 templates, 212 exam items, 742 mastery attempts, 318 scenario checks, 954 context variants).
+  - Quality and verification:
+    - go test ./... passed 100% across all 11 packages (internal/bank, internal/drill, internal/engine, internal/domain, internal/exam, internal/mastery, internal/tui, internal/tutor, internal/storage, internal/statements, internal/candidate).
+    - go vet ./... passed with 0 warnings.
+    - Recompiled acctg.exe and ran ./acctg.exe --reconcile-all --db :memory: (106/106 active questions 100% verified: Journal == T-Accounts == Equation).
+- Files: curriculum/accounts.json, curriculum/seed-questions.json, curriculum/pedagogy.json, internal/bank/family.go, internal/bank/schema.go, internal/bank/validator_test.go, internal/bank/pedagogy_test.go, internal/drill/generator.go, internal/drill/syllabus_batch4_test.go, internal/engine/event.go, internal/engine/rules.go, internal/engine/engine.go, internal/engine/engine_test.go, internal/exam/errors.go, internal/exam/expanded_bank_test.go, internal/mastery/expanded_bank_test.go, internal/tui/expanded_bank_test.go, internal/tui/expanded_context_test.go, internal/tutor/offline.go, docs/SYLLABUS-EXPANSION-PLAN.md, docs/HANDOFF.md.
+- Next: Explore expanding template variations, interactive ratio calculation drills, or preparing release packaging.
+
+## Syllabus Interleaved Expansion: Batch 3 Cross-Module Questions — 2026-10-12
+
+- Implemented Batch 3 cross-module questions per docs/SYLLABUS-EXPANSION-PLAN.md:
+  - Question Bank Expansion & Multi-Module Coverage:
+    - repurchase_treasury_stock_basic (Module 6): Repurchase of company common stock into Treasury Stock ($25,000 cash paid), demonstrating contra-equity accounting at cost where total Stockholders' Equity decreases without recording an investment asset.
+    - pay_bond_interest_discount_basic (Module 7): Semi-annual bond interest coupon payment ($2,000 cash) and discount amortization ($500), totaling $2,500 Interest Expense in a 3-posting compound entry.
+    - repo105_analysis_basic (Module 8): Lehman Brothers Repo 105 case analysis ($50,000 cash received under short-term repurchase agreement), classifying repo contracts as secured collateralized borrowings (Notes Payable) rather than misleading off-balance-sheet asset sales.
+    - apple_multielement_revenue_basic (Module 5): Apple multi-element revenue accounting ($1,000 cash received for bundled device), allocating 80% to point-of-sale hardware revenue and 20% to Unearned Revenue for multi-period software updates under ASC 606.
+    - Active question bank expanded from 98 to 102 active questions (103 total templates including 1 retired).
+  - Deterministic Rules Engine, Distractor Tags & Pedagogy:
+    - Registered new error tags: TagIgnoringBondAmortization, TagRepoTreatedAsSale, TagPrematureRevenueRecognition.
+    - Registered family constants: FamilyRepo105Analysis (mapped to modules [1, 2, 8]), FamilyAppleMultiElementRevenue (mapped to modules [1, 2, 5]).
+    - Implemented engine rules: RepurchaseTreasuryStockRule, PayBondInterestRule, Repo105AnalysisRule, AppleMultiElementRevenueRule in internal/engine/rules.go and registered in internal/engine/engine.go.
+    - Added Socratic hints in OfflineTutor, contrast explanations, and remediation explanations in DistractorExplanation for each new tag.
+  - Drill Generator Stage Builders & Unit Tests:
+    - Implemented buildRepurchaseTreasuryStockStages, buildPayBondInterestStages, buildRepo105AnalysisStages, and buildAppleMultiElementRevenueStages in internal/drill/generator.go.
+    - Verified all Stage 1 IdentifyAccount explanations omit debit/credit side cues and all CausalHints end in question marks (`?`).
+    - Added comprehensive unit test suites in internal/drill/syllabus_batch3_test.go and internal/engine/engine_test.go.
+  - Test Suite Updates:
+    - Updated bank, pedagogy, exam, mastery, and TUI tests for 102 active questions (103 templates, 204 exam items, 714 mastery attempts, 306 scenario checks, 918 context variants).
+  - Quality and verification:
+    - go test ./... passed 100% across all 11 packages (internal/bank, internal/drill, internal/engine, internal/domain, internal/exam, internal/mastery, internal/tui, internal/tutor, internal/storage, internal/statements, internal/candidate).
+    - go vet ./... passed with 0 warnings.
+    - Recompiled acctg.exe and ran ./acctg.exe --reconcile-all --db :memory: (102/102 active questions 100% verified: Journal == T-Accounts == Equation).
+- Files: curriculum/seed-questions.json, curriculum/pedagogy.json, internal/bank/family.go, internal/bank/schema.go, internal/bank/validator_test.go, internal/bank/pedagogy_test.go, internal/drill/generator.go, internal/drill/syllabus_batch3_test.go, internal/engine/event.go, internal/engine/rules.go, internal/engine/engine.go, internal/engine/engine_test.go, internal/exam/errors.go, internal/exam/expanded_bank_test.go, internal/mastery/expanded_bank_test.go, internal/tui/expanded_bank_test.go, internal/tui/expanded_context_test.go, internal/tutor/offline.go, docs/SYLLABUS-EXPANSION-PLAN.md, docs/HANDOFF.md.
+- Next: Implement Batch 4 cross-module questions (Module 6 Goodwill impairment testing, Module 8 Crypto indefinite-lived intangible asset accounting, Module 9 Aggressive vs conservative financial reporting choices, Module 10 Financial statement forecasting).
+
+## Syllabus Interleaved Expansion: Batch 2 Cross-Module Questions — 2026-10-12
+
+- Implemented Batch 2 cross-module questions per docs/SYLLABUS-EXPANSION-PLAN.md:
+  - Question Bank Expansion & Multi-Module Coverage:
+    - write_off_receivable_basic (Module 5): Customer account write-off under the allowance method ($1,200), demonstrating that Net Realizable Accounts Receivable and Net Income are completely unchanged.
+    - issue_bonds_discount_basic (Module 7): Long-term bond issuance at a discount ($100,000 par at 95% proceeds = $95,000 cash, $5,000 discount on bonds payable contra-liability, $100,000 bonds payable par).
+    - capitalize_software_feasibility_basic (Module 9): Software development cost capitalization post-technological feasibility (ASC 985-20) as an intangible asset swap ($30,000 cash paid for coding).
+    - current_ratio_analysis_basic (Module 3/8): Retail liquidity analysis; settling accounts payable in cash ($10,000), proving that for a firm with Current Ratio > 1.0, subtracting equal dollars from Current Assets and Current Liabilities increases the Current Ratio while Working Capital remains unchanged.
+    - Active question bank expanded from 94 to 98 active questions (99 total templates including 1 retired).
+  - Deterministic Rules Engine, Distractor Tags & Pedagogy:
+    - Registered new error tags: TagDiscountRecordedAsLoss, TagExpensingFeasibleSoftware, TagCurrentRatioWrongDirection.
+    - Registered family constant: FamilyCurrentRatioAnalysis (mapped to modules [1, 2, 3, 8]).
+    - Implemented engine rules: IssueBondsDiscountRule, CapitalizeSoftwareFeasibilityRule, CurrentRatioAnalysisRule in internal/engine/rules.go and registered in internal/engine/engine.go.
+    - Added Socratic hints in OfflineTutor and remediation explanations in DistractorExplanation for each new distractor tag.
+    - Dynamic compound fixture support: updated internal/bank/validator.go to resolve amounts dynamically from AmountParameter, supporting 3-posting entries like bond discount issuance.
+  - Drill Generator Stage Builders & Unit Tests:
+    - Implemented buildWriteOffReceivableStages, buildIssueBondsDiscountStages, buildCapitalizeSoftwareFeasibilityStages, and buildCurrentRatioAnalysisStages in internal/drill/generator.go.
+    - Verified all Stage 1 IdentifyAccount explanations omit debit/credit side cues and all CausalHints end in question marks (`?`).
+    - Added comprehensive unit test suites in internal/drill/syllabus_batch2_test.go and internal/engine/engine_test.go.
+  - Test Suite Updates:
+    - Updated bank, pedagogy, exam, mastery, and TUI tests for 98 active questions (99 templates, 196 exam items, 686 mastery attempts, 294 scenario checks, 882 context variants).
+  - Quality and verification:
+    - go test ./... passed 100% across all 11 packages (internal/bank, internal/drill, internal/engine, internal/domain, internal/exam, internal/mastery, internal/tui, internal/tutor, internal/storage, internal/statements, internal/candidate).
+    - go vet ./... passed with 0 warnings.
+    - Recompiled acctg.exe and ran ./acctg.exe --reconcile-all --db :memory: (98/98 active questions 100% verified: Journal == T-Accounts == Equation).
+- Files: curriculum/seed-questions.json, curriculum/pedagogy.json, internal/bank/family.go, internal/bank/schema.go, internal/bank/validator.go, internal/bank/validator_test.go, internal/bank/pedagogy_test.go, internal/drill/generator.go, internal/drill/quality90_test.go, internal/drill/syllabus_batch2_test.go, internal/engine/event.go, internal/engine/rules.go, internal/engine/engine.go, internal/engine/engine_test.go, internal/exam/errors.go, internal/exam/expanded_bank_test.go, internal/mastery/expanded_bank_test.go, internal/tui/expanded_bank_test.go, internal/tui/expanded_context_test.go, internal/tui/tui_test.go, internal/tutor/offline.go, docs/SYLLABUS-EXPANSION-PLAN.md, docs/HANDOFF.md.
+- Next: Implement Batch 3 cross-module questions (Module 6 Treasury Stock repurchase, Module 7 Bond interest payment & discount amortization, Module 8 Lehman Repo 105 off-balance-sheet leverage, Module 5 Apple multi-element revenue recognition).
+
+## Syllabus Interleaved Expansion: Architecture Foundation & Batch 1 — 2026-10-12
+
+- Implemented Step 1 Architecture Foundation and Batch 1 cross-module questions per docs/SYLLABUS-EXPANSION-PLAN.md:
+  - Account Catalog & Contra-Account Extensions (curriculum/accounts.json, internal/domain/entry.go, internal/domain/reconcile.go):
+    - Extended account catalog from 14 to 25 accounts: added allowance_for_doubtful_accounts (contra-asset), discount_on_bonds_payable (contra-liability), premium_on_bonds_payable (adjunct liability), bonds_payable, treasury_stock (contra-equity), additional_paid_in_capital, goodwill, patents, capitalized_software_costs, bad_debt_expense, interest_expense.
+    - Updated EquationEffects, PostingEquationEffect, and ReconcileTransaction in internal/domain to handle contra-liabilities and contra-equity across ledger balance tie-outs.
+  - Deterministic Rules Engine & Distractor Tag Routing (internal/engine, internal/bank, internal/exam, internal/tutor):
+    - Added new error tags: TagDirectWriteOffExpense, TagWriteOffExpensedAgain, TagStockIssuedInsteadOfBond, TagGoodwillExpensed, TagCashFlowOperatingWrongDirection.
+    - Registered family constants: FamilyBadDebtAllowance, FamilyWriteOffReceivable, FamilyIssueBondsPar, FamilyAcquireGoodwill, FamilyCreditSalesCashFlow.
+    - Implemented engine rules: BadDebtAllowanceRule, WriteOffReceivableRule, IssueBondsParRule, AcquireGoodwillRule, CreditSalesCashFlowRule.
+    - Added Socratic hints in OfflineTutor and remediation explanations in DistractorExplanation for each tag.
+  - Drill Generator Stage Builders (internal/drill/generator.go):
+    - Implemented buildBadDebtAllowanceStages, buildIssueBondsParStages, buildAcquireGoodwillStages, and buildCreditSalesCashFlowStages.
+    - Added unit test suite in internal/drill/syllabus_batch1_test.go.
+  - Interleaved Batch 1 Active Practice Questions (curriculum/seed-questions.json, curriculum/pedagogy.json):
+    - bad_debt_allowance_basic (Module 5): Allowance method bad debt adjusting entry ($5,000 bad debt expense).
+    - issue_bonds_par_basic (Module 7): Long-term bond issuance at par ($100,000 cash for 10-year bonds).
+    - acquire_goodwill_basic (Module 6): Business combination asset acquisition recognizing goodwill ($100,000 goodwill, asset swap).
+    - credit_sales_cash_flow_basic (Module 3): Credit sale and indirect Statement of Cash Flows operating section deduction for A/R increase.
+    - Active question bank expanded from 90 to 94 active questions (95 total templates).
+  - Quality and verification:
+    - go test ./... passed 100% across all 11 packages (internal/bank, internal/drill, internal/engine, internal/domain, internal/exam, internal/mastery, internal/tui, internal/tutor, internal/storage, internal/statements, internal/candidate).
+    - go vet ./... passed with 0 warnings.
+    - Recompiled acctg.exe and ran ./acctg.exe --reconcile-all --db :memory: (94/94 active questions 100% verified: Journal == T-Accounts == Equation).
+- Files: curriculum/accounts.json, curriculum/seed-questions.json, curriculum/pedagogy.json, internal/domain/entry.go, internal/domain/reconcile.go, internal/domain/reconcile_test.go, internal/bank/family.go, internal/bank/schema.go, internal/bank/validator_test.go, internal/bank/pedagogy_test.go, internal/engine/event.go, internal/engine/rules.go, internal/engine/engine.go, internal/engine/engine_test.go, internal/exam/errors.go, internal/exam/expanded_bank_test.go, internal/mastery/expanded_bank_test.go, internal/drill/generator.go, internal/drill/syllabus_batch1_test.go, internal/tutor/offline.go, internal/tui/expanded_bank_test.go, internal/tui/expanded_context_test.go, docs/SYLLABUS-EXPANSION-PLAN.md, docs/HANDOFF.md.
+- Next: Implement Batch 2 cross-module questions (Module 5 customer write-off, Module 7 bond discount issuance, Module 9 capitalized software feasibility, Module 3/8 current ratio analysis).
+
+## Syllabus Study Module Selection & Question Refresh Feature — 2026-10-12
+
+- Implemented ability for learners to select which syllabus module(s) they'd like to study, multi-select modules, or select all modules, dynamically refreshing the active question bank:
+  - Bank and schema extensions (internal/bank/schema.go, internal/bank/module_test.go):
+    - Added Module int and Modules []int fields to QuestionJSON.
+    - Added CourseModule catalog (AllCourseModules) defining the 10 canonical UW Foster School modules.
+    - Implemented QuestionModules(q), MatchesModules(q, sel), and FilterQuestionsByModules(questions, selectedModules).
+    - Inferred mappings for existing 90 active bank questions across modules 1, 2, 5, 6, and 7.
+  - Interactive TUI Module Selection modal (internal/tui/model.go, internal/tui/view.go):
+    - Created StateModuleSelect UI state.
+    - Added shortcut [m] / [M] across StateDrill, StateFeedback, StateRecap, and StateSessionComplete.
+    - Modal features:
+      - [1-9, 0] directly toggles individual modules (1 through 10).
+      - [↑/↓] / [j/k] moves cursor, [Space] toggles the focused module.
+      - [a] Selects All 10 modules; [c] Clears all selections.
+      - Dynamic count of available active questions per module.
+      - [Enter] applies selection and refreshes the drill session immediately with the filtered question set.
+      - [Esc] cancels changes and restores previous state.
+  - CLI flags (cmd/acctg/main.go):
+    - Added --modules (e.g. --modules=1,2,5) and --module (e.g. --module=5) flags.
+  - Quality and verification:
+    - Added unit tests TestAllCourseModules and TestQuestionModules in internal/bank/module_test.go.
+    - Added unit tests TestModuleSelectionModalAndQuestionRefresh and TestConfigModuleFilter in internal/tui/tui_test.go.
+    - Full test suite passed 100% across all 11 packages (go test ./...).
+    - Recompiled acctg.exe and verified ./acctg.exe --reconcile-all --db :memory: (90/90 active questions 100% verified).
+- Files: internal/bank/schema.go, internal/bank/module_test.go, internal/tui/model.go, internal/tui/view.go, internal/tui/tui_test.go, cmd/acctg/main.go, docs/HANDOFF.md.
+- Next: Implement Step 1 Architecture Foundation (contra-accounts & new engine rules) and Batch 1 cross-module questions.
+
 ## Sub-Question (Stage 1–7) Cycling & Big-Picture Question Navigation — 2026-10-04
 
 - Implemented ability to cycle between the 7 sub-questions (stages) within questions as well as jump between big-picture questions:

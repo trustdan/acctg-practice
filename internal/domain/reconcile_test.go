@@ -249,6 +249,73 @@ func TestReconcileTransaction(t *testing.T) {
 		}
 	})
 
+	t.Run("Contra-Asset: Allowance for Doubtful Accounts", func(t *testing.T) {
+		cat := sampleCatalog()
+		_ = cat.Add(domain.Account{ID: "allowance_for_doubtful_accounts", Name: "Allowance for Doubtful Accounts", Category: domain.CategoryAsset, NormalSide: domain.SideCredit, ContraOf: "accounts_receivable"})
+		_ = cat.Add(domain.Account{ID: "bad_debt_expense", Name: "Bad Debt Expense", Category: domain.CategoryExpense, NormalSide: domain.SideDebit})
+
+		entry := domain.NewEntry(
+			domain.Posting{AccountID: "bad_debt_expense", Side: domain.SideDebit, Amount: domain.NewMoney(500000)},
+			domain.Posting{AccountID: "allowance_for_doubtful_accounts", Side: domain.SideCredit, Amount: domain.NewMoney(500000)},
+		)
+		recon, err := domain.ReconcileTransaction(entry, cat)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !recon.Reconciled {
+			t.Fatalf("expected contra-asset entry to reconcile")
+		}
+		// Cr contra-asset reduces net assets (-A); Dr expense reduces equity (-E)
+		if recon.DeltaAssets.Cents() != -500000 || recon.DeltaLiabilities.Cents() != 0 || recon.DeltaEquity.Cents() != -500000 {
+			t.Errorf("contra-asset equation mismatch: %+v", recon.EquationDelta)
+		}
+	})
+
+	t.Run("Contra-Liability: Discount on Bonds Payable", func(t *testing.T) {
+		cat := sampleCatalog()
+		_ = cat.Add(domain.Account{ID: "bonds_payable", Name: "Bonds Payable", Category: domain.CategoryLiability, NormalSide: domain.SideCredit})
+		_ = cat.Add(domain.Account{ID: "discount_on_bonds_payable", Name: "Discount on Bonds Payable", Category: domain.CategoryLiability, NormalSide: domain.SideDebit, ContraOf: "bonds_payable"})
+
+		// Issued $100,000 face bonds for $95,000 cash (discount $5,000)
+		entry := domain.NewEntry(
+			domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(9500000)},
+			domain.Posting{AccountID: "discount_on_bonds_payable", Side: domain.SideDebit, Amount: domain.NewMoney(500000)},
+			domain.Posting{AccountID: "bonds_payable", Side: domain.SideCredit, Amount: domain.NewMoney(10000000)},
+		)
+		recon, err := domain.ReconcileTransaction(entry, cat)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !recon.Reconciled {
+			t.Fatalf("expected contra-liability entry to reconcile")
+		}
+		// Net assets +$95,000; Net liabilities +$95,000 ($100k bonds - $5k contra); Net equity 0
+		if recon.DeltaAssets.Cents() != 9500000 || recon.DeltaLiabilities.Cents() != 9500000 || recon.DeltaEquity.Cents() != 0 {
+			t.Errorf("contra-liability equation mismatch: %+v", recon.EquationDelta)
+		}
+	})
+
+	t.Run("Contra-Equity: Treasury Stock repurchase", func(t *testing.T) {
+		cat := sampleCatalog()
+		_ = cat.Add(domain.Account{ID: "treasury_stock", Name: "Treasury Stock", Category: domain.CategoryEquity, NormalSide: domain.SideDebit, ContraOf: "common_stock"})
+
+		entry := domain.NewEntry(
+			domain.Posting{AccountID: "treasury_stock", Side: domain.SideDebit, Amount: domain.NewMoney(300000)},
+			domain.Posting{AccountID: "cash", Side: domain.SideCredit, Amount: domain.NewMoney(300000)},
+		)
+		recon, err := domain.ReconcileTransaction(entry, cat)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !recon.Reconciled {
+			t.Fatalf("expected contra-equity entry to reconcile")
+		}
+		// Dr contra-equity reduces net equity (-E); Cr cash reduces net assets (-A)
+		if recon.DeltaAssets.Cents() != -300000 || recon.DeltaLiabilities.Cents() != 0 || recon.DeltaEquity.Cents() != -300000 {
+			t.Errorf("contra-equity equation mismatch: %+v", recon.EquationDelta)
+		}
+	})
+
 	t.Run("Unbalanced Entry Fails Reconciliation", func(t *testing.T) {
 		unbalanced := domain.NewEntry(
 			domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(100000)},

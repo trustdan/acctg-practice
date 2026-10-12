@@ -99,8 +99,104 @@ type QuestionJSON struct {
 	ScenarioTemplate string                             `json:"scenario_template"`
 	Parameters       map[string][]int64                 `json:"parameters"`
 	Concepts         []string                           `json:"concepts"`
+	Module           int                                `json:"module,omitempty"`
+	Modules          []int                              `json:"modules,omitempty"`
 	ExpectedFixture  FixtureJSON                        `json:"expected_fixture"`
 	Review           ReviewJSON                         `json:"review"`
+}
+
+// CourseModule describes a course syllabus module for Foster School Financial Reporting & Analysis.
+type CourseModule struct {
+	Number      int    `json:"number"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+// AllCourseModules returns the 10 canonical modules from the UW Foster syllabus.
+func AllCourseModules() []CourseModule {
+	return []CourseModule{
+		{Number: 1, Title: "Module 1: Intro Transactions", Description: "Recording economic transactions & cash vs accrual"},
+		{Number: 2, Title: "Module 2: Double-Entry Mechanics", Description: "Debits/Credits, T-accounts, 4 financial statements"},
+		{Number: 3, Title: "Module 3: Statement Analysis & Cash Flows", Description: "Component percentages, ratios, direct/indirect SCF"},
+		{Number: 4, Title: "Module 4: Financial Statements Project", Description: "Comprehensive accounting cycle & statement creation"},
+		{Number: 5, Title: "Module 5: Revenue & Receivables", Description: "Revenue recognition, allowance method, Apple case"},
+		{Number: 6, Title: "Module 6: Equity & Intangibles", Description: "Stock issuance, dividends, goodwill, Groupon pro-formas"},
+		{Number: 7, Title: "Module 7: Long-Term Liabilities", Description: "Bonds payable, discount/premium, Disney 100-yr bonds"},
+		{Number: 8, Title: "Module 8: Leverage & Crypto", Description: "Lehman Repo 105, monitoring, Tesla Bitcoin crypto"},
+		{Number: 9, Title: "Module 9: Reporting Strategy & R&D", Description: "Aggressive vs conservative, Microsoft R&D capitalization"},
+		{Number: 10, Title: "Module 10: Financial Forecasting", Description: "Aggregated vs disaggregated forecasting assumptions"},
+	}
+}
+
+// QuestionModules returns the module numbers associated with a question.
+// If explicit modules are set, they are returned; otherwise, modules are inferred
+// from the question's family ID and concept tags.
+func QuestionModules(q QuestionJSON) []int {
+	if len(q.Modules) > 0 {
+		return q.Modules
+	}
+	if q.Module > 0 {
+		return []int{q.Module}
+	}
+	// Inferred mapping from family ID
+	switch q.FamilyID {
+	case FamilyCashService, FamilyCashRent, FamilyCashExpense,
+		FamilyPrepaidPurchase, FamilyPrepaidConsumption, FamilyEquipmentPurchaseCash:
+		return []int{1, 2}
+	case FamilyCustomerAdvance, FamilyServiceOnCredit, FamilyCollectReceivable, FamilyEarnAdvance,
+		FamilyBadDebtAllowance, FamilyWriteOffReceivable, FamilyAppleMultiElementRevenue:
+		return []int{1, 2, 5}
+	case FamilyIssueShares, FamilyDividendCash, FamilyDeclareDividend, FamilyPayDividendPayable,
+		FamilyAcquireGoodwill, FamilyRepurchaseTreasuryStock, FamilyGoodwillImpairment:
+		return []int{1, 2, 6}
+	case FamilyBorrowCash, FamilyRepayNotePrincipal,
+		FamilyIssueBondsPar, FamilyIssueBondsDiscount, FamilyIssueBondsPremium, FamilyPayBondInterest:
+		return []int{1, 2, 7}
+	case FamilyCreditSalesCashFlow:
+		return []int{1, 2, 3}
+	case FamilyCurrentRatioAnalysis:
+		return []int{1, 2, 3, 8}
+	case FamilyRepo105Analysis, FamilyDigitalAssetAccounting:
+		return []int{1, 2, 8}
+	case FamilyCapitalizeSoftwareFeasibility, FamilyReportingPolicyChoice:
+		return []int{1, 2, 9}
+	case FamilyFinancialForecasting:
+		return []int{1, 2, 10}
+	default:
+		return []int{1, 2}
+	}
+}
+
+// MatchesModules reports whether the question matches any of the selected modules.
+// If selected is empty, all questions match.
+func MatchesModules(q QuestionJSON, selected map[int]bool) bool {
+	if len(selected) == 0 {
+		return true
+	}
+	for _, m := range QuestionModules(q) {
+		if selected[m] {
+			return true
+		}
+	}
+	return false
+}
+
+// FilterQuestionsByModules filters a slice of questions by selected module numbers.
+func FilterQuestionsByModules(questions []QuestionJSON, selectedModules []int) []QuestionJSON {
+	if len(selectedModules) == 0 {
+		return questions
+	}
+	selMap := make(map[int]bool, len(selectedModules))
+	for _, m := range selectedModules {
+		selMap[m] = true
+	}
+	var filtered []QuestionJSON
+	for _, q := range questions {
+		if MatchesModules(q, selMap) {
+			filtered = append(filtered, q)
+		}
+	}
+	return filtered
 }
 
 // TeachingText is reviewed wording only; it cannot change stage answers.

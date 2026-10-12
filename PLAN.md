@@ -384,6 +384,11 @@ Gate status, Stage 30b (2026-10-07): PASSED with the live-provider check open. A
 - Stage 30a: Streamed tutor replies for OpenAI-format providers (OpenAI API, LM Studio) (Complete).
 - Stage 30b: Streamed replies for Anthropic, Gemini and ChatGPT plan (Complete; live check open).
 
+## Content expansion roadmap & multi-agent distributed execution
+
+- Syllabus Interleaved Breadth (Modules 3–10): [docs/SYLLABUS-EXPANSION-PLAN.md](docs/SYLLABUS-EXPANSION-PLAN.md) outlines the 10-module cross-syllabus expansion strategy. Batches 1–4 are completed (106 active questions).
+- Multi-Agent Distributed Execution: [docs/MULTI-AGENT-QUESTION-EXPANSION-PLAN.md](docs/MULTI-AGENT-QUESTION-EXPANSION-PLAN.md) establishes the conflict-free Map-Reduce protocol for running concurrent worker agents across syllabus modules and financial statement categories using isolated candidate staging (`curriculum/candidates/`) without colliding on central bank JSON files or global count assertions.
+
 ## Current quality gate at 90 - October 3, 2026
 
 Bank breadth is 90 active scenarios, one retired record, 13 existing families. Integration and teaching delivery, immutable exam replay, focused offline explanations, guided matched contrasts, distinct-setting delayed retrieval, priority misconception choices, amount-scope choices and generic payable cleanup are covered by the checks recorded in [QUALITY-REVIEW90.md](docs/QUALITY-REVIEW90.md). Current pedagogy policy is 2; evidence projection is 2; schema migration is 9.

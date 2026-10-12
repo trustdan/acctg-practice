@@ -98,6 +98,70 @@ func DistractorExplanation(tag string) (misconception string, remediation string
 		return "Incorrect Dollar Amount",
 			"The chosen dollar amount does not reconcile to the transaction parameters."
 
+	case engine.TagDirectWriteOffExpense:
+		return "Direct Write-Off Violates GAAP Matching",
+			"Credited Accounts Receivable directly instead of establishing an allowance. Under the allowance method, estimated losses are matched to the period of sale using the contra-asset Allowance for Doubtful Accounts."
+
+	case engine.TagWriteOffExpensedAgain:
+		return "Write-Off Expensed a Second Time",
+			"Debited Bad Debt Expense upon specific write-off. Expense was already recognized when estimating uncollectibles; writing off a specific uncollectible account reduces the allowance, not net income again."
+
+	case engine.TagStockIssuedInsteadOfBond:
+		return "Debt Security Confused with Equity",
+			"Recorded Common Stock when issuing bonds. Bonds are long-term contractual debt obligations requiring repayment of principal and interest (Bonds Payable liability), not equity ownership shares."
+
+	case engine.TagGoodwillExpensed:
+		return "Goodwill Expensed at Acquisition",
+			"Expensed Goodwill immediately at acquisition. Goodwill purchased in a business combination has future economic value and must be capitalized as an intangible asset, not expensed."
+
+	case engine.TagCashFlowOperatingWrongDirection:
+		return "Cash Flow Operating Adjustment Inversion",
+			"Treated non-cash revenue as cash flow. Under the indirect Statement of Cash Flows, an increase in Accounts Receivable means revenue was recognized without collecting cash, so it must be deducted from Net Income."
+
+	case engine.TagDiscountRecordedAsLoss:
+		return "Bond Discount Expensed as Immediate Loss",
+			"Treated the discount on bonds payable as an immediate loss or expense. The discount represents additional cost of debt that must be recorded in a contra-liability account (Discount on Bonds Payable) and amortized over the bond term to Interest Expense."
+
+	case engine.TagExpensingFeasibleSoftware:
+		return "Feasible Software Development Costs Expensed",
+			"Expensed software development costs after technological feasibility was established. Under US GAAP (ASC 985-20), research costs before feasibility are expensed as R&D, but coding and testing costs after feasibility must be capitalized as an intangible asset."
+
+	case engine.TagCurrentRatioWrongDirection:
+		return "Current Ratio Impact Inverted",
+			"Assumed that paying off current liabilities lowers liquidity. Paying accounts payable with cash reduces both Current Assets and Current Liabilities by the same amount, leaving Working Capital unchanged; for any company with a Current Ratio > 1.0, this equal reduction mathematically increases the Current Ratio."
+
+	case engine.TagTreasuryStockRecordedAsAsset:
+		return "Treasury Stock Recorded as Asset",
+			"Recorded Treasury Stock as an asset or investment. A corporation cannot own an equity claim on itself; repurchased shares are contra-equity reducing total stockholders' equity, not an asset."
+
+	case engine.TagIgnoringBondAmortization:
+		return "Bond Discount Amortization Omitted",
+			"Recorded interest expense equal only to the cash coupon payment, ignoring discount amortization. Under US GAAP, issuing bonds at a discount increases effective interest expense; the discount must be amortized over the bond term."
+
+	case engine.TagRepoTreatedAsSale:
+		return "Repurchase Agreement Treated as Asset Sale",
+			"Treated the repurchase agreement as a sale of collateral rather than a secured borrowing. Under US GAAP economic substance, short-term repurchase agreements where the transferor retains effective control are collateralized financing transactions (Notes Payable), not asset sales."
+
+	case engine.TagPrematureRevenueRecognition:
+		return "Deferred Performance Obligation Recognized as Immediate Revenue",
+			"Recognized the entire sales price as immediate revenue at point of sale, ignoring undelivered obligations. Under US GAAP multi-element revenue rules (ASC 606), consideration must be allocated to distinct performance obligations, deferring unearned revenue for future deliverables."
+
+	case engine.TagGoodwillAmortized:
+		return "Goodwill Amortized Instead of Impairment Tested",
+			"Treated goodwill as subject to periodic amortization. Under US GAAP (ASC 350), goodwill has an indefinite life and cannot be amortized; it must be evaluated at least annually for impairment and written down only if fair value drops below carrying value."
+
+	case engine.TagCryptoRecordedAsCashEquivalent:
+		return "Digital Asset Treated as Cash or Cash Equivalent",
+			"Treated cryptocurrency as cash or cash equivalents. Under US GAAP (ASC 350), digital assets lack statutory legal tender status and are classified as indefinite-lived intangible assets, tested for impairment without recognizing unrealized holding gains until sold."
+
+	case engine.TagAggressiveRevenueAcceleration:
+		return "Aggressive Premature Revenue Recognition",
+			"Accelerated revenue recognition before fulfilling performance obligations under an aggressive policy. Prudent and conservative GAAP financial reporting requires deferring revenue to Unearned Revenue until goods or services are delivered, preserving earnings quality."
+
+	case engine.TagAggregatedForecastAssumption:
+		return "Crude Aggregated Top-Line Forecast Assumption",
+			"Relied on crude aggregated percentage growth rather than disaggregated unit-level drivers. Disaggregated operational drivers (unit volume, pricing power, store count) provide structural predictive accuracy, whereas aggregated top-line growth hides volume vs price dynamics."
+
 	default:
 		clean := strings.ReplaceAll(tag, "_", " ")
 		clean = strings.Title(clean)
@@ -142,6 +206,30 @@ func ConceptDisplayName(conceptID string) string {
 		return "Dividend Declaration vs. Payment"
 	case "accounting_equation_invariants":
 		return "Accounting Equation Effects (A = L + E)"
+	case "allowance_write_off":
+		return "Specific Receivable Write-Off (Allowance Method)"
+	case "bond_discount_issuance":
+		return "Issuing Bonds at a Discount (Contra-Liability)"
+	case "software_capitalization":
+		return "Software Development Cost Capitalization (ASC 985-20)"
+	case "current_ratio_liquidity":
+		return "Current Ratio & Working Capital Liquidity Analysis"
+	case "treasury_stock_accounting":
+		return "Treasury Stock & Contra-Equity Mechanics"
+	case "bond_interest_expense":
+		return "Bond Interest Expense & Discount Amortization"
+	case "repurchase_agreements":
+		return "Repurchase Agreements & Collateralized Borrowing (Repo 105)"
+	case "multi_element_revenue_recognition":
+		return "Multi-Element Revenue Allocation (ASC 606)"
+	case "goodwill_impairment":
+		return "Goodwill Impairment Testing (ASC 350)"
+	case "digital_asset_accounting":
+		return "Digital Asset & Cryptocurrency Accounting"
+	case "reporting_strategy":
+		return "Aggressive vs. Conservative Reporting Strategy"
+	case "financial_forecasting":
+		return "Disaggregated Financial Statement Forecasting"
 	default:
 		clean := strings.ReplaceAll(conceptID, "_", " ")
 		return strings.Title(clean)

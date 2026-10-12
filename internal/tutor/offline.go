@@ -167,6 +167,38 @@ func socraticHintForErrorTag(tag string) string {
 		return "Check side placement: Debit is always the Left side, and Credit is always the Right side. Verify whether this account increases or decreases, and apply its normal side rule."
 	case engine.TagUnbalancedEntry:
 		return "Total debits must strictly equal total credits. Check the amounts to ensure both sides balance."
+	case engine.TagDirectWriteOffExpense:
+		return "Do we know yet which specific customers will default? Under the allowance method, which contra-asset account establishes the credit reserve under GAAP matching?"
+	case engine.TagWriteOffExpensedAgain:
+		return "Was Bad Debt Expense already estimated and recorded earlier? Does writing off a specific customer account reduce net income a second time or reduce the established allowance reserve?"
+	case engine.TagStockIssuedInsteadOfBond:
+		return "Did investors buy ownership shares in the company, or did they lend money expecting repayment of principal and interest? Choose the liability account that records long-term debt obligations."
+	case engine.TagGoodwillExpensed:
+		return "Does the acquired business provide ongoing future economic benefits? Under GAAP, should the premium paid over net identifiable assets be capitalized as an intangible asset or expensed today?"
+	case engine.TagCashFlowOperatingWrongDirection:
+		return "Net income includes this credit revenue, but did the company receive cash? On the indirect Statement of Cash Flows, should uncollected revenue be added or deducted from Net Income?"
+	case engine.TagDiscountRecordedAsLoss:
+		return "Does issuing bonds below par represent an immediate operating loss, or does the discount represent additional borrowing cost amortized over the bond term as interest expense?"
+	case engine.TagExpensingFeasibleSoftware:
+		return "Under US GAAP (ASC 985-20), once technological feasibility is established, coding and testing costs provide demonstrable future economic benefit. Should these costs be expensed immediately or capitalized as an intangible asset?"
+	case engine.TagCurrentRatioWrongDirection:
+		return "Both Current Assets (Cash) and Current Liabilities (Accounts Payable) decreased by the same dollar amount. If the initial Current Ratio was greater than 1.0, what mathematical effect does subtracting equal amounts from numerator and denominator have?"
+	case engine.TagTreasuryStockRecordedAsAsset:
+		return "Can a corporation hold an asset representing an ownership claim on itself? Under US GAAP, should repurchased shares be recorded as contra-equity reducing stockholders' equity?"
+	case engine.TagIgnoringBondAmortization:
+		return "Does issuing bonds at a discount mean total borrowing cost equals only the cash coupon paid, or must discount amortization be added to interest expense?"
+	case engine.TagRepoTreatedAsSale:
+		return "Does transferring liquid collateral with an obligation to repurchase it days later represent a true sale, or a collateralized financing liability (Notes Payable)?"
+	case engine.TagPrematureRevenueRecognition:
+		return "Has the company fulfilled all performance obligations today, or must consideration for future deliverables (such as multi-period software updates) be deferred in Unearned Revenue?"
+	case engine.TagGoodwillAmortized:
+		return "Under US GAAP (ASC 350), does goodwill have a finite life subject to periodic amortization, or is it an indefinite-lived asset tested annually for impairment?"
+	case engine.TagCryptoRecordedAsCashEquivalent:
+		return "Under US GAAP, are cryptocurrencies classified as cash or cash equivalents, or as indefinite-lived intangible assets subject to impairment testing?"
+	case engine.TagAggressiveRevenueAcceleration:
+		return "Under conservative financial reporting policy, can revenue be recognized immediately if ongoing performance obligations remain to be delivered?"
+	case engine.TagAggregatedForecastAssumption:
+		return "In financial forecasting, do crude top-line percentage growth extrapolations provide the same structural accuracy as disaggregated operational drivers (unit volume times price)?"
 	default:
 		return ""
 	}
@@ -190,6 +222,22 @@ func familyContrastExplanation(familyID string) string {
 		return "Contrast: Paying down loan principal reduces the liability Notes Payable (Debit) with Cash (Credit). It is a liability reduction, not an expense."
 	case "dividend_cash":
 		return "Contrast: Dividends distribute earnings to stockholders. Debit the Dividends account, which reduces equity and is closed to Retained Earnings at period end. Dividends are not an expense and do not appear on the Income Statement."
+	case "repurchase_treasury_stock":
+		return "Contrast: Repurchasing company common stock reduces Cash (Credit) and increases Treasury Stock (Debit), a contra-equity account reducing stockholders' equity. It is not an outside asset investment."
+	case "pay_bond_interest":
+		return "Contrast: When bonds are issued at a discount, total Interest Expense (Debit) exceeds the cash coupon paid (Credit Cash). The difference is credited to Discount on Bonds Payable to amortize the contra-liability toward par."
+	case "repo105_analysis":
+		return "Contrast: Under US GAAP economic substance, short-term repurchase agreements are collateralized loans (Debit Cash, Credit Notes Payable), maintaining leverage transparency rather than being treated as asset sales."
+	case "apple_multielement_revenue":
+		return "Contrast: In bundled arrangements with future software updates, only the delivered hardware value is recognized as point-of-sale revenue; the undelivered software obligations are credited to Unearned Revenue and recognized over time."
+	case "goodwill_impairment":
+		return "Contrast: Goodwill is not amortized. When a reporting unit's fair value falls below carrying value, an impairment loss is debited (-Equity) and Goodwill is credited (-Assets). Impairment cannot be reversed under US GAAP."
+	case "digital_asset_accounting":
+		return "Contrast: Under US GAAP (Tesla Bitcoin), digital assets are classified as indefinite-lived intangibles (Debit Digital Assets, Credit Cash). Impairment losses are recognized when prices decline, but holding gains cannot be recognized until sold."
+	case "reporting_policy_choice":
+		return "Contrast: A conservative reporting strategy defers revenue to Unearned Revenue until all performance obligations are fulfilled, preserving earnings quality, whereas an aggressive policy prematurely accelerates revenue recognition."
+	case "financial_forecasting":
+		return "Contrast: Pro-forma forecasting built from disaggregated operational drivers (unit volume, selling price per unit) provides actionable visibility into capacity constraints and working capital, unlike crude aggregated growth percentages."
 	default:
 		return ""
 	}

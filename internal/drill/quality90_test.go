@@ -55,7 +55,7 @@ func TestQuality90OptionsRemainDeterministicAndDiagnostic(t *testing.T) {
 				// A balanced numeric entry with the correct accounts can still have the wrong amount.
 				wrong := domain.Entry{Postings: append([]domain.Posting(nil), inst.Entry.Postings...)}
 				for i := range wrong.Postings {
-					wrong.Postings[i].Amount = domain.NewMoney(amount * 2)
+					wrong.Postings[i].Amount = domain.NewMoney(wrong.Postings[i].Amount.Cents() * 2)
 				}
 				if !wrong.IsBalanced() || eng.EvaluateEntry(engine.TransactionEvent{FamilyID: q.FamilyID, Parameters: inst.Parameters}, wrong).IsCorrect {
 					t.Fatal("balanced wrong amount accepted")

@@ -472,6 +472,13 @@ func TestAllParameterCombinationsBalance(t *testing.T) {
 		bank.FamilyRepayNotePrincipal,
 		bank.FamilyIssueShares,
 		bank.FamilyDividendCash,
+		bank.FamilyDeclareDividend,
+		bank.FamilyPayDividendPayable,
+		bank.FamilyBadDebtAllowance,
+		bank.FamilyWriteOffReceivable,
+		bank.FamilyIssueBondsPar,
+		bank.FamilyAcquireGoodwill,
+		bank.FamilyCreditSalesCashFlow,
 	}
 
 	testAmounts := []int64{
@@ -831,3 +838,612 @@ func TestDeclaredVsPaidDividendsDistinctSemantics(t *testing.T) {
 		t.Errorf("payment reconciliation failed: %v", err)
 	}
 }
+
+func TestBadDebtAllowanceAndWriteOffRules(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	// Event 1: Year-end bad debt estimation under allowance method ($5,000)
+	allowanceEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyBadDebtAllowance,
+		Parameters: map[string]int64{"amount_minor_units": 500000},
+	}
+	procAllow, err := eng.ProcessEvent(allowanceEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed for bad debt allowance: %v", err)
+	}
+	if !procAllow.Entry.IsBalanced() {
+		t.Errorf("expected balanced entry")
+	}
+	// Dr Bad Debt Expense $5,000, Cr Allowance for Doubtful Accounts $5,000
+	if procAllow.Equation.DeltaAssets.Cents() != -500000 || procAllow.Equation.DeltaEquity.Cents() != -500000 || procAllow.Equation.DeltaLiabilities.Cents() != 0 {
+		t.Errorf("unexpected equation delta: %+v", procAllow.Equation)
+	}
+
+	// Diagnostic check: crediting accounts receivable directly (direct write-off mistake)
+	directWriteOffCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "bad_debt_expense", Side: domain.SideDebit, Amount: domain.NewMoney(500000)},
+		domain.Posting{AccountID: "accounts_receivable", Side: domain.SideCredit, Amount: domain.NewMoney(500000)},
+	)
+	evalDirect := eng.EvaluateEntry(allowanceEv, directWriteOffCandidate)
+	if evalDirect.IsCorrect {
+		t.Errorf("direct write off candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalDirect.ErrorTags {
+		if tag == engine.TagDirectWriteOffExpense {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagDirectWriteOffExpense, got %v", evalDirect.ErrorTags)
+	}
+
+	// Event 2: Specific customer write-off ($1,200)
+	writeOffEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyWriteOffReceivable,
+		Parameters: map[string]int64{"amount_minor_units": 120000},
+	}
+	procWriteOff, err := eng.ProcessEvent(writeOffEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed for write off: %v", err)
+	}
+	if procWriteOff.Equation.DeltaAssets.Cents() != 0 || procWriteOff.Equation.DeltaLiabilities.Cents() != 0 || procWriteOff.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("write off net asset and equity change must be 0, got: %+v", procWriteOff.Equation)
+	}
+
+	// Diagnostic check: expensing write-off again
+	expensedAgainCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "bad_debt_expense", Side: domain.SideDebit, Amount: domain.NewMoney(120000)},
+		domain.Posting{AccountID: "accounts_receivable", Side: domain.SideCredit, Amount: domain.NewMoney(120000)},
+	)
+	evalExpensedAgain := eng.EvaluateEntry(writeOffEv, expensedAgainCandidate)
+	if evalExpensedAgain.IsCorrect {
+		t.Errorf("expensed again write off candidate should fail")
+	}
+	hasExpensedAgainTag := false
+	for _, tag := range evalExpensedAgain.ErrorTags {
+		if tag == engine.TagWriteOffExpensedAgain {
+			hasExpensedAgainTag = true
+		}
+	}
+	if !hasExpensedAgainTag {
+		t.Errorf("expected TagWriteOffExpensedAgain, got %v", evalExpensedAgain.ErrorTags)
+	}
+
+	// Reconcile
+	recon, err := domain.ReconcileTransaction(procAllow.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("allowance reconciliation failed: %v", err)
+	}
+}
+
+func TestIssueBondsParRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	bondEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyIssueBondsPar,
+		Parameters: map[string]int64{"amount_minor_units": 10000000}, // $100,000
+	}
+	proc, err := eng.ProcessEvent(bondEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	if proc.Equation.DeltaAssets.Cents() != 10000000 || proc.Equation.DeltaLiabilities.Cents() != 10000000 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("unexpected equation delta: %+v", proc.Equation)
+	}
+
+	// Diagnostic: crediting common stock instead of bonds
+	stockCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(10000000)},
+		domain.Posting{AccountID: "common_stock", Side: domain.SideCredit, Amount: domain.NewMoney(10000000)},
+	)
+	evalStock := eng.EvaluateEntry(bondEv, stockCandidate)
+	if evalStock.IsCorrect {
+		t.Errorf("stock candidate should fail")
+	}
+	hasStockTag := false
+	for _, tag := range evalStock.ErrorTags {
+		if tag == engine.TagStockIssuedInsteadOfBond {
+			hasStockTag = true
+		}
+	}
+	if !hasStockTag {
+		t.Errorf("expected TagStockIssuedInsteadOfBond, got %v", evalStock.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestAcquireGoodwillRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	goodwillEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyAcquireGoodwill,
+		Parameters: map[string]int64{"amount_minor_units": 20000000}, // $200,000
+	}
+	proc, err := eng.ProcessEvent(goodwillEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	if proc.Equation.DeltaAssets.Cents() != 0 || proc.Equation.DeltaLiabilities.Cents() != 0 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("goodwill asset swap must have zero net delta: %+v", proc.Equation)
+	}
+
+	// Diagnostic: expensing goodwill
+	expenseCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "rent_expense", Side: domain.SideDebit, Amount: domain.NewMoney(20000000)},
+		domain.Posting{AccountID: "cash", Side: domain.SideCredit, Amount: domain.NewMoney(20000000)},
+	)
+	evalExpense := eng.EvaluateEntry(goodwillEv, expenseCandidate)
+	if evalExpense.IsCorrect {
+		t.Errorf("expensed goodwill candidate should fail")
+	}
+	hasGoodwillTag := false
+	for _, tag := range evalExpense.ErrorTags {
+		if tag == engine.TagGoodwillExpensed {
+			hasGoodwillTag = true
+		}
+	}
+	if !hasGoodwillTag {
+		t.Errorf("expected TagGoodwillExpensed, got %v", evalExpense.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestIssueBondsDiscountRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	bondEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyIssueBondsDiscount,
+		Parameters: map[string]int64{"amount_minor_units": 10000000}, // $100,000 par
+	}
+	proc, err := eng.ProcessEvent(bondEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debits: Cash $95,000, Discount $5,000; Credit: Bonds Payable $100,000
+	// DeltaAssets: +95,000; DeltaLiabilities: +100,000 - 5,000 = +95,000; DeltaEquity: 0
+	if proc.Equation.DeltaAssets.Cents() != 9500000 || proc.Equation.DeltaLiabilities.Cents() != 9500000 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("unexpected equation delta for bond discount: %+v", proc.Equation)
+	}
+
+	// Diagnostic: recording discount as immediate expense
+	expenseCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(9500000)},
+		domain.Posting{AccountID: "interest_expense", Side: domain.SideDebit, Amount: domain.NewMoney(500000)},
+		domain.Posting{AccountID: "bonds_payable", Side: domain.SideCredit, Amount: domain.NewMoney(10000000)},
+	)
+	evalExp := eng.EvaluateEntry(bondEv, expenseCandidate)
+	if evalExp.IsCorrect {
+		t.Errorf("expensed discount candidate should fail")
+	}
+	hasDiscountTag := false
+	for _, tag := range evalExp.ErrorTags {
+		if tag == engine.TagDiscountRecordedAsLoss {
+			hasDiscountTag = true
+		}
+	}
+	if !hasDiscountTag {
+		t.Errorf("expected TagDiscountRecordedAsLoss, got %v", evalExp.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestCapitalizeSoftwareFeasibilityRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	softEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyCapitalizeSoftwareFeasibility,
+		Parameters: map[string]int64{"amount_minor_units": 3000000}, // $30,000
+	}
+	proc, err := eng.ProcessEvent(softEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	if proc.Equation.DeltaAssets.Cents() != 0 || proc.Equation.DeltaLiabilities.Cents() != 0 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("software capitalization asset swap must have zero net delta: %+v", proc.Equation)
+	}
+
+	// Diagnostic: expensing feasible software development
+	expenseCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "rent_expense", Side: domain.SideDebit, Amount: domain.NewMoney(3000000)},
+		domain.Posting{AccountID: "cash", Side: domain.SideCredit, Amount: domain.NewMoney(3000000)},
+	)
+	evalExp := eng.EvaluateEntry(softEv, expenseCandidate)
+	if evalExp.IsCorrect {
+		t.Errorf("expensed feasible software candidate should fail")
+	}
+	hasExpTag := false
+	for _, tag := range evalExp.ErrorTags {
+		if tag == engine.TagExpensingFeasibleSoftware {
+			hasExpTag = true
+		}
+	}
+	if !hasExpTag {
+		t.Errorf("expected TagExpensingFeasibleSoftware, got %v", evalExp.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestCurrentRatioAnalysisRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	crEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyCurrentRatioAnalysis,
+		Parameters: map[string]int64{"amount_minor_units": 2000000}, // $20,000
+	}
+	proc, err := eng.ProcessEvent(crEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Accounts Payable $20,000 (-L), Credit Cash $20,000 (-A)
+	if proc.Equation.DeltaAssets.Cents() != -2000000 || proc.Equation.DeltaLiabilities.Cents() != -2000000 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("unexpected equation delta for current ratio analysis: %+v", proc.Equation)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestRepurchaseTreasuryStockRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	tsEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyRepurchaseTreasuryStock,
+		Parameters: map[string]int64{"amount_minor_units": 2500000}, // $25,000
+	}
+	proc, err := eng.ProcessEvent(tsEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Treasury Stock $25,000 (Contra-Equity increases -> -Equity), Credit Cash $25,000 (-Assets)
+	if proc.Equation.DeltaAssets.Cents() != -2500000 || proc.Equation.DeltaLiabilities.Cents() != 0 || proc.Equation.DeltaEquity.Cents() != -2500000 {
+		t.Errorf("unexpected equation delta for treasury stock: %+v", proc.Equation)
+	}
+
+	// Diagnostic: recording treasury stock as asset
+	assetCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "goodwill", Side: domain.SideDebit, Amount: domain.NewMoney(2500000)},
+		domain.Posting{AccountID: "cash", Side: domain.SideCredit, Amount: domain.NewMoney(2500000)},
+	)
+	evalAsset := eng.EvaluateEntry(tsEv, assetCandidate)
+	if evalAsset.IsCorrect {
+		t.Errorf("asset candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalAsset.ErrorTags {
+		if tag == engine.TagTreasuryStockRecordedAsAsset {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagTreasuryStockRecordedAsAsset, got %v", evalAsset.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestPayBondInterestRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	interestEv := engine.TransactionEvent{
+		FamilyID: bank.FamilyPayBondInterest,
+		Parameters: map[string]int64{
+			"amount_minor_units":   250000,
+			"cash_minor_units":     200000,
+			"discount_minor_units": 50000,
+		},
+	}
+	proc, err := eng.ProcessEvent(interestEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Interest Expense $2,500 (-Equity), Credit Cash $2,000 (-Assets), Credit Discount $500 (+carrying Liabilities)
+	if proc.Equation.DeltaAssets.Cents() != -200000 || proc.Equation.DeltaLiabilities.Cents() != 50000 || proc.Equation.DeltaEquity.Cents() != -250000 {
+		t.Errorf("unexpected equation delta for bond interest: %+v", proc.Equation)
+	}
+
+	// Diagnostic: ignoring discount amortization
+	cashOnlyCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "interest_expense", Side: domain.SideDebit, Amount: domain.NewMoney(200000)},
+		domain.Posting{AccountID: "cash", Side: domain.SideCredit, Amount: domain.NewMoney(200000)},
+	)
+	evalCashOnly := eng.EvaluateEntry(interestEv, cashOnlyCandidate)
+	if evalCashOnly.IsCorrect {
+		t.Errorf("cash only candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalCashOnly.ErrorTags {
+		if tag == engine.TagIgnoringBondAmortization {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagIgnoringBondAmortization, got %v", evalCashOnly.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestRepo105AnalysisRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	repoEv := engine.TransactionEvent{
+		FamilyID:   bank.FamilyRepo105Analysis,
+		Parameters: map[string]int64{"amount_minor_units": 5000000}, // $50,000
+	}
+	proc, err := eng.ProcessEvent(repoEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Cash $50,000 (+A), Credit Notes Payable $50,000 (+L)
+	if proc.Equation.DeltaAssets.Cents() != 5000000 || proc.Equation.DeltaLiabilities.Cents() != 5000000 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("unexpected equation delta for repo: %+v", proc.Equation)
+	}
+
+	// Diagnostic: treating repo as sale of assets
+	saleCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(5000000)},
+		domain.Posting{AccountID: "equipment", Side: domain.SideCredit, Amount: domain.NewMoney(5000000)},
+	)
+	evalSale := eng.EvaluateEntry(repoEv, saleCandidate)
+	if evalSale.IsCorrect {
+		t.Errorf("sale candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalSale.ErrorTags {
+		if tag == engine.TagRepoTreatedAsSale {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagRepoTreatedAsSale, got %v", evalSale.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestAppleMultiElementRevenueRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	appleEv := engine.TransactionEvent{
+		FamilyID: bank.FamilyAppleMultiElementRevenue,
+		Parameters: map[string]int64{
+			"amount_minor_units":            100000,
+			"delivered_revenue_minor_units": 80000,
+			"unearned_revenue_minor_units":  20000,
+		},
+	}
+	proc, err := eng.ProcessEvent(appleEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Cash $1,000 (+A), Credit Service Revenue $800 (+E), Credit Unearned Revenue $200 (+L)
+	if proc.Equation.DeltaAssets.Cents() != 100000 || proc.Equation.DeltaLiabilities.Cents() != 20000 || proc.Equation.DeltaEquity.Cents() != 80000 {
+		t.Errorf("unexpected equation delta for multi-element revenue: %+v", proc.Equation)
+	}
+
+	// Diagnostic: recognizing 100% immediate revenue
+	immediateCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(100000)},
+		domain.Posting{AccountID: "service_revenue", Side: domain.SideCredit, Amount: domain.NewMoney(100000)},
+	)
+	evalImmediate := eng.EvaluateEntry(appleEv, immediateCandidate)
+	if evalImmediate.IsCorrect {
+		t.Errorf("immediate revenue candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalImmediate.ErrorTags {
+		if tag == engine.TagPrematureRevenueRecognition {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagPrematureRevenueRecognition, got %v", evalImmediate.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestGoodwillImpairmentRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	impairEv := engine.TransactionEvent{
+		FamilyID: bank.FamilyGoodwillImpairment,
+		Parameters: map[string]int64{
+			"amount_minor_units": 5000000, // $50,000
+		},
+	}
+	proc, err := eng.ProcessEvent(impairEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Loss on Impairment $50,000 (-Equity), Credit Goodwill $50,000 (-Assets)
+	if proc.Equation.DeltaAssets.Cents() != -5000000 || proc.Equation.DeltaLiabilities.Cents() != 0 || proc.Equation.DeltaEquity.Cents() != -5000000 {
+		t.Errorf("unexpected equation delta for goodwill impairment: %+v", proc.Equation)
+	}
+
+	// Diagnostic: treating impairment as amortization expense
+	amortCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "rent_expense", Side: domain.SideDebit, Amount: domain.NewMoney(5000000)},
+		domain.Posting{AccountID: "goodwill", Side: domain.SideCredit, Amount: domain.NewMoney(5000000)},
+	)
+	evalAmort := eng.EvaluateEntry(impairEv, amortCandidate)
+	if evalAmort.IsCorrect {
+		t.Errorf("amortization candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalAmort.ErrorTags {
+		if tag == engine.TagGoodwillAmortized {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagGoodwillAmortized, got %v", evalAmort.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestDigitalAssetAccountingRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	cryptoEv := engine.TransactionEvent{
+		FamilyID: bank.FamilyDigitalAssetAccounting,
+		Parameters: map[string]int64{
+			"amount_minor_units": 150000000, // $1,500,000
+		},
+	}
+	proc, err := eng.ProcessEvent(cryptoEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Digital Assets $1.5M (+A), Credit Cash $1.5M (-A). Asset swap: delta = 0
+	if proc.Equation.DeltaAssets.Cents() != 0 || proc.Equation.DeltaLiabilities.Cents() != 0 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("unexpected equation delta for digital assets: %+v", proc.Equation)
+	}
+
+	// Diagnostic: treating purchase as revenue or immediate expense
+	expCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "rent_expense", Side: domain.SideDebit, Amount: domain.NewMoney(150000000)},
+		domain.Posting{AccountID: "cash", Side: domain.SideCredit, Amount: domain.NewMoney(150000000)},
+	)
+	evalExp := eng.EvaluateEntry(cryptoEv, expCandidate)
+	if evalExp.IsCorrect {
+		t.Errorf("expense candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalExp.ErrorTags {
+		if tag == engine.TagCryptoRecordedAsCashEquivalent {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagCryptoRecordedAsCashEquivalent, got %v", evalExp.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestReportingPolicyChoiceRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	policyEv := engine.TransactionEvent{
+		FamilyID: bank.FamilyReportingPolicyChoice,
+		Parameters: map[string]int64{
+			"amount_minor_units": 2500000, // $25,000
+		},
+	}
+	proc, err := eng.ProcessEvent(policyEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Cash $25,000 (+A), Credit Unearned Revenue $25,000 (+L)
+	if proc.Equation.DeltaAssets.Cents() != 2500000 || proc.Equation.DeltaLiabilities.Cents() != 2500000 || proc.Equation.DeltaEquity.Cents() != 0 {
+		t.Errorf("unexpected equation delta for reporting policy choice: %+v", proc.Equation)
+	}
+
+	// Diagnostic: aggressive immediate revenue acceleration
+	aggressiveCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(2500000)},
+		domain.Posting{AccountID: "service_revenue", Side: domain.SideCredit, Amount: domain.NewMoney(2500000)},
+	)
+	evalAggressive := eng.EvaluateEntry(policyEv, aggressiveCandidate)
+	if evalAggressive.IsCorrect {
+		t.Errorf("aggressive candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalAggressive.ErrorTags {
+		if tag == engine.TagAggressiveRevenueAcceleration {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagAggressiveRevenueAcceleration, got %v", evalAggressive.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+func TestFinancialForecastingRule(t *testing.T) {
+	eng, catalog := setupTestEngine(t)
+
+	forecastEv := engine.TransactionEvent{
+		FamilyID: bank.FamilyFinancialForecasting,
+		Parameters: map[string]int64{
+			"amount_minor_units": 4000000, // $40,000
+		},
+	}
+	proc, err := eng.ProcessEvent(forecastEv)
+	if err != nil {
+		t.Fatalf("ProcessEvent failed: %v", err)
+	}
+	// Debit Accounts Receivable $40,000 (+A), Credit Service Revenue $40,000 (+E)
+	if proc.Equation.DeltaAssets.Cents() != 4000000 || proc.Equation.DeltaLiabilities.Cents() != 0 || proc.Equation.DeltaEquity.Cents() != 4000000 {
+		t.Errorf("unexpected equation delta for financial forecasting: %+v", proc.Equation)
+	}
+
+	// Diagnostic: recording cash for credit sales forecast
+	cashCandidate := domain.NewEntry(
+		domain.Posting{AccountID: "cash", Side: domain.SideDebit, Amount: domain.NewMoney(4000000)},
+		domain.Posting{AccountID: "service_revenue", Side: domain.SideCredit, Amount: domain.NewMoney(4000000)},
+	)
+	evalCash := eng.EvaluateEntry(forecastEv, cashCandidate)
+	if evalCash.IsCorrect {
+		t.Errorf("cash candidate should fail")
+	}
+	hasTag := false
+	for _, tag := range evalCash.ErrorTags {
+		if tag == engine.TagCashRecordedWhenUncollected {
+			hasTag = true
+		}
+	}
+	if !hasTag {
+		t.Errorf("expected TagCashRecordedWhenUncollected, got %v", evalCash.ErrorTags)
+	}
+
+	recon, err := domain.ReconcileTransaction(proc.Entry, catalog)
+	if err != nil || !recon.Reconciled {
+		t.Errorf("reconciliation failed: %v", err)
+	}
+}
+
+

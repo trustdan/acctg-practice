@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q_m06_ppe_straight_line_depr_01",
+      "version": 1,
+      "family_id": "m06_ppe_straight_line_depr",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "At fiscal year-end, the company records annual straight-line depreciation of ${amount_dollars} on factory equipment with an estimated useful life of 5 years and salvage value. Record the adjusting journal entry to recognize annual depreciation expense.",
+      "parameters": {
+        "amount_minor_units": [
+          600000,
+          1200000,
+          2400000
+        ]
+      },
+      "concepts": [
+        "straight_line_depreciation",
+        "accumulated_depreciation",
+        "contra_asset",
+        "adjusting_entries"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "depreciation_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M06 Candidate Batch: UW Foster Module 6 PPE & Depreciation (Straight-Line Adjusting Entry)"
+      }
+    },
+    {
+      "id": "q_m06_ppe_macrs_tax_timing_02",
+      "version": 1,
+      "family_id": "m06_ppe_macrs_tax_timing",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "For financial statement reporting under US GAAP, the company uses straight-line depreciation to reflect the steady economic consumption of its operating machinery, recording ${amount_dollars} of book depreciation expense for the year, while using accelerated MACRS on its tax return. Record the company's financial accounting adjusting entry for book depreciation.",
+      "parameters": {
+        "amount_minor_units": [
+          800000,
+          1600000,
+          3200000
+        ]
+      },
+      "concepts": [
+        "macrs_vs_straight_line",
+        "depreciation_timing_difference",
+        "book_tax_differences",
+        "contra_asset"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "depreciation_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M06 Candidate Batch: UW Foster Module 6 PPE & Depreciation (Accelerated MACRS vs Straight-Line Book Timing Difference)"
+      }
+    },
+    {
+      "id": "q_m06_ppe_asset_disposal_gain_loss_03",
+      "version": 1,
+      "family_id": "m06_ppe_asset_disposal_gain_loss",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "The company retires and sells factory equipment with an original cost of ${amount_dollars} and accumulated depreciation of 80% of original cost. The equipment is sold to an external buyer for cash proceeds equal to 25% of original cost, recognizing a gain on disposal. Record the derecognition of the asset and the sale transaction.",
+      "parameters": {
+        "amount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ],
+        "accum_depr_minor_units": [
+          4000000,
+          8000000,
+          16000000
+        ],
+        "cash_minor_units": [
+          1250000,
+          2500000,
+          5000000
+        ],
+        "gain_minor_units": [
+          250000,
+          500000,
+          1000000
+        ]
+      },
+      "concepts": [
+        "asset_disposal",
+        "gain_on_disposal",
+        "asset_derecognition",
+        "book_value_calculation"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "debit",
+            "amount_parameter": "accum_depr_minor_units"
+          },
+          {
+            "account_id": "equipment",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "gain_on_disposal",
+            "side": "credit",
+            "amount_parameter": "gain_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M06 Candidate Batch: UW Foster Module 6 PPE & Depreciation (Equipment Derecognition & Gain on Disposal)"
+      }
+    },
+    {
+      "id": "q_m06_ppe_impairment_recoverability_04",
+      "version": 1,
+      "family_id": "m06_ppe_impairment_recoverability",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "At year-end, the company performs an impairment review of production equipment under ASC 360 following technological changes. The equipment carrying value of $100,000 exceeds undiscounted expected future cash flows of $75,000 (triggering impairment under Step 1 recoverability). The fair value is measured at $60,000, requiring an impairment loss write-down of ${amount_dollars} (Step 2 measurement). Record the impairment loss adjusting entry.",
+      "parameters": {
+        "amount_minor_units": [
+          4000000,
+          8000000,
+          12000000
+        ]
+      },
+      "concepts": [
+        "asc_360_impairment",
+        "recoverability_test",
+        "fair_value_measurement",
+        "loss_on_impairment"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "loss_on_impairment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M06 Candidate Batch: UW Foster Module 6 PPE & Depreciation (ASC 360 Two-Step Impairment Test)"
+      }
+    }
+  ]
+}

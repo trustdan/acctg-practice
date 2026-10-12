@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "policy_version": 1,
+  "review": {
+    "reviewer": "Worker Agent 1 (Stream-M06)",
+    "approved_at": "2026-10-12T18:25:00Z",
+    "source": "Stream-M06 Property, Plant & Equipment, Depreciation, and Impairments Pedagogical Policy"
+  },
+  "questions": [
+    {
+      "question_id": "q_m06_ppe_straight_line_depr_01",
+      "question_version": 1,
+      "setting_group": "ppe.straight_line_depr",
+      "contrasts": [
+        {
+          "question_id": "q_m06_ppe_macrs_tax_timing_02",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "straight_line_vs_macrs_depreciation"
+    },
+    {
+      "question_id": "q_m06_ppe_macrs_tax_timing_02",
+      "question_version": 1,
+      "setting_group": "ppe.macrs_tax_timing",
+      "contrasts": [
+        {
+          "question_id": "q_m06_ppe_straight_line_depr_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "straight_line_vs_macrs_depreciation"
+    },
+    {
+      "question_id": "q_m06_ppe_asset_disposal_gain_loss_03",
+      "question_version": 1,
+      "setting_group": "ppe.asset_disposal_gain_loss",
+      "contrasts": [
+        {
+          "question_id": "q_m06_ppe_straight_line_depr_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "asset_disposal_derecognition_gain_loss"
+    },
+    {
+      "question_id": "q_m06_ppe_impairment_recoverability_04",
+      "question_version": 1,
+      "setting_group": "ppe.impairment_recoverability",
+      "contrasts": [
+        {
+          "question_id": "q_m06_ppe_straight_line_depr_01",
+          "question_version": 1
+        }
+      ],
+      "distractor_profile": "asc_360_impairment_recoverability"
+    }
+  ]
+}

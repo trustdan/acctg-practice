@@ -258,9 +258,9 @@ func TestStreamM05PedagogyPolicy(t *testing.T) {
 		Questions     []struct {
 			QuestionID        string   `json:"question_id"`
 			QuestionVersion   int      `json:"question_version"`
-			SettingGroup      string   `json:"setting_group"`
-			Contrasts         []string `json:"contrasts"`
-			DistractorProfile string   `json:"distractor_profile"`
+			SettingGroup      string `json:"setting_group"`
+			Contrasts         []any  `json:"contrasts"`
+			DistractorProfile string `json:"distractor_profile"`
 		} `json:"questions"`
 	}
 

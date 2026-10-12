@@ -52,8 +52,8 @@ func TestExpandedBankJournalAndRecapsAllAmounts(t *testing.T) {
 			checked++
 		}
 	}
-	if checked != 318 {
-		t.Fatalf("expected 318 scenario/amount checks, got %d", checked)
+	if checked != 354 {
+		t.Fatalf("expected 354 scenario/amount checks, got %d", checked)
 	}
 }
 

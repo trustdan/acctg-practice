@@ -16,8 +16,8 @@ func TestCanonicalAccountsValidation(t *testing.T) {
 	if file.SchemaVersion != 1 {
 		t.Fatalf("expected schema version 1, got %d", file.SchemaVersion)
 	}
-	if catalog.Count() != 27 {
-		t.Fatalf("expected 27 accounts in canonical catalog, got %d", catalog.Count())
+	if catalog.Count() != 29 {
+		t.Fatalf("expected 29 accounts in canonical catalog, got %d", catalog.Count())
 	}
 
 	// Verify key accounts exist
@@ -74,8 +74,8 @@ func TestCanonicalSeedQuestionsValidation(t *testing.T) {
 	if qBank.SchemaVersion != 1 {
 		t.Fatalf("expected schema version 1, got %d", qBank.SchemaVersion)
 	}
-	if len(qBank.Questions) != 107 {
-		t.Fatalf("expected 107 canonical question templates (106 active, 1 retired), got %d", len(qBank.Questions))
+	if len(qBank.Questions) != 119 {
+		t.Fatalf("expected 119 canonical question templates (118 active, 1 retired), got %d", len(qBank.Questions))
 	}
 
 	activeCount := 0
@@ -94,8 +94,8 @@ func TestCanonicalSeedQuestionsValidation(t *testing.T) {
 		}
 	}
 
-	if activeCount != 106 {
-		t.Errorf("expected 106 active templates, got %d", activeCount)
+	if activeCount != 118 {
+		t.Errorf("expected 118 active templates, got %d", activeCount)
 	}
 	if retiredCount != 1 {
 		t.Errorf("expected 1 retired template, got %d", retiredCount)

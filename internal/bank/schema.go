@@ -162,6 +162,14 @@ func QuestionModules(q QuestionJSON) []int {
 		return []int{1, 2, 9}
 	case FamilyFinancialForecasting:
 		return []int{1, 2, 10}
+	case FamilyM03OCFAccountsPayableIncrease, FamilyM03OCFPrepaidIncrease, FamilyM03OCFUnearnedRevenueIncrease:
+		return []int{1, 2, 3}
+	case FamilyM03OCFQuickRatio:
+		return []int{1, 2, 3, 8}
+	case FamilyM04VariableConsideration, FamilyM04ContractAssetAR, FamilyM04RightOfReturn, FamilyM04SatisfactionOverTime:
+		return []int{1, 2, 4}
+	case FamilyM05InventoryFIFO, FamilyM05InventoryLIFO, FamilyM05InventoryNRVWriteDown, FamilyM05FreightInCapitalize:
+		return []int{1, 2, 5}
 	default:
 		return []int{1, 2}
 	}

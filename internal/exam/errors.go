@@ -162,6 +162,42 @@ func DistractorExplanation(tag string) (misconception string, remediation string
 		return "Crude Aggregated Top-Line Forecast Assumption",
 			"Relied on crude aggregated percentage growth rather than disaggregated unit-level drivers. Disaggregated operational drivers (unit volume, pricing power, store count) provide structural predictive accuracy, whereas aggregated top-line growth hides volume vs price dynamics."
 
+	case engine.TagM03OCFPayableWrongDirection:
+		return "Accounts Payable Increase Subtracted on Cash Flows",
+			"Subtracted an increase in Accounts Payable on the indirect Statement of Cash Flows. Incurring expenses on account reduces Net Income without a cash outflow; therefore, an increase in Accounts Payable must be ADDED back to Net Income to determine operating cash flow."
+
+	case engine.TagM03OCFPrepaidWrongDirection:
+		return "Prepaid Asset Increase Added on Cash Flows",
+			"Added an increase in prepaid expenses on the indirect Statement of Cash Flows. Disbursing cash for future coverage consumes cash without reducing Net Income today; therefore, increases in current operating assets must be DEDUCTED from Net Income."
+
+	case engine.TagM03OCFUnearnedRevenueWrongDirection:
+		return "Unearned Revenue Increase Subtracted on Cash Flows",
+			"Subtracted an increase in Unearned Revenue on the indirect Statement of Cash Flows. Cash collected in advance from customers was received today but excluded from Net Income; therefore, increases in operating liabilities must be ADDED back to Net Income."
+
+	case engine.TagM03QuickRatioWrongDirection:
+		return "Quick Ratio Impact Inverted",
+			"Assumed that paying off accounts payable with cash decreases the Quick Ratio. When initial Quick Ratio is above 1.0, subtracting equal amounts of cash and current payables from both numerator and denominator mathematically increases the Quick Ratio."
+
+	case engine.TagM03InventoryTreatedAsQuickAsset:
+		return "Inventory Included in Quick Assets",
+			"Treated inventory as a quick asset when calculating acid-test liquidity. The Quick Ratio strictly measures immediate liquidity and excludes inventory and prepaids because inventory cannot be directly used to settle immediate obligations without liquidation time and risk."
+
+	case engine.TagM04RevenueRecognizedWithUncertainReturn:
+		return "Revenue Recognized During Open Return Period",
+			"Recognized sales revenue while products or services were subject to full refund or right of return terms. Under ASC 606, consideration subject to return rights cannot be recognized as immediate revenue; it must be recorded as Unearned Revenue / Refund Liability."
+
+	case engine.TagM04CashDebitedOnOverTimeSatisfaction:
+		return "Cash Debited When Relieving Contract Liability",
+			"Debited Cash upon delivering services over time. Cash was collected in an earlier advance transaction; as performance obligations are satisfied over time, the existing contract liability (Unearned Revenue) is debited, not Cash."
+
+	case engine.TagM05InventoryRecordedAtSelling:
+		return "Inventory Relieved at Selling Price",
+			"Recorded inventory reduction or COGS at selling price rather than historical cost. Inventory and Cost of Goods Sold must be measured at cost under GAAP, while selling price is recorded in the separate revenue entry."
+
+	case engine.TagM05FreightInExpensed:
+		return "Freight-In Expensed Immediately",
+			"Expensed freight-in costs immediately as an operating expense. Under US GAAP, shipping and transportation costs incurred to bring merchandise inventory into condition and location for sale must be capitalized into the Inventory asset, not expensed."
+
 	default:
 		clean := strings.ReplaceAll(tag, "_", " ")
 		clean = strings.Title(clean)

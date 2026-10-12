@@ -9,9 +9,9 @@ import (
 )
 
 func TestExpandedBankExamCoverageAndSnapshotReplay(t *testing.T) {
-	runner, cat, eng, gen, all := setupTestExam(t, 101, 107, 0)
-	if len(runner.Questions) != 106 {
-		t.Fatalf("expected only 106 active exam questions, got %d", len(runner.Questions))
+	runner, cat, eng, gen, all := setupTestExam(t, 101, 119, 0)
+	if len(runner.Questions) != 118 {
+		t.Fatalf("expected only 118 active exam questions, got %d", len(runner.Questions))
 	}
 	var snapshots []*domain.QuestionInstance
 	for _, eq := range runner.Questions {
@@ -54,7 +54,7 @@ func TestExpandedBankExamCoverageAndSnapshotReplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.CorrectItems != 212 || len(report.Reviews) != 212 {
+	if report.CorrectItems != 236 || len(report.Reviews) != 236 {
 		t.Fatalf("exam review coverage %+v", report)
 	}
 	for _, review := range report.Reviews {

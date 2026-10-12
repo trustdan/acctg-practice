@@ -24,8 +24,8 @@ func TestReviewedPedagogyPolicyReferencesAndStrictValidation(t *testing.T) {
 	if err = policy.ValidateReferences(questions.Questions); err != nil {
 		t.Fatal(err)
 	}
-	if len(policy.Questions) != 106 {
-		t.Fatalf("expected reviewed settings for 106, got %d", len(policy.Questions))
+	if len(policy.Questions) != 118 {
+		t.Fatalf("expected reviewed settings for 118, got %d", len(policy.Questions))
 	}
 	for _, q := range questions.Questions {
 		p, _, err := bank.ReviewedPedagogy(q)

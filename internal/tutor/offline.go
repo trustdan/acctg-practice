@@ -199,6 +199,24 @@ func socraticHintForErrorTag(tag string) string {
 		return "Under conservative financial reporting policy, can revenue be recognized immediately if ongoing performance obligations remain to be delivered?"
 	case engine.TagAggregatedForecastAssumption:
 		return "In financial forecasting, do crude top-line percentage growth extrapolations provide the same structural accuracy as disaggregated operational drivers (unit volume times price)?"
+	case engine.TagM03OCFPayableWrongDirection:
+		return "When an operating expense was incurred on account, did it reduce Net Income without any cash leaving the firm? Should this non-cash payable increase be added or deducted to reconcile to cash flow?"
+	case engine.TagM03OCFPrepaidWrongDirection:
+		return "If cash was paid out for insurance coverage but not yet expensed on the income statement, must this asset increase be deducted from Net Income to calculate operating cash flow?"
+	case engine.TagM03OCFUnearnedRevenueWrongDirection:
+		return "If customers paid cash in advance that was not yet recognized in Net Income, must this liability increase be added to Net Income to reflect operating cash inflow?"
+	case engine.TagM03QuickRatioWrongDirection:
+		return "When both Quick Assets (Cash) and Current Liabilities (A/P) decrease by the identical dollar amount, and the ratio was greater than 1.0, does the ratio increase or decrease?"
+	case engine.TagM03InventoryTreatedAsQuickAsset:
+		return "Does the acid-test (Quick) ratio include less liquid operating assets like inventory, or only cash, marketable securities, and accounts receivable?"
+	case engine.TagM04RevenueRecognizedWithUncertainReturn:
+		return "Under ASC 606, if the customer holds a full right of return and significant reversal is possible, can revenue be recognized immediately, or must a contract liability (Unearned Revenue) be recorded?"
+	case engine.TagM04CashDebitedOnOverTimeSatisfaction:
+		return "Was cash collected again today, or is the company fulfilling an advance obligation that was already collected and recorded in Unearned Revenue?"
+	case engine.TagM05InventoryRecordedAtSelling:
+		return "When merchandise is sold under perpetual inventory, is the inventory reduction recorded at cost or at retail selling price?"
+	case engine.TagM05FreightInExpensed:
+		return "Under GAAP, are shipping costs necessary to acquire and receive merchandise inventory expensed immediately, or capitalized as part of the Inventory asset cost?"
 	default:
 		return ""
 	}

@@ -53,7 +53,7 @@ func TestExpandedBankSubstepsAndRapidVariantsDoNotCreateDelayedMastery(t *testin
 		attempts = append(attempts, session.Attempts...)
 		count++
 	}
-	if count != 106 || len(attempts) != 742 {
+	if count != 118 || len(attempts) != 826 {
 		t.Fatalf("bank evidence coverage %d/%d", count, len(attempts))
 	}
 	stats := mastery.RebuildProjections(attempts)

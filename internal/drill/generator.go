@@ -136,6 +136,30 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 		buildReportingPolicyChoiceStages(instance, money, seed, processed)
 	case bank.FamilyFinancialForecasting:
 		buildFinancialForecastingStages(instance, money, seed, processed)
+	case bank.FamilyM03OCFAccountsPayableIncrease:
+		BuildM03OCFAccountsPayableIncreaseStages(instance, money, seed, processed)
+	case bank.FamilyM03OCFPrepaidIncrease:
+		BuildM03OCFPrepaidIncreaseStages(instance, money, seed, processed)
+	case bank.FamilyM03OCFUnearnedRevenueIncrease:
+		BuildM03OCFUnearnedRevenueIncreaseStages(instance, money, seed, processed)
+	case bank.FamilyM03OCFQuickRatio:
+		BuildM03OCFQuickRatioStages(instance, money, seed, processed)
+	case bank.FamilyM04VariableConsideration:
+		buildM04VariableConsiderationStages(instance, money, seed, processed)
+	case bank.FamilyM04ContractAssetAR:
+		buildM04ContractAssetARStages(instance, money, seed, processed)
+	case bank.FamilyM04RightOfReturn:
+		buildM04RightOfReturnStages(instance, money, seed, processed)
+	case bank.FamilyM04SatisfactionOverTime:
+		buildM04SatisfactionOverTimeStages(instance, money, seed, processed)
+	case bank.FamilyM05InventoryFIFO:
+		BuildM05InventoryFIFOStages(instance, money, seed, processed)
+	case bank.FamilyM05InventoryLIFO:
+		BuildM05InventoryLIFOStages(instance, money, seed, processed)
+	case bank.FamilyM05InventoryNRVWriteDown:
+		BuildM05InventoryNRVStages(instance, money, seed, processed)
+	case bank.FamilyM05FreightInCapitalize:
+		BuildM05FreightInCapStages(instance, money, seed, processed)
 	default:
 		buildGenericStages(instance, money, seed, processed)
 	}

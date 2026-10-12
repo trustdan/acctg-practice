@@ -1,6 +1,32 @@
 # Implementation handoff
 
-## Multi-Agent Distributed Question Expansion Architecture — 2026-10-12
+## Multi-Agent Wave 1 Integration: 118 Active Questions (119 Templates) — 2026-10-12
+
+- Successfully merged and integrated Wave 1 parallel streams (Stream-M03, Stream-M04, Stream-M05) into the master active bank:
+  - Stream-M03 (Module 3: Cash Flows & Statement Analysis):
+    - `q_m03_ocf_ap_increase_01`: Incurring operating rent on account ($15,000 increase in Accounts Payable added back to Net Income on indirect Statement of Cash Flows).
+    - `q_m03_ocf_prepaid_increase_02`: Cash advance payment for insurance ($6,000 increase in Prepaid Insurance deducted from Net Income).
+    - `q_m03_ocf_unearned_revenue_03`: Cash retainer advance collected from customer ($8,000 increase in Unearned Revenue added back to Net Income).
+    - `q_m03_ocf_quick_ratio_04`: Cash payment to settle accounts payable ($10,000 reduction), demonstrating mathematical increase in Quick Ratio when initial ratio > 1.0.
+  - Stream-M04 (Module 4: Revenue Recognition ASC 606):
+    - `q_m04_rev_variable_consideration_01`: ASC 606 Step 3 variable consideration constraint (billing fixed fee on account while constraining uncertain milestone bonus).
+    - `q_m04_rev_contract_asset_ar_01`: Unconditional right to consideration recorded as Accounts Receivable vs. conditional Contract Asset.
+    - `q_m04_rev_right_of_return_01`: Consideration received subject to full right-of-return trial period deferred to Unearned Revenue (Contract Liability).
+    - `q_m04_rev_satisfaction_over_time_01`: Delievering services over time under ASC 606 Step 5 input method, debiting Unearned Revenue and crediting Service Revenue.
+  - Stream-M05 (Module 5: Inventory & Cost of Goods Sold):
+    - `q_m05_inv_fifo_cogs_01`: Perpetual FIFO costing allocating earliest inventory batches to COGS upon sale.
+    - `q_m05_inv_lifo_cogs_02`: Perpetual LIFO costing matching most recent inventory acquisitions against current revenue.
+    - `q_m05_inv_lcnrv_adjustment_03`: Lower of Cost or Net Realizable Value (NRV) write-down recognizing non-cash expense and writing down damaged inventory.
+    - `q_m05_inv_freight_in_04`: Capitalization of freight-in shipping costs into the Inventory asset rather than immediate operating expense.
+  - Account Catalog Extensions (`curriculum/accounts.json`):
+    - Extended account catalog from 27 to 29 canonical accounts: added `inventory` (asset, normal debit) and `cost_of_goods_sold` (expense, normal debit).
+  - Test Suite & Reconcile Verification:
+    - Updated bank, pedagogy, exam, mastery, and TUI tests for 118 active questions (119 templates, 236 exam items, 826 mastery attempts, 354 scenario checks, 1062 context variants).
+    - `go test ./...` passed 100% across all 11 packages.
+    - `go vet ./...` passed with 0 warnings.
+    - Root executable `acctg.exe` compiled cleanly and `./acctg.exe --reconcile-all --db :memory:` verified 118/118 active questions (100% reconciled: Journal == T-Accounts == Equation).
+- Files: curriculum/accounts.json, curriculum/seed-questions.json, curriculum/pedagogy.json, internal/bank/family.go, internal/bank/schema.go, internal/bank/validator_test.go, internal/bank/pedagogy_test.go, internal/drill/generator.go, internal/drill/stages_m03.go, internal/drill/stages_m04.go, internal/drill/stages_m05.go, internal/drill/syllabus_m03_test.go, internal/drill/syllabus_m04_test.go, internal/drill/syllabus_m05_test.go, internal/engine/engine.go, internal/engine/event_m03.go, internal/engine/event_m04.go, internal/engine/event_m05.go, internal/engine/rules_m03.go, internal/engine/rules_m04.go, internal/engine/rules_m05.go, internal/exam/errors.go, internal/exam/expanded_bank_test.go, internal/mastery/expanded_bank_test.go, internal/tui/expanded_bank_test.go, internal/tui/expanded_context_test.go, internal/tutor/offline.go, docs/HANDOFF.md.
+- Next: Launch Wave 2 (Stream-M06: PPE & Depreciation, Stream-M07: Bonds & Effective Interest, Stream-M08: Leases & Equity).
 
 - Formulated and documented comprehensive durable plan for parallel multi-agent question expansion: [docs/MULTI-AGENT-QUESTION-EXPANSION-PLAN.md](MULTI-AGENT-QUESTION-EXPANSION-PLAN.md).
 - Architecture & Isolation Guarantees:

@@ -35,6 +35,24 @@ const (
 	FamilyDigitalAssetAccounting = "digital_asset_accounting"
 	FamilyReportingPolicyChoice = "reporting_policy_choice"
 	FamilyFinancialForecasting  = "financial_forecasting"
+
+	// Wave 1: Stream-M03 (Cash Flows & Statement Analysis)
+	FamilyM03OCFAccountsPayableIncrease   = "m03_ocf_ap_increase"
+	FamilyM03OCFPrepaidIncrease           = "m03_ocf_prepaid_increase"
+	FamilyM03OCFUnearnedRevenueIncrease   = "m03_ocf_unearned_revenue_increase"
+	FamilyM03OCFQuickRatio                = "m03_ocf_quick_ratio"
+
+	// Wave 1: Stream-M04 (Revenue Recognition ASC 606)
+	FamilyM04VariableConsideration = "m04_variable_consideration"
+	FamilyM04ContractAssetAR       = "m04_contract_asset_ar"
+	FamilyM04RightOfReturn         = "m04_right_of_return"
+	FamilyM04SatisfactionOverTime  = "m04_satisfaction_over_time"
+
+	// Wave 1: Stream-M05 (Inventory & Cost of Goods Sold)
+	FamilyM05InventoryFIFO         = "m05_inv_fifo_costing"
+	FamilyM05InventoryLIFO         = "m05_inv_lifo_costing"
+	FamilyM05InventoryNRVWriteDown = "m05_inv_nrv_writedown"
+	FamilyM05FreightInCapitalize   = "m05_inv_freight_in_cap"
 )
 
 var supportedFamilies = map[string]struct{}{
@@ -71,6 +89,20 @@ var supportedFamilies = map[string]struct{}{
 	FamilyDigitalAssetAccounting: {},
 	FamilyReportingPolicyChoice: {},
 	FamilyFinancialForecasting:  {},
+
+	// Wave 1 Streams
+	FamilyM03OCFAccountsPayableIncrease: {},
+	FamilyM03OCFPrepaidIncrease:         {},
+	FamilyM03OCFUnearnedRevenueIncrease: {},
+	FamilyM03OCFQuickRatio:              {},
+	FamilyM04VariableConsideration:      {},
+	FamilyM04ContractAssetAR:            {},
+	FamilyM04RightOfReturn:              {},
+	FamilyM04SatisfactionOverTime:       {},
+	FamilyM05InventoryFIFO:              {},
+	FamilyM05InventoryLIFO:              {},
+	FamilyM05InventoryNRVWriteDown:       {},
+	FamilyM05FreightInCapitalize:         {},
 }
 
 // IsSupportedFamily checks whether the family ID has reviewed semantic rules in code.

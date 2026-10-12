@@ -166,6 +166,18 @@
       "name": "Digital Assets",
       "category": "asset",
       "normal_side": "debit"
+    },
+    {
+      "id": "inventory",
+      "name": "Inventory",
+      "category": "asset",
+      "normal_side": "debit"
+    },
+    {
+      "id": "cost_of_goods_sold",
+      "name": "Cost of Goods Sold",
+      "category": "expense",
+      "normal_side": "debit"
     }
   ]
 }

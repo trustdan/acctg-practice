@@ -73,7 +73,7 @@ func buildM04VariableConsiderationStages(inst *domain.QuestionInstance, amt doma
 	}
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
-		{ID: "opt_service_revenue", Text: "Service Revenue (Revenue / Equity)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue"},
 		{ID: "opt_unearned_revenue", Text: "Unearned Revenue (Liability)", ErrorTag: engine.TagRevenueDeferredWhenEarned},
 		{ID: "opt_cash", Text: "Cash (Asset)", ErrorTag: engine.TagCashRecordedWhenUncollected},
 	}, seed, 4015)
@@ -187,7 +187,7 @@ func buildM04ContractAssetARStages(inst *domain.QuestionInstance, amt domain.Mon
 	}
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
-		{ID: "opt_service_revenue", Text: "Service Revenue (Revenue / Equity)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue"},
 		{ID: "opt_accounts_payable", Text: "Accounts Payable (Liability)", ErrorTag: engine.TagWrongAccount},
 		{ID: "opt_cash", Text: "Cash (Asset)", ErrorTag: engine.TagCashRecordedWhenUncollected},
 	}, seed, 4025)
@@ -415,7 +415,7 @@ func buildM04SatisfactionOverTimeStages(inst *domain.QuestionInstance, amt domai
 	}
 
 	stage5Opts := shuffleOptions([]domain.AnswerOption{
-		{ID: "opt_service_revenue", Text: "Service Revenue (Revenue / Equity)"},
+		{ID: "opt_service_revenue", Text: "Service Revenue"},
 		{ID: "opt_cash", Text: "Cash (Asset)", ErrorTag: engine.TagM04CashDebitedOnOverTimeSatisfaction},
 		{ID: "opt_accounts_receivable", Text: "Accounts Receivable (Asset)", ErrorTag: engine.TagWrongAccount},
 	}, seed, 4045)

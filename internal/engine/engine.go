@@ -90,6 +90,21 @@ func NewEngine(catalog *domain.AccountCatalog) *Engine {
 	e.rules[bank.FamilyReportingPolicyChoice] = reportingPolicyChoice
 	e.rules[bank.FamilyFinancialForecasting] = financialForecasting
 
+	// Wave 1: Stream-M03
+	RegisterM03Rules(e)
+
+	// Wave 1: Stream-M04
+	e.rules[bank.FamilyM04VariableConsideration] = M04VariableConsiderationRule{}
+	e.rules[bank.FamilyM04ContractAssetAR] = M04ContractAssetARRule{}
+	e.rules[bank.FamilyM04RightOfReturn] = M04RightOfReturnRule{}
+	e.rules[bank.FamilyM04SatisfactionOverTime] = M04SatisfactionOverTimeRule{}
+
+	// Wave 1: Stream-M05
+	e.rules[bank.FamilyM05InventoryFIFO] = M05InventoryFIFORule{}
+	e.rules[bank.FamilyM05InventoryLIFO] = M05InventoryLIFORule{}
+	e.rules[bank.FamilyM05InventoryNRVWriteDown] = M05InventoryNRVWriteDownRule{}
+	e.rules[bank.FamilyM05FreightInCapitalize] = M05FreightInCapitalizeRule{}
+
 	return e
 }
 

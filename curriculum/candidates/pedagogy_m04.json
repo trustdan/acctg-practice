@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "policy_version": 1,
+  "review": {
+    "reviewer": "Worker Agent 2 (Stream-M04)",
+    "approved_at": "2026-10-12T12:00:00Z",
+    "source": "Stream-M04 pedagogy policy candidate for Wave 1 ASC 606 revenue recognition"
+  },
+  "questions": [
+    {
+      "question_id": "q_m04_rev_variable_consideration_01",
+      "question_version": 1,
+      "setting_group": "m04_rev_variable_consideration.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m04_rev_contract_asset_ar_01",
+      "question_version": 1,
+      "setting_group": "m04_rev_contract_asset_ar.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m04_rev_right_of_return_01",
+      "question_version": 1,
+      "setting_group": "m04_rev_right_of_return.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m04_rev_satisfaction_over_time_01",
+      "question_version": 1,
+      "setting_group": "m04_rev_satisfaction_over_time.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    }
+  ]
+}

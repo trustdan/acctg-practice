@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q_m04_rev_variable_consideration_01",
+      "version": 1,
+      "family_id": "m04_variable_consideration",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "A consulting firm completes technical advisory services under a contract with a fixed fee of ${amount_dollars} and an incentive bonus of $2,000 contingent on client cost savings. Under the ASC 606 variable consideration constraint, the bonus is excluded from the transaction price because meeting the cost savings target is volatile and outside the firm's influence. The firm bills the client on account for the fixed fee of ${amount_dollars} with net 30 payment terms. No cash has been collected. Record the billing of the fixed fee under ASC 606.",
+      "parameters": {
+        "amount_minor_units": [
+          120000,
+          240000,
+          480000
+        ]
+      },
+      "concepts": [
+        "revenue_recognition_asc606",
+        "variable_consideration_constraint",
+        "transaction_price",
+        "debit_credit_translation"
+      ],
+      "module": 4,
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M04)",
+        "approved_at": "2026-10-12T12:00:00Z",
+        "source": "Stream-M04 ASC 606 Revenue Recognition candidate proposal for Wave 1: Variable consideration constraint under ASC 606 Step 3"
+      }
+    },
+    {
+      "id": "q_m04_rev_contract_asset_ar_01",
+      "version": 1,
+      "family_id": "m04_contract_asset_ar",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under ASC 606-10-45, an entity distinguishes between a contract asset (conditional right) and an account receivable (unconditional right). A systems engineering firm successfully completes a milestone that has received full client sign-off. The contract stipulates that invoice billing is now unconditional, subject only to the passage of time before payment is due on net 30 credit terms. The firm issues an invoice on account for ${amount_dollars}. Record the establishment of this unconditional claim under ASC 606.",
+      "parameters": {
+        "amount_minor_units": [
+          150000,
+          300000,
+          600000
+        ]
+      },
+      "concepts": [
+        "revenue_recognition_asc606",
+        "contract_asset_vs_receivable",
+        "unconditional_right_to_consideration",
+        "debit_credit_translation"
+      ],
+      "module": 4,
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "accounts_receivable",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M04)",
+        "approved_at": "2026-10-12T12:00:00Z",
+        "source": "Stream-M04 ASC 606 Revenue Recognition candidate proposal for Wave 1: Unconditional right to payment presentation under ASC 606-10-45"
+      }
+    },
+    {
+      "id": "q_m04_rev_right_of_return_01",
+      "version": 1,
+      "family_id": "m04_right_of_return",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under ASC 606-10-55-23, when a contract includes a right of return and returns cannot be reliably estimated prior to performance, consideration received is recorded as a contract liability (Unearned Revenue) rather than revenue. A digital education provider receives ${amount_dollars} cash today for an annual executive seminar series starting next month, accompanied by an unconditional 30-day money-back guarantee. No services have been performed. Record today's cash receipt under ASC 606.",
+      "parameters": {
+        "amount_minor_units": [
+          180000,
+          360000,
+          720000
+        ]
+      },
+      "concepts": [
+        "revenue_recognition_asc606",
+        "right_of_return",
+        "contract_liability",
+        "cash_classification"
+      ],
+      "module": 4,
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "unearned_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M04)",
+        "approved_at": "2026-10-12T12:00:00Z",
+        "source": "Stream-M04 ASC 606 Revenue Recognition candidate proposal for Wave 1: Customer cash advance subject to right of return refund terms under ASC 606"
+      }
+    },
+    {
+      "id": "q_m04_rev_satisfaction_over_time_01",
+      "version": 1,
+      "family_id": "m04_satisfaction_over_time",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under ASC 606 Step 5, revenue is recognized over time as the customer simultaneously receives and consumes benefits from performance. A corporate client previously paid in advance for six months of ongoing compliance advisory, recorded in Unearned Revenue. During the current month, the firm delivers ongoing compliance services over time, satisfying ${amount_dollars} of its performance obligation. No cash changes hands today. Record the revenue earned and contract liability relief for the month under ASC 606.",
+      "parameters": {
+        "amount_minor_units": [
+          200000,
+          400000,
+          800000
+        ]
+      },
+      "concepts": [
+        "revenue_recognition_asc606",
+        "performance_obligation_over_time",
+        "contract_liability_satisfaction",
+        "debit_credit_translation"
+      ],
+      "module": 4,
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "unearned_revenue",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "service_revenue",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Worker Agent 2 (Stream-M04)",
+        "approved_at": "2026-10-12T12:00:00Z",
+        "source": "Stream-M04 ASC 606 Revenue Recognition candidate proposal for Wave 1: Over-time performance obligation satisfaction under ASC 606 Step 5"
+      }
+    }
+  ]
+}

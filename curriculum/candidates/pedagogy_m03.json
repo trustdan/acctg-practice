@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "policy_version": 2,
+  "review": {
+    "reviewer": "Worker Agent 1 (Stream-M03)",
+    "approved_at": "2026-10-12T17:45:00Z",
+    "source": "Stream-M03 pedagogical configuration for indirect cash flow and quick ratio questions"
+  },
+  "questions": [
+    {
+      "question_id": "q_m03_ocf_ap_increase_01",
+      "question_version": 1,
+      "setting_group": "m03_ocf_ap_increase.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m03_ocf_prepaid_increase_02",
+      "question_version": 1,
+      "setting_group": "m03_ocf_prepaid_increase.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m03_ocf_unearned_revenue_03",
+      "question_version": 1,
+      "setting_group": "m03_ocf_unearned_revenue_increase.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m03_ocf_quick_ratio_04",
+      "question_version": 1,
+      "setting_group": "m03_ocf_quick_ratio.baseline",
+      "contrasts": [],
+      "distractor_profile": ""
+    }
+  ]
+}

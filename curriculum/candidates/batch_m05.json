@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q_m05_inv_fifo_costing_01",
+      "version": 1,
+      "family_id": "m05_inv_fifo_costing",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under a perpetual inventory system with rising acquisition costs, the company sells merchandise to a customer and removes inventory using FIFO (First-In, First-Out). The cost assigned to goods sold from the earliest purchase batches is ${amount_dollars}.",
+      "parameters": {
+        "amount_minor_units": [
+          1200000,
+          2400000,
+          3600000
+        ]
+      },
+      "concepts": [
+        "inventory_costing_fifo",
+        "cogs_recognition",
+        "perpetual_inventory_system",
+        "matching_principle"
+      ],
+      "module": 5,
+      "modules": [
+        5,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cost_of_goods_sold",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "inventory",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M05 Candidate Batch: UW Foster Module 5 Inventory & COGS (FIFO Costing under Inflation)"
+      }
+    },
+    {
+      "id": "q_m05_inv_lifo_costing_02",
+      "version": 1,
+      "family_id": "m05_inv_lifo_costing",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "Under a perpetual inventory system in an inflationary environment, the company delivers inventory to a client and applies LIFO (Last-In, First-Out) costing, transferring the most recent purchase cost layer of ${amount_dollars} to cost of goods sold.",
+      "parameters": {
+        "amount_minor_units": [
+          1500000,
+          3000000,
+          4500000
+        ]
+      },
+      "concepts": [
+        "inventory_costing_lifo",
+        "cogs_recognition",
+        "inflation_tax_shield",
+        "lifo_conformity_rule"
+      ],
+      "module": 5,
+      "modules": [
+        5,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cost_of_goods_sold",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "inventory",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M05 Candidate Batch: UW Foster Module 5 Inventory & COGS (LIFO Perpetual Costing & Conformity)"
+      }
+    },
+    {
+      "id": "q_m05_inv_nrv_writedown_03",
+      "version": 1,
+      "family_id": "m05_inv_nrv_writedown",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "At financial statement date, the company performs valuation testing under ASC 330. Due to obsolescence, ending inventory has a net realizable value below carrying cost, requiring an immediate write-down of ${amount_dollars}.",
+      "parameters": {
+        "amount_minor_units": [
+          500000,
+          1000000,
+          2000000
+        ]
+      },
+      "concepts": [
+        "lower_of_cost_or_nrv",
+        "inventory_writedown",
+        "asc_330",
+        "conservatism_principle"
+      ],
+      "module": 5,
+      "modules": [
+        5,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cost_of_goods_sold",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "inventory",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M05 Candidate Batch: UW Foster Module 5 Inventory & COGS (Lower of Cost or NRV Write-Down ASC 330)"
+      }
+    },
+    {
+      "id": "q_m05_inv_freight_in_cap_04",
+      "version": 1,
+      "family_id": "m05_inv_freight_in_cap",
+      "rule_version": 1,
+      "status": "candidate_pending_review",
+      "scenario_template": "The company purchases merchandise shipped FOB shipping point and pays ${amount_dollars} cash for freight-in shipping costs required to bring the inventory to its warehouse ready for resale.",
+      "parameters": {
+        "amount_minor_units": [
+          80000,
+          160000,
+          320000
+        ]
+      },
+      "concepts": [
+        "freight_in_capitalization",
+        "fob_shipping_point",
+        "inventory_cost_basis",
+        "asset_exchange"
+      ],
+      "module": 5,
+      "modules": [
+        5,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "inventory",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "source": "Stream-M05 Candidate Batch: UW Foster Module 5 Inventory & COGS (Freight-In Capitalization FOB Shipping Point)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "policy_version": 1,
+  "review": {
+    "reviewer": "Worker Agent 3 (Stream-M05)",
+    "approved_at": "2026-10-12T17:47:00Z",
+    "source": "Stream-M05 Inventory & Cost of Goods Sold Pedagogical Policy"
+  },
+  "questions": [
+    {
+      "question_id": "q_m05_inv_fifo_costing_01",
+      "question_version": 1,
+      "setting_group": "inventory.fifo_costing",
+      "contrasts": [
+        "q_m05_inv_lifo_costing_02"
+      ],
+      "distractor_profile": "inventory_fifo_vs_lifo"
+    },
+    {
+      "question_id": "q_m05_inv_lifo_costing_02",
+      "question_version": 1,
+      "setting_group": "inventory.lifo_costing",
+      "contrasts": [
+        "q_m05_inv_fifo_costing_01"
+      ],
+      "distractor_profile": "inventory_fifo_vs_lifo"
+    },
+    {
+      "question_id": "q_m05_inv_nrv_writedown_03",
+      "question_version": 1,
+      "setting_group": "inventory.nrv_writedown",
+      "contrasts": [
+        "q_m05_inv_fifo_costing_01"
+      ],
+      "distractor_profile": "inventory_nrv_vs_historical_cost"
+    },
+    {
+      "question_id": "q_m05_inv_freight_in_cap_04",
+      "question_version": 1,
+      "setting_group": "inventory.freight_in_cap",
+      "contrasts": [
+        "q_m05_inv_fifo_costing_01"
+      ],
+      "distractor_profile": "freight_in_capitalization_vs_expense"
+    }
+  ]
+}

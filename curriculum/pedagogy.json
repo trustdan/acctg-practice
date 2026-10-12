@@ -960,6 +960,90 @@
       "setting_group": "inventory.freight_in_cap",
       "contrasts": [],
       "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m06_ppe_straight_line_depr_01",
+      "question_version": 1,
+      "setting_group": "ppe.straight_line_depr",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m06_ppe_macrs_tax_timing_02",
+      "question_version": 1,
+      "setting_group": "ppe.macrs_tax_timing",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m06_ppe_asset_disposal_gain_loss_03",
+      "question_version": 1,
+      "setting_group": "ppe.asset_disposal_gain_loss",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m06_ppe_impairment_recoverability_04",
+      "question_version": 1,
+      "setting_group": "ppe.impairment_recoverability",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m07_bnd_issuance_discount_01",
+      "question_version": 1,
+      "setting_group": "bonds.issuance_discount",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m07_bnd_issuance_premium_02",
+      "question_version": 1,
+      "setting_group": "bonds.issuance_premium",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m07_bnd_effective_interest_amort_03",
+      "question_version": 1,
+      "setting_group": "bonds.effective_interest_amort",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m07_bnd_contingent_liability_04",
+      "question_version": 1,
+      "setting_group": "liabilities.contingent_liability",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m08_lse_commencement_rou_asset_01",
+      "question_version": 1,
+      "setting_group": "lease.commencement",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m08_lse_periodic_lease_payment_02",
+      "question_version": 1,
+      "setting_group": "lease.periodic_payment",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m08_lse_treasury_stock_repurchase_03",
+      "question_version": 1,
+      "setting_group": "equity.treasury_stock_repurchase",
+      "contrasts": [],
+      "distractor_profile": ""
+    },
+    {
+      "question_id": "q_m08_lse_treasury_stock_reissuance_04",
+      "question_version": 1,
+      "setting_group": "equity.treasury_stock_reissuance",
+      "contrasts": [],
+      "distractor_profile": ""
     }
   ]
 }

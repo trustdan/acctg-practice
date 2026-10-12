@@ -1,5 +1,33 @@
 # Implementation handoff
 
+## Multi-Agent Wave 2 Integration: 130 Active Questions (131 Templates) — 2026-10-12
+
+- Successfully merged and integrated Wave 2 parallel streams (Stream-M06, Stream-M07, Stream-M08) into the master active bank:
+  - Stream-M06 (Module 6: PPE, Depreciation & Impairments):
+    - `q_m06_ppe_straight_line_depr_01`: Straight-line depreciation adjusting entry ((Cost - Salvage) / Useful Life), debiting Depreciation Expense and crediting Accumulated Depreciation.
+    - `q_m06_ppe_macrs_tax_timing_02`: Book depreciation under straight-line while MACRS accelerated depreciation is used for tax returns, explaining timing differences.
+    - `q_m06_ppe_asset_disposal_gain_loss_03`: Derecognition of PPE upon sale for cash, removing Equipment and Accumulated Depreciation and recognizing Gain on Disposal.
+    - `q_m06_ppe_impairment_recoverability_04`: ASC 360 two-step impairment testing (undiscounted cash flows < carrying value triggers write-down to fair value via Loss on Impairment).
+  - Stream-M07 (Module 7: Liabilities, Bonds & Contingencies):
+    - `q_m07_bnd_issuance_discount_01`: Bond issuance at discount (stated rate < market rate), debiting Cash and Discount on Bonds Payable (contra-liability) and crediting Bonds Payable.
+    - `q_m07_bnd_issuance_premium_02`: Bond issuance at premium (stated rate > market rate), debiting Cash and crediting Premium on Bonds Payable (adjunct liability) and Bonds Payable.
+    - `q_m07_bnd_effective_interest_amort_03`: Semiannual interest payment and discount amortization under effective interest method (ASC 835-30).
+    - `q_m07_bnd_contingent_liability_04`: ASC 450 loss contingency accrual (probable and reasonably estimable litigation loss), debiting Litigation Loss and crediting Contingent Liability.
+  - Stream-M08 (Module 8: Leases ASC 842 & Stockholders' Equity):
+    - `q_m08_lse_commencement_rou_asset_01`: Initial lease commencement capitalizing Right-of-Use Asset and Lease Liability at present value under ASC 842.
+    - `q_m08_lse_periodic_lease_payment_02`: Annual lease payment bifurcating cash outflow into principal Lease Liability reduction and Interest Expense.
+    - `q_m08_lse_treasury_stock_repurchase_03`: Stock repurchase under the cost method, debiting Treasury Stock (contra-equity) and crediting Cash.
+    - `q_m08_lse_treasury_stock_reissuance_04`: Reissuing treasury shares above cost, debiting Cash and crediting Treasury Stock (at cost) and Additional Paid-in Capital (no gain/loss in earnings).
+  - Account Catalog Extensions (`curriculum/accounts.json`):
+    - Extended account catalog to 37 canonical accounts: added `accumulated_depreciation` (asset, contra of `equipment`), `depreciation_expense` (expense), `gain_on_disposal` (revenue), `loss_on_disposal` (expense), `right_of_use_asset` (asset), `lease_liability` (liability), `litigation_loss` (expense), and `contingent_liability` (liability).
+  - Test Suite & Reconcile Verification:
+    - Updated bank, pedagogy, exam, mastery, and TUI tests for 130 active questions (131 templates, 260 exam items, 910 mastery attempts, 390 scenario checks, 1,170 context variants).
+    - `go test ./...` passed 100% across all 11 packages.
+    - `go vet ./...` passed with 0 warnings.
+    - Root executable `acctg.exe` compiled cleanly and `./acctg.exe --reconcile-all --db :memory:` verified 130/130 active questions (100% reconciled: Journal == T-Accounts == Equation).
+- Files: curriculum/accounts.json, curriculum/seed-questions.json, curriculum/pedagogy.json, internal/bank/family.go, internal/bank/schema.go, internal/bank/validator_test.go, internal/bank/pedagogy_test.go, internal/drill/generator.go, internal/drill/stages_m06.go, internal/drill/stages_m07.go, internal/drill/stages_m08.go, internal/drill/syllabus_m06_test.go, internal/drill/syllabus_m07_test.go, internal/drill/syllabus_m08_test.go, internal/engine/engine.go, internal/engine/event_m06.go, internal/engine/event_m07.go, internal/engine/event_m08.go, internal/engine/rules_m06.go, internal/engine/rules_m07.go, internal/engine/rules_m08.go, internal/exam/errors.go, internal/exam/expanded_bank_test.go, internal/mastery/expanded_bank_test.go, internal/tui/expanded_bank_test.go, internal/tui/expanded_context_test.go, internal/tutor/offline.go, docs/HANDOFF.md.
+- Next: Launch Wave 3 (Stream-M09: Quality of Financial Reporting, Stream-M10: Financial Statement Forecasting).
+
 ## Multi-Agent Wave 1 Integration: 118 Active Questions (119 Templates) — 2026-10-12
 
 - Successfully merged and integrated Wave 1 parallel streams (Stream-M03, Stream-M04, Stream-M05) into the master active bank:

@@ -217,6 +217,32 @@ func socraticHintForErrorTag(tag string) string {
 		return "When merchandise is sold under perpetual inventory, is the inventory reduction recorded at cost or at retail selling price?"
 	case engine.TagM05FreightInExpensed:
 		return "Under GAAP, are shipping costs necessary to acquire and receive merchandise inventory expensed immediately, or capitalized as part of the Inventory asset cost?"
+	case engine.TagM06AccumulatedDeprExpensed:
+		return "Is Accumulated Depreciation an operating expense on the income statement, or a contra-asset account offsetting the historical cost of equipment on the balance sheet?"
+	case engine.TagM06DirectAssetCredit:
+		return "Under US GAAP, does periodic depreciation directly reduce the original equipment cost account, or is it accumulated in a separate contra-asset account?"
+	case engine.TagM06GainTreatedAsRevenue:
+		return "Does selling an operational machine generate core recurring customer revenue, or a non-operating peripheral gain on disposal?"
+	case engine.TagM06DisposalAccumDeprRetained:
+		return "When an asset is retired and removed from the books, must the cumulative depreciation associated with that specific asset also be removed?"
+	case engine.TagM07DiscountRecordedAsLoss:
+		return "Does a discount on bonds payable represent an immediate period loss, or an adjustment to borrowing cost amortized over the life of the bond?"
+	case engine.TagM07PremiumRecordedAsGain:
+		return "Does receiving a bond premium count as immediate upfront gain, or does it reduce interest expense across the life of the debt?"
+	case engine.TagM07IgnoringBondAmortization:
+		return "Under the effective interest method, does interest expense equal only the cash coupon payment, or must the difference amortize the bond discount or premium?"
+	case engine.TagM07ContingentRecordedAsPayable:
+		return "Does an accrued litigation loss represent trade accounts payable to routine suppliers, or a specific contingent litigation liability?"
+	case engine.TagM08LeaseExpensedAtCommencement:
+		return "Under ASC 842, can a long-term lease commitment be expensed immediately at signing, or must a Right-of-Use Asset and Lease Liability be capitalized?"
+	case engine.TagM08ROUAssetRecordedAsEquity:
+		return "Does a lease agreement represent an equity ownership interest, or a contractual financing obligation owed to a lessor?"
+	case engine.TagM08IgnoringLeaseInterest:
+		return "Does a lease payment solely reduce the principal obligation, or does it cover both financing interest expense and liability reduction?"
+	case engine.TagM08TreasuryStockRecordedAsAsset:
+		return "Can a company hold an investment asset in its own stock, or is repurchased stock classified as a contra-equity account?"
+	case engine.TagM08GainRecordedOnTreasuryReissuance:
+		return "Can transactions in a corporation's own capital stock ever generate income statement gains or losses under US GAAP?"
 	default:
 		return ""
 	}

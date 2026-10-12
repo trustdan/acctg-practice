@@ -105,6 +105,21 @@ func NewEngine(catalog *domain.AccountCatalog) *Engine {
 	e.rules[bank.FamilyM05InventoryNRVWriteDown] = M05InventoryNRVWriteDownRule{}
 	e.rules[bank.FamilyM05FreightInCapitalize] = M05FreightInCapitalizeRule{}
 
+	// Wave 2: Stream-M06
+	e.rules[bank.FamilyM06StraightLineDepr] = M06PPEStraightLineDeprRule{}
+	e.rules[bank.FamilyM06MACRSTaxTiming] = M06PPEMACRSTaxTimingRule{}
+	e.rules[bank.FamilyM06AssetDisposalGainLoss] = M06PPEAssetDisposalGainLossRule{}
+	e.rules[bank.FamilyM06ImpairmentRecoverability] = M06PPEImpairmentRecoverabilityRule{}
+
+	// Wave 2: Stream-M07
+	e.rules[bank.FamilyM07BondIssuanceDiscount] = M07BondIssuanceDiscountRule{}
+	e.rules[bank.FamilyM07BondIssuancePremium] = M07BondIssuancePremiumRule{}
+	e.rules[bank.FamilyM07BondEffectiveInterestAmort] = M07BondEffectiveInterestAmortRule{}
+	e.rules[bank.FamilyM07BondContingentLiability] = M07BondContingentLiabilityRule{}
+
+	// Wave 2: Stream-M08
+	RegisterM08Rules(e)
+
 	return e
 }
 

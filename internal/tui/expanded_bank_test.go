@@ -52,8 +52,8 @@ func TestExpandedBankJournalAndRecapsAllAmounts(t *testing.T) {
 			checked++
 		}
 	}
-	if checked != 354 {
-		t.Fatalf("expected 354 scenario/amount checks, got %d", checked)
+	if checked != 390 {
+		t.Fatalf("expected 390 scenario/amount checks, got %d", checked)
 	}
 }
 
@@ -76,7 +76,14 @@ func TestJournalNextUsesActiveRenderedAllowedAmountsWithoutChangingDrillIndex(t 
 				allowed = true
 			}
 		}
-		if !allowed || (m.JournalCanonicalEntry.TotalCredit().Cents() != amount && m.JournalCanonicalEntry.Postings[0].Amount.Cents() != amount) {
+		hasPostingWithAmount := false
+		for _, p := range m.JournalCanonicalEntry.Postings {
+			if p.Amount.Cents() == amount {
+				hasPostingWithAmount = true
+				break
+			}
+		}
+		if !allowed || (m.JournalCanonicalEntry.TotalCredit().Cents() != amount && !hasPostingWithAmount) {
 			t.Fatalf("%s prompt and grading amount disagree", q.ID)
 		}
 		if m.CurrentQuestionIndex != drillIndex {

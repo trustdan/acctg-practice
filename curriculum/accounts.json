@@ -215,6 +215,18 @@
       "name": "Lease Liability",
       "category": "liability",
       "normal_side": "credit"
+    },
+    {
+      "id": "litigation_loss",
+      "name": "Litigation Loss",
+      "category": "expense",
+      "normal_side": "debit"
+    },
+    {
+      "id": "contingent_liability",
+      "name": "Contingent Liability",
+      "category": "liability",
+      "normal_side": "credit"
     }
   ]
 }

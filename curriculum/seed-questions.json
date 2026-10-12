@@ -6806,6 +6806,650 @@
         "approved_at": "2026-10-12T17:58:00Z",
         "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
       }
+    },
+    {
+      "id": "q_m06_ppe_straight_line_depr_01",
+      "version": 1,
+      "family_id": "m06_ppe_straight_line_depr",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At fiscal year-end, the company records annual straight-line depreciation of ${amount_dollars} on factory equipment with an estimated useful life of 5 years and salvage value. Record the adjusting journal entry to recognize annual depreciation expense.",
+      "parameters": {
+        "amount_minor_units": [
+          600000,
+          1200000,
+          2400000
+        ]
+      },
+      "concepts": [
+        "straight_line_depreciation",
+        "accumulated_depreciation",
+        "contra_asset",
+        "adjusting_entries"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "depreciation_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m06_ppe_macrs_tax_timing_02",
+      "version": 1,
+      "family_id": "m06_ppe_macrs_tax_timing",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "For financial statement reporting under US GAAP, the company uses straight-line depreciation to reflect the steady economic consumption of its operating machinery, recording ${amount_dollars} of book depreciation expense for the year, while using accelerated MACRS on its tax return. Record the company's financial accounting adjusting entry for book depreciation.",
+      "parameters": {
+        "amount_minor_units": [
+          800000,
+          1600000,
+          3200000
+        ]
+      },
+      "concepts": [
+        "macrs_vs_straight_line",
+        "depreciation_timing_difference",
+        "book_tax_differences",
+        "contra_asset"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "depreciation_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m06_ppe_asset_disposal_gain_loss_03",
+      "version": 1,
+      "family_id": "m06_ppe_asset_disposal_gain_loss",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "The company retires and sells factory equipment with an original cost of ${amount_dollars} and accumulated depreciation of 80% of original cost. The equipment is sold to an external buyer for cash proceeds equal to 25% of original cost, recognizing a gain on disposal. Record the derecognition of the asset and the sale transaction.",
+      "parameters": {
+        "accum_depr_minor_units": [
+          4000000,
+          8000000,
+          16000000
+        ],
+        "amount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ],
+        "cash_minor_units": [
+          1250000,
+          2500000,
+          5000000
+        ],
+        "gain_minor_units": [
+          250000,
+          500000,
+          1000000
+        ]
+      },
+      "concepts": [
+        "asset_disposal",
+        "gain_on_disposal",
+        "asset_derecognition",
+        "book_value_calculation"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "debit",
+            "amount_parameter": "accum_depr_minor_units"
+          },
+          {
+            "account_id": "equipment",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "gain_on_disposal",
+            "side": "credit",
+            "amount_parameter": "gain_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m06_ppe_impairment_recoverability_04",
+      "version": 1,
+      "family_id": "m06_ppe_impairment_recoverability",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At year-end, the company performs an impairment review of production equipment under ASC 360 following technological changes. The equipment carrying value of $100,000 exceeds undiscounted expected future cash flows of $75,000 (triggering impairment under Step 1 recoverability). The fair value is measured at $60,000, requiring an impairment loss write-down of ${amount_dollars} (Step 2 measurement). Record the impairment loss adjusting entry.",
+      "parameters": {
+        "amount_minor_units": [
+          4000000,
+          8000000,
+          12000000
+        ]
+      },
+      "concepts": [
+        "asc_360_impairment",
+        "recoverability_test",
+        "fair_value_measurement",
+        "loss_on_impairment"
+      ],
+      "module": 6,
+      "modules": [
+        6,
+        1,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "loss_on_impairment",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "accumulated_depreciation",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m07_bnd_issuance_discount_01",
+      "version": 1,
+      "family_id": "m07_bnd_issuance_discount",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "To fund long-term factory modernization, the company issues 10-year bonds with a contractual face value of ${amount_dollars}. Because the market interest rate exceeds the stated coupon rate, investors require a discount, and the company receives cash proceeds of 95% of face value with a 5% discount below par.",
+      "parameters": {
+        "amount_minor_units": [
+          100000000,
+          200000000,
+          400000000
+        ],
+        "cash_minor_units": [
+          95000000,
+          190000000,
+          380000000
+        ],
+        "discount_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ]
+      },
+      "concepts": [
+        "bond_discount_issuance",
+        "contra_liability",
+        "discount_on_bonds_payable_classification",
+        "bonds_payable_classification"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "discount_on_bonds_payable",
+            "side": "debit",
+            "amount_parameter": "discount_minor_units"
+          },
+          {
+            "account_id": "bonds_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m07_bnd_issuance_premium_02",
+      "version": 1,
+      "family_id": "m07_bnd_issuance_premium",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "The company issues 10-year bonds with a contractual face value of ${amount_dollars}. Because the stated coupon rate exceeds the prevailing market yield, investors pay a premium above par, yielding cash proceeds equal to 105% of face value with a 5% premium.",
+      "parameters": {
+        "amount_minor_units": [
+          100000000,
+          200000000,
+          400000000
+        ],
+        "cash_minor_units": [
+          105000000,
+          210000000,
+          420000000
+        ],
+        "premium_minor_units": [
+          5000000,
+          10000000,
+          20000000
+        ]
+      },
+      "concepts": [
+        "bond_premium_issuance",
+        "adjunct_liability",
+        "premium_on_bonds_payable_classification",
+        "bonds_payable_classification"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "premium_on_bonds_payable",
+            "side": "credit",
+            "amount_parameter": "premium_minor_units"
+          },
+          {
+            "account_id": "bonds_payable",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m07_bnd_effective_interest_amort_03",
+      "version": 1,
+      "family_id": "m07_bnd_effective_interest_amort",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At the semiannual interest payment date, the company applies the effective interest method under ASC 835-30 for bonds issued at a discount. Total economic interest expense of ${amount_dollars} is recognized (carrying value multiplied by the semiannual market rate), while contractual cash coupon interest of 6% annual (3% semiannual) is paid to bondholders. The difference amortizes the bond discount.",
+      "parameters": {
+        "amount_minor_units": [
+          3800000,
+          7600000,
+          15200000
+        ],
+        "cash_minor_units": [
+          3000000,
+          6000000,
+          12000000
+        ],
+        "discount_minor_units": [
+          800000,
+          1600000,
+          3200000
+        ]
+      },
+      "concepts": [
+        "effective_interest_method",
+        "bond_discount_amortization",
+        "interest_expense_recognition",
+        "carrying_value_accretion"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "interest_expense",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "cash_minor_units"
+          },
+          {
+            "account_id": "discount_on_bonds_payable",
+            "side": "credit",
+            "amount_parameter": "discount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m07_bnd_contingent_liability_04",
+      "version": 1,
+      "family_id": "m07_bnd_contingent_liability",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "At fiscal year-end, the company's legal counsel confirms that an adverse judgment in a pending intellectual property infringement lawsuit is probable, and the ultimate liability loss is reasonably estimable at ${amount_dollars}. Under ASC 450, the company accrues the loss and corresponding liability.",
+      "parameters": {
+        "amount_minor_units": [
+          25000000,
+          50000000,
+          100000000
+        ]
+      },
+      "concepts": [
+        "contingent_liability_accrual",
+        "asc_450",
+        "probable_and_estimable",
+        "loss_contingency"
+      ],
+      "module": 7,
+      "modules": [
+        7,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "litigation_loss",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "contingent_liability",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m08_lse_commencement_rou_asset_01",
+      "version": 1,
+      "family_id": "m08_lse_commencement_rou_asset",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "Under ASC 842, the company enters into a 5-year operating lease for office space with annual lease payments. At the lease commencement date, the present value of future lease payments discounted at the incremental borrowing rate is ${amount_dollars}. Record the initial lease commencement transaction on the balance sheet.",
+      "parameters": {
+        "amount_minor_units": [
+          6000000,
+          12000000,
+          24000000
+        ]
+      },
+      "concepts": [
+        "lease_commencement",
+        "rou_asset_recognition",
+        "lease_liability_asc842",
+        "present_value_measurement"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "right_of_use_asset",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "lease_liability",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m08_lse_periodic_lease_payment_02",
+      "version": 1,
+      "family_id": "m08_lse_periodic_lease_payment",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "Under ASC 842, the company makes an annual lease payment of ${amount_dollars} cash for leased facility assets. Of this total cash outflow, ${interest_dollars} represents interest expense accrued on the outstanding lease obligation, and ${principal_dollars} reduces the principal lease liability.",
+      "parameters": {
+        "amount_minor_units": [
+          1000000,
+          2000000,
+          3000000
+        ],
+        "interest_minor_units": [
+          200000,
+          400000,
+          600000
+        ],
+        "principal_minor_units": [
+          800000,
+          1600000,
+          2400000
+        ]
+      },
+      "concepts": [
+        "periodic_lease_payment",
+        "lease_liability_amortization",
+        "interest_expense",
+        "asc_842_subsequent_measurement"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "lease_liability",
+            "side": "debit",
+            "amount_parameter": "principal_minor_units"
+          },
+          {
+            "account_id": "interest_expense",
+            "side": "debit",
+            "amount_parameter": "interest_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m08_lse_treasury_stock_repurchase_03",
+      "version": 1,
+      "family_id": "m08_lse_treasury_stock_repurchase",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "Under the cost method of accounting for share repurchases, the company buys back common shares from open market investors for ${amount_dollars} cash to be held in treasury for future employee equity compensation.",
+      "parameters": {
+        "amount_minor_units": [
+          2000000,
+          5000000,
+          10000000
+        ]
+      },
+      "concepts": [
+        "treasury_stock_cost_method",
+        "share_repurchases",
+        "contra_equity",
+        "cash_outflow_financing"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "treasury_stock",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "cash",
+            "side": "credit",
+            "amount_parameter": "amount_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
+    },
+    {
+      "id": "q_m08_lse_treasury_stock_reissuance_04",
+      "version": 1,
+      "family_id": "m08_lse_treasury_stock_reissuance",
+      "rule_version": 1,
+      "status": "approved_active",
+      "scenario_template": "The company reissues treasury shares to market investors for ${amount_dollars} cash. The shares were originally acquired at a cost basis of ${cost_dollars}, resulting in cash proceeds exceeding historical acquisition cost by ${apic_dollars}.",
+      "parameters": {
+        "amount_minor_units": [
+          1500000,
+          3000000,
+          4500000
+        ],
+        "apic_minor_units": [
+          500000,
+          1000000,
+          1500000
+        ],
+        "cost_minor_units": [
+          1000000,
+          2000000,
+          3000000
+        ]
+      },
+      "concepts": [
+        "treasury_stock_reissuance",
+        "apic_treasury_stock",
+        "no_gain_or_loss_on_treasury",
+        "stockholders_equity"
+      ],
+      "module": 8,
+      "modules": [
+        8,
+        2
+      ],
+      "expected_fixture": {
+        "postings": [
+          {
+            "account_id": "cash",
+            "side": "debit",
+            "amount_parameter": "amount_minor_units"
+          },
+          {
+            "account_id": "treasury_stock",
+            "side": "credit",
+            "amount_parameter": "cost_minor_units"
+          },
+          {
+            "account_id": "additional_paid_in_capital",
+            "side": "credit",
+            "amount_parameter": "apic_minor_units"
+          }
+        ]
+      },
+      "review": {
+        "reviewer": "Codex (delegated by trustdan)",
+        "approved_at": "2026-10-12T18:30:00Z",
+        "source": "University of Washington Foster School of Business - Financial Reporting \u0026 Analysis Syllabus"
+      }
     }
   ]
 }

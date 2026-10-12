@@ -198,6 +198,58 @@ func DistractorExplanation(tag string) (misconception string, remediation string
 		return "Freight-In Expensed Immediately",
 			"Expensed freight-in costs immediately as an operating expense. Under US GAAP, shipping and transportation costs incurred to bring merchandise inventory into condition and location for sale must be capitalized into the Inventory asset, not expensed."
 
+	case engine.TagM06AccumulatedDeprExpensed:
+		return "Accumulated Depreciation Treated as Expense",
+			"Treated Accumulated Depreciation as an operating expense. Accumulated Depreciation is a contra-asset account with a normal credit balance that offsets the historical cost of equipment on the balance sheet, while periodic cost allocation is debited to Depreciation Expense."
+
+	case engine.TagM06DirectAssetCredit:
+		return "Direct Credit to Equipment Asset",
+			"Directly credited the Equipment asset account for depreciation. Under US GAAP, the historical cost of property, plant, and equipment is preserved in the asset account, and periodic depreciation is credited to the contra-asset Accumulated Depreciation."
+
+	case engine.TagM06GainTreatedAsRevenue:
+		return "Gain on Disposal Recorded as Operating Revenue",
+			"Recorded the net gain from selling equipment as operating Service Revenue. Gains on disposal of non-current operational assets are non-operating peripheral gains, distinct from core recurring customer revenue."
+
+	case engine.TagM06DisposalAccumDeprRetained:
+		return "Accumulated Depreciation Retained Upon Disposal",
+			"Failed to remove the related Accumulated Depreciation upon disposing of equipment. When a capitalized asset is retired or sold, both its original cost and its cumulative accumulated depreciation must be derecognized from the balance sheet."
+
+	case engine.TagM07DiscountRecordedAsLoss:
+		return "Bond Discount Recorded as Immediate Loss",
+			"Recorded the discount on bond issuance as an immediate loss. Under US GAAP, bond discount represents additional future interest expense recognized over the life of the bond via amortization, not an immediate period loss."
+
+	case engine.TagM07PremiumRecordedAsGain:
+		return "Bond Premium Recorded as Immediate Gain",
+			"Recorded the premium on bond issuance as an immediate gain. Under US GAAP, bond premium reduces borrowing costs over the term of the bond through periodic amortization, rather than being recognized as upfront gain."
+
+	case engine.TagM07IgnoringBondAmortization:
+		return "Bond Amortization Omitted on Interest Payment",
+			"Ignored bond discount or premium amortization when recording periodic interest. Under the effective interest method, interest expense reflects the true carrying value multiplied by the market rate, and the difference from coupon cash amortizes the discount or premium."
+
+	case engine.TagM07ContingentRecordedAsPayable:
+		return "Contingent Liability Recorded as Trade Payable",
+			"Recorded a litigation loss contingency as a trade Accounts Payable. Accrued loss contingencies should be recognized as an accrued liability or litigation reserve, not trade accounts payable arising from vendor credit purchases."
+
+	case engine.TagM08LeaseExpensedAtCommencement:
+		return "Lease Expensed at Initial Commencement",
+			"Expensed the entire lease commitment at commencement. Under ASC 842, long-term leases must be capitalized onto the balance sheet by recognizing a Right-of-Use Asset and a corresponding Lease Liability at present value."
+
+	case engine.TagM08ROUAssetRecordedAsEquity:
+		return "ROU Asset Obligation Recorded as Equity",
+			"Recorded the lease financing obligation as stockholders' equity. Lease obligations represent legally binding contractual financing commitments to third-party lessors, which are liabilities, not equity."
+
+	case engine.TagM08IgnoringLeaseInterest:
+		return "Interest Component Omitted on Lease Payment",
+			"Ignored the interest financing cost when recording a periodic lease payment. Lease payments satisfy both financing interest on the carrying lease obligation and the reduction of principal lease liability."
+
+	case engine.TagM08TreasuryStockRecordedAsAsset:
+		return "Treasury Stock Recorded as Asset",
+			"Treated repurchased company stock as an asset or investment. A corporation cannot own shares of itself; repurchasing outstanding shares returns capital to shareholders and is recorded as a contra-equity account (Treasury Stock)."
+
+	case engine.TagM08GainRecordedOnTreasuryReissuance:
+		return "Gain Recorded on Reissuing Treasury Stock",
+			"Recognized an income statement gain upon reissuing treasury shares above cost. Transactions in a company's own equity can never create income statement gains or losses under US GAAP; any excess proceeds are credited to Additional Paid-in Capital."
+
 	default:
 		clean := strings.ReplaceAll(tag, "_", " ")
 		clean = strings.Title(clean)

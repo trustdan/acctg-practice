@@ -46,15 +46,46 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 	}
 	money := domain.NewMoney(amtVal)
 
+	// Copy and populate secondary parameters aligned by amount index
+	resolvedParams := make(map[string]int64, len(paramValues))
+	for k, v := range paramValues {
+		resolvedParams[k] = v
+	}
+
+	amtIdx := -1
+	if amounts, ok := q.Parameters["amount_minor_units"]; ok {
+		for i, a := range amounts {
+			if a == amtVal {
+				amtIdx = i
+				break
+			}
+		}
+	}
+
 	// Replace scenario template placeholders
 	promptText := q.ScenarioTemplate
 	promptText = strings.ReplaceAll(promptText, "${amount_dollars}", money.FormatDollars())
 	promptText = strings.ReplaceAll(promptText, "${amount_exact}", money.FormatExact())
 
+	if amtIdx >= 0 {
+		for paramKey, paramVals := range q.Parameters {
+			if paramKey != "amount_minor_units" && amtIdx < len(paramVals) {
+				pVal := paramVals[amtIdx]
+				if _, exists := resolvedParams[paramKey]; !exists {
+					resolvedParams[paramKey] = pVal
+				}
+				pMoney := domain.NewMoney(pVal)
+				baseName := strings.TrimSuffix(paramKey, "_minor_units")
+				promptText = strings.ReplaceAll(promptText, fmt.Sprintf("${%s_dollars}", baseName), pMoney.FormatDollars())
+				promptText = strings.ReplaceAll(promptText, fmt.Sprintf("${%s_exact}", baseName), pMoney.FormatExact())
+			}
+		}
+	}
+
 	// Process canonical event in engine
 	event := engine.TransactionEvent{
 		FamilyID:   q.FamilyID,
-		Parameters: paramValues,
+		Parameters: resolvedParams,
 	}
 	processed, err := g.engine.ProcessEvent(event)
 	if err != nil {
@@ -68,7 +99,7 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 		FamilyID:      q.FamilyID,
 		RuleVersion:   q.RuleVersion,
 		PromptText:    promptText,
-		Parameters:    paramValues,
+		Parameters:    resolvedParams,
 		RandomSeed:    seed,
 		Entry:         processed.Entry,
 		Concepts:      q.Concepts,
@@ -160,6 +191,12 @@ func (g *Generator) GenerateInstance(q bank.QuestionJSON, seed int64, paramValue
 		BuildM05InventoryNRVStages(instance, money, seed, processed)
 	case bank.FamilyM05FreightInCapitalize:
 		BuildM05FreightInCapStages(instance, money, seed, processed)
+	case bank.FamilyM06StraightLineDepr, bank.FamilyM06MACRSTaxTiming, bank.FamilyM06AssetDisposalGainLoss, bank.FamilyM06ImpairmentRecoverability:
+		BuildM06Stages(q.FamilyID, instance, money, seed, processed)
+	case bank.FamilyM07BondIssuanceDiscount, bank.FamilyM07BondIssuancePremium, bank.FamilyM07BondEffectiveInterestAmort, bank.FamilyM07BondContingentLiability:
+		BuildM07Stages(q.FamilyID, instance, money, seed, processed)
+	case bank.FamilyM08LeaseCommencementROUAsset, bank.FamilyM08LeasePeriodicPayment, bank.FamilyM08TreasuryStockRepurchase, bank.FamilyM08TreasuryStockReissuance:
+		BuildM08Stages(q.FamilyID, instance, money, seed, processed)
 	default:
 		buildGenericStages(instance, money, seed, processed)
 	}

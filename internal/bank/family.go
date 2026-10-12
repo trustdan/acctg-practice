@@ -53,6 +53,24 @@ const (
 	FamilyM05InventoryLIFO         = "m05_inv_lifo_costing"
 	FamilyM05InventoryNRVWriteDown = "m05_inv_nrv_writedown"
 	FamilyM05FreightInCapitalize   = "m05_inv_freight_in_cap"
+
+	// Wave 2: Stream-M06 (PPE, Depreciation & Impairments)
+	FamilyM06StraightLineDepr         = "m06_ppe_straight_line_depr"
+	FamilyM06MACRSTaxTiming           = "m06_ppe_macrs_tax_timing"
+	FamilyM06AssetDisposalGainLoss    = "m06_ppe_asset_disposal_gain_loss"
+	FamilyM06ImpairmentRecoverability = "m06_ppe_impairment_recoverability"
+
+	// Wave 2: Stream-M07 (Liabilities, Bonds & Contingent Liabilities)
+	FamilyM07BondIssuanceDiscount       = "m07_bnd_issuance_discount"
+	FamilyM07BondIssuancePremium        = "m07_bnd_issuance_premium"
+	FamilyM07BondEffectiveInterestAmort = "m07_bnd_effective_interest_amort"
+	FamilyM07BondContingentLiability    = "m07_bnd_contingent_liability"
+
+	// Wave 2: Stream-M08 (Leases ASC 842 & Treasury Stock)
+	FamilyM08LeaseCommencementROUAsset = "m08_lse_commencement_rou_asset"
+	FamilyM08LeasePeriodicPayment      = "m08_lse_periodic_lease_payment"
+	FamilyM08TreasuryStockRepurchase   = "m08_lse_treasury_stock_repurchase"
+	FamilyM08TreasuryStockReissuance   = "m08_lse_treasury_stock_reissuance"
 )
 
 var supportedFamilies = map[string]struct{}{
@@ -103,6 +121,20 @@ var supportedFamilies = map[string]struct{}{
 	FamilyM05InventoryLIFO:              {},
 	FamilyM05InventoryNRVWriteDown:       {},
 	FamilyM05FreightInCapitalize:         {},
+
+	// Wave 2 Streams
+	FamilyM06StraightLineDepr:         {},
+	FamilyM06MACRSTaxTiming:           {},
+	FamilyM06AssetDisposalGainLoss:    {},
+	FamilyM06ImpairmentRecoverability: {},
+	FamilyM07BondIssuanceDiscount:       {},
+	FamilyM07BondIssuancePremium:        {},
+	FamilyM07BondEffectiveInterestAmort: {},
+	FamilyM07BondContingentLiability:    {},
+	FamilyM08LeaseCommencementROUAsset: {},
+	FamilyM08LeasePeriodicPayment:      {},
+	FamilyM08TreasuryStockRepurchase:   {},
+	FamilyM08TreasuryStockReissuance:   {},
 }
 
 // IsSupportedFamily checks whether the family ID has reviewed semantic rules in code.
